@@ -1,4 +1,5 @@
 ﻿#:property UseAppHost=false
+#:property PublishAot=false
 
 using System.Runtime.CompilerServices;
 using System.Text.Encodings.Web;

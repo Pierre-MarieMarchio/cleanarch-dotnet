@@ -1,4 +1,5 @@
 ﻿#:property UseAppHost=false
+#:property PublishAot=false
 
 using System.Diagnostics;
 using System.Text;
