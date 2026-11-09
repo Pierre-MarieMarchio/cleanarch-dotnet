@@ -38,6 +38,9 @@ public sealed class NewSettingTests
     [Fact]
     public void UnrecordableEdit() => Expectations.Hold(UnrecordableEditCases);
 
+    [Fact]
+    public void Output() => Expectations.Hold(OutputCases);
+
     private const string _module = "src/Application/A.Application/ApplicationModule.cs";
 
     private const string _api = "src/Presentation/A.Api/appsettings.json";
@@ -646,5 +649,92 @@ public sealed class NewSettingTests
         }
 
         expect(restored, "An edit that could not be written did not put back the files edited before it and remove the files written.");
+    }
+
+    private static readonly (string Group, string[][] Runs)[] _outputRuns =
+    [
+        (
+            "every kind",
+            [
+                ["Invoices", "InvoiceLimits", "--keys", _validKeys, "--dry-run"],
+                ["Invoices", "InvoiceLimits", "--keys", _validKeys],
+            ]),
+        (
+            "defaults only",
+            [
+                ["Invoices", "Limits", "--keys", "Max:int(1..9)=1"],
+                ["Invoices", "Toggles", "--keys", "Strict:bool=true, Verbose:bool=false, Retries:int(0..5)=3"],
+            ]),
+        (
+            "feature taking the configuration",
+            [
+                ["Notes", "NoteRetention", "--keys", "Days:int(1..30)=7"],
+                ["Notes", "NoteSecrets", "--keys", "Owner:string(3..40), Token:secret"],
+            ]),
+        (
+            "edge values",
+            [
+                ["Invoices", "Negatives", "--keys", "Max:int(-5..5)=-1"],
+                ["Invoices", "Spans", "--keys", "Span:duration(1.00:00:00..2.00:00:00)=1.12:00:00, Flag:bool=false"],
+                ["Invoices", "Labels", "--keys", "Name:string(1..20)=a b.c-d/e@f:g"],
+                ["Invoices", "Required", "--keys", "Name:string(1..9)"],
+                ["Invoices", "Wide", "--keys", "Big:long(-5000000000..5000000000)=-1, Brief:duration(00:00:01..00:00:59)=00:00:30, Hour:duration(00:00:01..2.00:00:00)=01:00:00"],
+            ]),
+        (
+            "refused",
+            [
+                ["Invoices", "Limits", "--keys", "Max:int(1..9)=10"],
+                ["Invoices", "Logging", "--keys", "Max:int(1..9)=1"],
+            ]),
+    ];
+
+    private static readonly (string Group, string Digest)[] _outputDigests =
+    [
+        ("every kind", "6f86ae586735d500f5817b2d0811036ea59e4a78cfaa0b2d92e005970bc87a54"),
+        ("defaults only", "a5b051b7c31617bd66ab041a9342593f1e8a80ca6b1b53891ce64ecb18976be1"),
+        ("feature taking the configuration", "ad3013fc2d37b290edc47a6aa4d3756faba5c8d049a6c72360084e3fa9e9190a"),
+        ("edge values", "c8e4d946c739bddca1a79389e41cf61aea0fe23bed62adb2d89000052966343a"),
+        ("refused", "ae5a9117df15478aa393083cc5b677a2f74c6dc5a81003a9a63b811457fd123b"),
+    ];
+
+    private static void OutputCases(string scratch, Action<bool, string> expect)
+    {
+        foreach (var (group, runs) in _outputRuns)
+        {
+            string digest = OutputDigest(scratch, runs);
+            string recorded = _outputDigests.Single(entry => entry.Group == group).Digest;
+
+            expect(
+                digest == recorded,
+                $"[{group}] The files, the edits and the report of add setting are no longer those it wrote when this digest was recorded: digest {digest}, "
+                + $"recorded {recorded}. A change to that output is a change for every project that runs add setting: make it on purpose, then record the new digest.");
+        }
+    }
+
+    private static string OutputDigest(string scratch, string[][] runs)
+    {
+        string root = NewTree(scratch);
+        using var digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+
+        void Feed(string text) => digest.AppendData(Encoding.UTF8.GetBytes(text.ReplaceLineEndings("\n").Replace(root, "<root>", StringComparison.Ordinal) + "\u0000"));
+
+        foreach (string[] run in runs)
+        {
+            var before = Snapshot(root);
+            var result = Invoke(root, run);
+
+            Feed(string.Join(' ', run));
+            Feed($"{result.Code}");
+            Feed(result.Output);
+            Feed(result.Error);
+
+            foreach (var (path, hash) in Snapshot(root).Where(entry => !before.TryGetValue(entry.Key, out string? earlier) || earlier != entry.Value).OrderBy(entry => entry.Key, StringComparer.Ordinal))
+            {
+                Feed(path);
+                Feed(hash == "<directory>" ? hash : File.ReadAllText(Path.Combine(root, path)));
+            }
+        }
+
+        return Convert.ToHexStringLower(digest.GetHashAndReset());
     }
 }

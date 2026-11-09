@@ -104,6 +104,12 @@ public sealed partial class NewFeatureTests
     public void FieldShape() => Expectations.Hold(FieldShapeCases);
 
     [Fact]
+    public void WithFields() => Expectations.Hold(WithFieldsCases);
+
+    [Fact]
+    public void FieldAdditionOutput() => Expectations.Hold(FieldAdditionOutputCases);
+
+    [Fact]
     public void TemplateGuard() => Expectations.Hold(TemplateGuardCases);
 
     internal static string NewTree(string scratch, bool reaction = true, string database = "postgresql")
@@ -1998,79 +2004,101 @@ public sealed partial class NewFeatureTests
 
     private static string? Option(string[] options, string name) => Array.IndexOf(options, name) is >= 0 and var at ? options[at + 1] : null;
 
+    private static readonly string[][] _operationSubsets =
+    [
+        .. Enumerable.Range(1, (1 << _operationNames.Length) - 1)
+            .Select(mask => _operationNames.Where((_, index) => (mask & (1 << index)) != 0).ToArray()),
+    ];
+
+    private static readonly (string Group, string[] Options, bool Reaction, bool Api, string Database)[] _digestGroups =
+    [
+        ("record, owner, delete", ["--access", "owner", "--deletion", "delete"], true, true, "postgresql"),
+        ("record, owner, anonymise", ["--access", "owner", "--deletion", "anonymise"], true, true, "postgresql"),
+        ("record, shared", ["--access", "shared"], true, true, "postgresql"),
+        ("aggregate, owner, delete", ["--access", "owner", "--deletion", "delete", "--model", "aggregate"], true, true, "postgresql"),
+        ("aggregate, owner, anonymise", ["--access", "owner", "--deletion", "anonymise", "--model", "aggregate"], true, true, "postgresql"),
+        ("aggregate, shared", ["--access", "shared", "--model", "aggregate"], true, true, "postgresql"),
+        ("record, owner, delete, the project's first owner feature", ["--access", "owner", "--deletion", "delete"], false, true, "postgresql"),
+        ("record, owner, delete, without the API", ["--access", "owner", "--deletion", "delete"], true, false, "postgresql"),
+        ("record, owner, delete, on SQL Server", ["--access", "owner", "--deletion", "delete"], true, true, "sqlserver"),
+        ("record, owner, delete, on SQLite", ["--access", "owner", "--deletion", "delete"], true, true, "sqlite"),
+    ];
+
+    private static IncrementalHash Digest(out Action<string> feed)
+    {
+        var digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+
+        feed = text => digest.AppendData(Encoding.UTF8.GetBytes(text.ReplaceLineEndings("\n") + "\u0000"));
+
+        return digest;
+    }
+
+    private static FeatureSpec? DigestSpec(string root, string[] options, string[] subset, string concurrency, string? fields, List<string> problems) =>
+        Check(
+            new AddFeatureRequest("Widgets", "Widget", Option(options, "--access")!, Option(options, "--deletion"), string.Join(',', subset), Option(options, "--model"), concurrency, fields),
+            System.IO.Path.GetFullPath(root),
+            GeneratorRun.Project(root),
+            problems);
+
+    private static List<Emission> FeedPlan(Action<string> feed, string root, FeatureSpec spec)
+    {
+        var plan = Plan(spec, root, out var skipped);
+        var editor = Edits(root, spec, plan);
+        var manifest = ManifestOf(spec, plan, null, editor, Version);
+
+        using var report = new StringWriter();
+        Report(report, root, spec, plan, manifest.Path, skipped, ReportMode.DryRun);
+        ReportPage(report, spec, null, "no page", ReportMode.DryRun);
+
+        foreach (var emission in plan)
+        {
+            feed(emission.Path);
+            feed(emission.Content);
+        }
+
+        feed(manifest.Content);
+
+        foreach (var (path, _, bytes) in TextEdits.Replacements(editor))
+        {
+            feed(path);
+            feed(Encoding.UTF8.GetString(bytes));
+        }
+
+        feed(report.ToString());
+
+        return plan;
+    }
+
+    private static string DigestTree(string scratch, bool reaction, bool api, string database, bool integration)
+    {
+        string root = NewTree(scratch, reaction, database);
+
+        if (integration)
+        {
+            Put(root, "tests/Integration/A.Api.IntegrationTests/Infrastructure/TestDatabase.cs", "        [\n            AppDbContext.PlatformSchema,\n        ];\n");
+        }
+
+        return api ? root : WithoutTheApi(root, "A.Worker");
+    }
+
     private static IEnumerable<(string Group, string Digest)> WithoutFieldsDigests(string scratch)
     {
-        string[][] subsets =
-        [
-            .. Enumerable.Range(1, (1 << _operationNames.Length) - 1)
-                .Select(mask => _operationNames.Where((_, index) => (mask & (1 << index)) != 0).ToArray()),
-        ];
-
-        (string Group, string[] Options, bool Reaction, bool Api, string Database)[] groups =
-        [
-            ("record, owner, delete", ["--access", "owner", "--deletion", "delete"], true, true, "postgresql"),
-            ("record, owner, anonymise", ["--access", "owner", "--deletion", "anonymise"], true, true, "postgresql"),
-            ("record, shared", ["--access", "shared"], true, true, "postgresql"),
-            ("aggregate, owner, delete", ["--access", "owner", "--deletion", "delete", "--model", "aggregate"], true, true, "postgresql"),
-            ("aggregate, owner, anonymise", ["--access", "owner", "--deletion", "anonymise", "--model", "aggregate"], true, true, "postgresql"),
-            ("aggregate, shared", ["--access", "shared", "--model", "aggregate"], true, true, "postgresql"),
-            ("record, owner, delete, the project's first owner feature", ["--access", "owner", "--deletion", "delete"], false, true, "postgresql"),
-            ("record, owner, delete, without the API", ["--access", "owner", "--deletion", "delete"], true, false, "postgresql"),
-            ("record, owner, delete, on SQL Server", ["--access", "owner", "--deletion", "delete"], true, true, "sqlserver"),
-            ("record, owner, delete, on SQLite", ["--access", "owner", "--deletion", "delete"], true, true, "sqlite"),
-        ];
-
-        foreach (var (group, options, reaction, api, database) in groups)
+        foreach (var (group, options, reaction, api, database) in _digestGroups)
         {
-            string root = NewTree(scratch, reaction, database);
+            string root = DigestTree(scratch, reaction, api, database, integration: false);
+            using var digest = Digest(out var feed);
 
-            if (!api)
-            {
-                WithoutTheApi(root, "A.Worker");
-            }
-
-            using var digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-
-            void Feed(string text) => digest.AppendData(Encoding.UTF8.GetBytes(text.ReplaceLineEndings("\n") + "\u0000"));
-
-            foreach (string[] subset in subsets)
+            foreach (string[] subset in _operationSubsets)
             {
                 foreach (string concurrency in new[] { "none", "etag" })
                 {
-                    var problems = new List<string>();
-                    var request = new AddFeatureRequest(
-                        "Widgets", "Widget", options[Array.IndexOf(options, "--access") + 1], Option(options, "--deletion"), string.Join(',', subset), Option(options, "--model"), concurrency, Fields: null);
-
-                    if (Check(request, System.IO.Path.GetFullPath(root), GeneratorRun.Project(root), problems) is not { } spec)
+                    if (DigestSpec(root, options, subset, concurrency, fields: null, []) is not { } spec)
                     {
                         continue;
                     }
 
-                    var plan = Plan(spec, root, out var skipped);
-                    var editor = Edits(root, spec, plan);
-                    var manifest = ManifestOf(spec, plan, null, editor, Version);
-
-                    using var report = new StringWriter();
-                    Report(report, root, spec, plan, manifest.Path, skipped, ReportMode.DryRun);
-                    ReportPage(report, spec, null, "no page", ReportMode.DryRun);
-
-                    Feed($"{string.Join(',', subset)} {concurrency}");
-
-                    foreach (var emission in plan)
-                    {
-                        Feed(emission.Path);
-                        Feed(emission.Content);
-                    }
-
-                    Feed(manifest.Content);
-
-                    foreach (var (path, _, bytes) in TextEdits.Replacements(editor))
-                    {
-                        Feed(path);
-                        Feed(Encoding.UTF8.GetString(bytes));
-                    }
-
-                    Feed(report.ToString());
+                    feed($"{string.Join(',', subset)} {concurrency}");
+                    FeedPlan(feed, root, spec);
                 }
             }
 

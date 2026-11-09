@@ -571,4 +571,159 @@ public sealed partial class NewFeatureTests
                 && string.Join(" | ", quoted.Select(field => field.Default!.Expression)) == "0.50m | \"it's\" | new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero) | -3L",
             $"The defaults were not read as written, nor carried to C# as the migration needs them: {string.Join(" | ", problems)}{(quoted is null ? string.Empty : string.Join(", ", quoted.Select(field => field.Declared)))}");
     }
+
+    private static readonly string[] _digestFieldLists =
+    [
+        _everyType,
+        "Body:text(65536), Price:decimal, Cost:decimal(28,0), Rate:decimal(5,2)>-1<1, Weight:decimal(6,3)>=0.5<=999.999, Quantity:int>0<100, "
+            + "Score:int?>=1, Big:long>=0<=9000000000, Small:long<0, Ready:bool?, Born:DateOnly?, At:DateTimeOffset?, Batch:Guid, Label:string(17)",
+        "Nickname:string(40)?, Notes:text(300)?, Count:int?, Total:long?, Budget:decimal?, Ratio:decimal(5,4)?>-1<1, Paid:bool?, Due:DateOnly?, "
+            + "At:DateTimeOffset?, Reference:Guid?",
+        "Title:string(400)",
+    ];
+
+    private static readonly (string Group, string Digest)[] _withFieldsDigests =
+    [
+        ("record, owner, delete", "fd379a6ed235d23f0c838c11f8a5a62a739b30c5c4c734a92fa97b0b869529ca"),
+        ("record, owner, anonymise", "8bff0e69a374d6f084c9f98e465991d0174341ba1fbef0bd96e70db466b2269a"),
+        ("record, shared", "7b100af8330a513eea76624fd6e6f519401d719248de0c3b8640a62e5062a1f3"),
+        ("aggregate, owner, delete", "5abb5f64b12264b7ee102f05b82807cbde0eae6b8b2a38fb415118ccfe3e52d7"),
+        ("aggregate, owner, anonymise", "916a3672b815eaf832790bb2142b005a6fc48e233791d6244ccdd8dd5b6c8d06"),
+        ("aggregate, shared", "548f5e717eaf2b09e898b77e80ec9200d3f27e81dfe088b67d0afcabf5d783ad"),
+        ("record, owner, delete, the project's first owner feature", "4fefd065da454fa0d48fea77ed0182e4f3512096044252babd0c02201b2fdbba"),
+        ("record, owner, delete, without the API", "8849d605bac961129de5e83c952c2475bcd6286bacc1e7a1bdccb65c5dcab0e2"),
+        ("record, owner, delete, on SQL Server", "fd379a6ed235d23f0c838c11f8a5a62a739b30c5c4c734a92fa97b0b869529ca"),
+        ("record, owner, delete, on SQLite", "1e93b3c121bed89a3026e5bcba1b291765a95a78e78d79f5c84e315ba239e038"),
+    ];
+
+    private static void WithFieldsCases(string scratch, Action<bool, string> expect)
+    {
+        foreach (var (group, digest) in WithFieldsDigests(scratch, expect))
+        {
+            string recorded = _withFieldsDigests.Single(entry => entry.Group == group).Digest;
+
+            expect(
+                digest == recorded,
+                $"[{group}] with --fields, the files, the edits, the manifest and the report are no longer those this generator wrote "
+                + $"when this digest was recorded: digest {digest}, recorded {recorded}. A change to that output is a change for every "
+                + "project that runs add feature --fields: make it on purpose, then record the new digest.");
+        }
+    }
+
+    private static IEnumerable<(string Group, string Digest)> WithFieldsDigests(string scratch, Action<bool, string> expect)
+    {
+        foreach (var (group, options, reaction, api, database) in _digestGroups)
+        {
+            string root = DigestTree(scratch, reaction, api, database, integration: true);
+            bool fieldTests = false;
+            using var digest = Digest(out var feed);
+
+            foreach (string fields in _digestFieldLists)
+            {
+                foreach (string[] subset in _operationSubsets)
+                {
+                    foreach (string concurrency in new[] { "none", "etag" })
+                    {
+                        var problems = new List<string>();
+
+                        if (DigestSpec(root, options, subset, concurrency, fields, problems) is not { } spec)
+                        {
+                            expect(
+                                DigestSpec(root, options, subset, concurrency, fields: null, []) is null,
+                                $"[{group}, {string.Join(',', subset)} {concurrency}] --fields \"{fields}\" was refused, so the digest does not hold it: {string.Join(" | ", problems)}");
+
+                            continue;
+                        }
+
+                        feed($"{fields} | {string.Join(',', subset)} {concurrency}");
+
+                        var plan = FeedPlan(feed, root, spec);
+
+                        fieldTests |= plan.Any(emission => emission.Path.EndsWith("/Widgets/WidgetFieldTests.cs", StringComparison.Ordinal));
+                    }
+                }
+            }
+
+            expect(fieldTests == api, $"[{group}] the digest {(api ? "holds no" : "holds a")} WidgetFieldTests.cs, the integration test of the fields.");
+
+            yield return (group, Convert.ToHexStringLower(digest.GetHashAndReset()));
+        }
+    }
+
+    private const string _otherAdded =
+        "Rank:int<100=1, Weight:decimal>0<=50=1.5, Cost:decimal(28,0)>=0=0, Label:string(30)='it''s', Body:text='none', Huge:text(65536)?, "
+        + "Score:int?>=1, Small:long<0=-3, Ready:bool=true, Archived:bool?, Born:DateOnly?, Seen:DateTimeOffset?, Origin:Guid?, "
+        + "Opened:DateTimeOffset='2026-03-01T00:00:00Z'";
+
+    private static readonly (string Group, string Digest)[] _fieldAdditionDigests =
+    [
+        ("record, owner, delete", "ef308ebd664eebef01c50b5d62331566af62f372cf77116dce2e2455cf6773c4"),
+        ("record, shared, etag, get,list,update", "14c97060d730f8026ce7b064cc04a306bd8099e2fb3902496aa94b3678d68cc2"),
+        ("aggregate, owner, anonymise", "198a95a7b06c2e96fe91d0a9e3a57d6aff8ab00678b49ee42bc24e11d4fa11ce"),
+        ("aggregate, shared, get,list,create", "ad5cc9cf034515d416389208f2a3e79b320cecc7ae2dd4cd13267f34c979cb8c"),
+        ("record, owner, anonymise", "3bdc2b988ebf90cf1ef0a8a9c822ee8ebf9367aa7f0ddb239be998b9b229fecd"),
+        ("aggregate, owner, delete", "0cfe291e2712cd433db0b026a0efdcc8f075605ed333471e215c1b9f61d00db5"),
+        ("record, owner, delete, without the API", "1b6948c1d082c0433c464597717b1d028f9301e25fc184d83f9c7db3336b0973"),
+        ("record, shared, on SQLite", "f3731bfa1a268708a3fbd2f1f3fea18263bf9b10577de6951350c7e52ef0b029"),
+    ];
+
+    private static void FieldAdditionOutputCases(string scratch, Action<bool, string> expect)
+    {
+        foreach (var (group, digest) in FieldAdditionDigests(scratch, expect))
+        {
+            string recorded = _fieldAdditionDigests.Single(entry => entry.Group == group).Digest;
+
+            expect(
+                digest == recorded,
+                $"[{group}] the files, the edits, the steps and the report of add field are no longer those it wrote when this digest "
+                + $"was recorded: digest {digest}, recorded {recorded}. A change to that output is a change for every project that runs "
+                + "add field: make it on purpose, then record the new digest.");
+        }
+    }
+
+    private static IEnumerable<(string Group, string Digest)> FieldAdditionDigests(string scratch, Action<bool, string> expect)
+    {
+        (string Group, string[] Options, bool Api, string Database)[] features =
+        [
+            .. _fieldShapes.Select(shape => (shape.Label, shape.Options, true, "postgresql")),
+            ("record, owner, anonymise", ["--access", "owner", "--deletion", "anonymise"], true, "postgresql"),
+            ("aggregate, owner, delete", ["--access", "owner", "--deletion", "delete", "--model", "aggregate", "--concurrency", "etag"], true, "postgresql"),
+            ("record, owner, delete, without the API", ["--access", "owner", "--deletion", "delete"], false, "postgresql"),
+            ("record, shared, on SQLite", ["--access", "shared"], true, "sqlite"),
+        ];
+
+        string[][] additions = [["Things", _everyAdded, "--dry-run"], ["Things", _everyAdded], ["Things", _otherAdded]];
+
+        foreach (var (group, options, api, database) in features)
+        {
+            string root = DigestTree(scratch, reaction: true, api, database, integration: true);
+            var created = Invoke(root, ["Things", "Thing", .. options, "--fields", _existingFields]);
+
+            expect(created.Code == 0, $"[{group}] add feature refused the feature add field extends: {created.Error}");
+
+            using var digest = Digest(out var feed);
+
+            foreach (string[] addition in additions)
+            {
+                var before = Snapshot(root);
+                var ran = new List<TextEdits.Command>();
+                var result = InvokeField(root, Migrating(root, ran, database == "sqlite" ? "things_Things" : "Things"), addition);
+
+                expect(result.Code == 0, $"[{group}] add field {string.Join(' ', addition)} was refused: {result.Error}");
+                feed(string.Join(' ', addition));
+                feed($"{result.Code}");
+                feed(result.Output);
+                feed(result.Error);
+                feed(string.Join('\n', ran.Select(command => command.Display)));
+
+                foreach (var (path, hash) in Snapshot(root).Where(entry => !before.TryGetValue(entry.Key, out string? earlier) || earlier != entry.Value).OrderBy(entry => entry.Key, StringComparer.Ordinal))
+                {
+                    feed(path);
+                    feed(hash == "<directory>" ? hash : File.ReadAllText(System.IO.Path.Combine(root, path)));
+                }
+            }
+
+            yield return (group, Convert.ToHexStringLower(digest.GetHashAndReset()));
+        }
+    }
 }

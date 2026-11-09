@@ -32,6 +32,9 @@ public sealed class NewEventTests
     [Fact]
     public void Rollback() => Expectations.Hold(RollbackCases);
 
+    [Fact]
+    public void Output() => Expectations.Hold(OutputCases);
+
     private const string _module = "src/Application/A.Application/ApplicationModule.cs";
 
     private const string _list = "tests/Architecture/A.Architecture.Tests/Rules/DomainEventTests.cs";
@@ -527,5 +530,85 @@ public sealed class NewEventTests
         }
 
         expect(restored, "An edit that could not be written did not put back the files edited before it and remove the files written.");
+    }
+
+    private static readonly (string Group, string[][] Runs)[] _outputRuns =
+    [
+        (
+            "consumed",
+            [
+                ["Invoices", "InvoicePaidDomainEvent", "--consumer", "Reminders:CancelReminders", "--dry-run"],
+                ["Invoices", "InvoicePaidDomainEvent", "--consumer", "Reminders:CancelReminders", "--fields", "InvoiceId:Guid, Reason:string, Amount:decimal, PaidOn:DateOnly, Late:bool, Lines:int, Cents:long, At:DateTimeOffset"],
+                ["Invoices", "InvoicePaidDomainEvent", "--consumer", "Reminders:CancelReminders"],
+            ]),
+        (
+            "configured consumer",
+            [
+                ["Invoices", "InvoiceVoidedDomainEvent", "--consumer", "Files:ReclaimFiles"],
+                ["Invoices", "InvoiceSplitDomainEvent", "--consumer", "Files:SplitFiles", "--fields", "FirstId:Guid, SecondId:Guid, Memo:string"],
+            ]),
+        (
+            "unconsumed",
+            [
+                ["Invoices", "InvoiceNotedDomainEvent", "--unconsumed", "Nothing reacts to a note", "--fields", "InvoiceId:Guid", "--dry-run"],
+                ["Invoices", "InvoiceNotedDomainEvent", "--unconsumed", "Nothing reacts to a note", "--fields", "InvoiceId:Guid"],
+                ["Invoices", "InvoiceRefundedDomainEvent", "--unconsumed", "Refunds are only reported", "--fields", "Amount:decimal, Cents:long, Lines:int, Late:bool, PaidOn:DateOnly, At:DateTimeOffset, Reason:string"],
+                ["Invoices", "InvoiceArchivedDomainEvent", "--unconsumed", "Archiving has no reaction"],
+            ]),
+        (
+            "refused",
+            [
+                ["Invoices", "InvoiceLostDomainEvent", "--unconsumed", "Nothing reacts to a loss", "--fields", "Reason:string?"],
+                ["Invoices", "InvoiceLostDomainEvent"],
+            ]),
+    ];
+
+    private static readonly (string Group, string Digest)[] _outputDigests =
+    [
+        ("consumed", "0f036c8f0aaa9096a317c5ed0721638c916590e54734b908762e3be277cdcd4f"),
+        ("configured consumer", "8ec40facd32e4f64061cee4c43a47283db50aa7321e2271b00cb86a031b9d9ac"),
+        ("unconsumed", "ad0c86329b00a3628268a9b4bb3a4681b4e857e39dcf3b39a475d81920486fb1"),
+        ("refused", "e55f63d9c3130b99653f81570b729cb6f11869f30585584273cba99f5032ba98"),
+    ];
+
+    private static void OutputCases(string scratch, Action<bool, string> expect)
+    {
+        foreach (var (group, runs) in _outputRuns)
+        {
+            string digest = OutputDigest(scratch, runs);
+            string recorded = _outputDigests.Single(entry => entry.Group == group).Digest;
+
+            expect(
+                digest == recorded,
+                $"[{group}] The files, the edits and the report of add event are no longer those it wrote when this digest was recorded: digest {digest}, "
+                + $"recorded {recorded}. A change to that output is a change for every project that runs add event: make it on purpose, then record the new digest.");
+        }
+    }
+
+    private static string OutputDigest(string scratch, string[][] runs)
+    {
+        string root = NewTree(scratch);
+        using var digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+
+        void Feed(string text) => digest.AppendData(Encoding.UTF8.GetBytes(text.ReplaceLineEndings("\n").Replace(root, "<root>", StringComparison.Ordinal) + "\u0000"));
+
+        foreach (string[] run in runs)
+        {
+            var before = Snapshot(root);
+            var result = Invoke(root, run);
+
+            Feed(string.Join(' ', run));
+            Feed($"{result.Code}");
+            Feed(result.Output);
+            Feed(result.Error);
+
+            foreach (var (path, hash) in Snapshot(root).Where(entry => !before.TryGetValue(entry.Key, out string? earlier) || earlier != entry.Value).OrderBy(entry => entry.Key, StringComparer.Ordinal))
+            {
+                Feed(path);
+                Feed(hash == "<directory>" ? hash : File.ReadAllText(Path.Combine(root, path)));
+            }
+        }
+
+        return Convert.ToHexStringLower(digest.GetHashAndReset());
     }
 }
