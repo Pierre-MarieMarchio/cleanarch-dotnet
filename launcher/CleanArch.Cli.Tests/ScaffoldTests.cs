@@ -35,6 +35,8 @@ public sealed class ScaffoldTests : IDisposable
     private readonly List<ExternalCall> _calls = [];
     private readonly SampleProject _project = new(SampleProject.Api);
     private string _generated = _generatedProject;
+    private string? _starterNodeTypes;
+    private readonly List<string?> _nodeTypesAtInstall = [];
 
     [Fact]
     public void APresentation_IsGeneratedAside_KeepsWhatItsDescriptorNames_AndJoinsTheSolutionFolderOfItsLayer()
@@ -141,12 +143,49 @@ public sealed class ScaffoldTests : IDisposable
         package["dependencies"]!["react"]!.GetValue<string>().ShouldBe("19.2.1");
         package["dependencies"]!["@acme-shop/api-client"]!.GetValue<string>().ShouldBe("workspace:*");
         package["devDependencies"]!["vite"]!.GetValue<string>().ShouldBe("8.0.0");
+        package["devDependencies"]!.AsObject().ContainsKey("@types/node").ShouldBeFalse("the scaffold adds no @types/node the framework's CLI did not declare");
         File.ReadAllText(Full(Path.Combine(_site, "src", "main.tsx"))).ShouldBe("overlay");
         File.Exists(Full(Path.Combine(_site, "README.md"))).ShouldBeFalse();
         Directory.Exists(Full(Path.Combine(_site, "public"))).ShouldBeFalse();
         Directory.Exists(Full(Path.Combine(_site, "overlay"))).ShouldBeFalse();
         File.Exists(Full(Path.Combine(_site, ScaffoldDescriptor.FileName))).ShouldBeFalse();
         Directory.EnumerateDirectories(web, ".web-scaffold-*").ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void AWebApp_WhoseCliDeclaresNodeTypes_TypesTheMajorOfTheWorkspacesNode_ThenIsPinnedToTheVersionInstalled()
+    {
+        Write(Path.Combine("src", "Web", "package.json"), "{}");
+        Write(Path.Combine("src", "Web", ".node-version"), "26.13.0\n");
+        WriteSiteDescriptor();
+        _starterNodeTypes = "22.20.5";
+
+        Scaffolds.WebApps(Located(), Shell(), only: null).ShouldBe(ExitCode.Succeeded, _error.ToString());
+
+        _nodeTypesAtInstall[0].ShouldBe("^26");
+        JsonObject package = JsonNode.Parse(File.ReadAllText(Full(Path.Combine(_site, "package.json"))))!.AsObject();
+        package["devDependencies"]!["@types/node"]!.GetValue<string>().ShouldBe("26.13.0");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("lts/*\n")]
+    public void AWebApp_WhoseCliDeclaresNodeTypes_IsRefused_WithoutAnExactNodeVersion_AndLeftUnchanged(string? nodeVersion)
+    {
+        Write(Path.Combine("src", "Web", "package.json"), "{}");
+        if (nodeVersion is not null)
+        {
+            Write(Path.Combine("src", "Web", ".node-version"), nodeVersion);
+        }
+
+        WriteSiteDescriptor();
+        _starterNodeTypes = "22.20.5";
+
+        Scaffolds.WebApps(Located(), Shell(), only: null).ShouldNotBe(ExitCode.Succeeded);
+
+        _error.ToString().ShouldContain("src/Web/.node-version");
+        File.Exists(Full(Path.Combine(_site, "package.json"))).ShouldBeFalse();
+        File.Exists(Full(Path.Combine(_site, ScaffoldDescriptor.FileName))).ShouldBeTrue();
     }
 
     [Fact]
@@ -204,7 +243,9 @@ public sealed class ScaffoldTests : IDisposable
                 Starter(Path.Combine(here, directory));
                 break;
             case ["install", ..]:
+                _nodeTypesAtInstall.Add(JsonNode.Parse(File.ReadAllText(Full(Path.Combine(_site, "package.json"))))?["devDependencies"]?["@types/node"]?.GetValue<string>());
                 Write(Path.Combine(_site, "node_modules", "react", "package.json"), """{ "version": "19.2.1" }""");
+                Write(Path.Combine(_site, "node_modules", "@types", "node", "package.json"), """{ "version": "26.13.0" }""");
                 break;
             case ["tool", "run", "kiota", ..]:
                 Directory.CreateDirectory(call.Arguments[call.Arguments.ToList().IndexOf("--output") + 1]);
@@ -220,15 +261,26 @@ public sealed class ScaffoldTests : IDisposable
         WriteAt(Path.Combine(folder, "Program.cs"), "generated");
     }
 
-    private static void Starter(string folder)
+    private void Starter(string folder)
     {
-        WriteAt(Path.Combine(folder, "package.json"), """
+        JsonObject package = JsonNode.Parse("""
             { "name": "starter", "packageManager": "pnpm@10.0.0", "dependencies": { "react": "^19.0.0" }, "devDependencies": { "vite": "8.0.0" } }
-            """);
+            """)!.AsObject();
+        if (_starterNodeTypes is not null)
+        {
+            package["devDependencies"]!["@types/node"] = _starterNodeTypes;
+        }
+
+        WriteAt(Path.Combine(folder, "package.json"), package.ToJsonString());
         WriteAt(Path.Combine(folder, "README.md"), "starter");
         WriteAt(Path.Combine(folder, "public", "icon.svg"), "<svg />");
         WriteAt(Path.Combine(folder, "src", "main.tsx"), "starter");
     }
+
+    private void WriteSiteDescriptor() =>
+        WriteDescriptor(_site, """
+            { "name": "site", "package": "create-vite", "version": "9.3.1", "arguments": ["{directory}", "--template", "react-ts"] }
+            """);
 
     private void WriteDescriptor(string folder, string json) => Write(Path.Combine(folder, ScaffoldDescriptor.FileName), json);
 

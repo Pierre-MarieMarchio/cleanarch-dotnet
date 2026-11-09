@@ -126,6 +126,7 @@
       "paths": [
         "src/Web/**",
         ".github/workflows/web.yml",
+        ".github/workflows/web-node-version.yml",
         ".template.config/webapp/**",
         ".template.config/webpackage/**",
         ".template.config/variants/web-PlaceholderSite/**"

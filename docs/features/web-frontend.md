@@ -12,7 +12,8 @@ How web apps run beside the API in this project, call it, and sign their users i
 
 `src/Web` is one pnpm workspace with one lockfile. Node comes from `src/Web/.node-version`, pnpm
 from the `packageManager` field of `src/Web/package.json`, which Corepack reads; run pnpm from
-`src/Web`. Nothing in the .NET build needs Node.
+`src/Web`. Nothing in the .NET build needs Node. Each app's image runs the same Node.js version, and
+a new major is done by hand, as [supply chain](../guides/build-and-ci.md#supply-chain) says.
 
 | Path | What it is |
 |---|---|
@@ -34,8 +35,9 @@ and `vite-svelte`; `create-react-router` for
 `react-router`; the Angular CLI's `ng new` for `angular`. `bootstrap` runs that
 step once, as does `dotnet cleanarch add web-app`, and needs the network to fetch the CLI.
 It writes the CLI's starter, lays the wiring over it (the `/api` relay, the package name, the
-`api-client` dependency, the scripts the workspace runs), pins every dependency to the version
-installed, then runs `pnpm install` and `pnpm api`.
+`api-client` dependency, the scripts the workspace runs), moves an `@types/node` the CLI declares to
+the major of `src/Web/.node-version`, pins every dependency to the version installed, then runs
+`pnpm install` and `pnpm api`.
 
 The CLI runs with its input closed, from the scratch folder it writes into. A CLI that asks a
 question therefore makes `add web-app` fail, leaving the app's folder unchanged, instead of waiting
@@ -414,10 +416,10 @@ Removing an app is deleting its folder, its `include:` line and its port line, t
 `pnpm install`.
 
 A project generated without a web app adds its first one with the same command plus
-`--workspace`, `--project-name <Project>` and `--scope`, which also creates `src/Web` and
-`.github/workflows/web.yml`; the API side is in every project already. `add web-app` then makes the
-lines `src/Web/README.md` lists for the workspace before the app's, and records both; create the
-app as above.
+`--workspace`, `--project-name <Project>` and `--scope`, which also creates `src/Web`,
+`.github/workflows/web.yml` and `.github/workflows/web-node-version.yml`; the API side is in every
+project already. `add web-app` then makes the lines `src/Web/README.md` lists for the workspace
+before the app's, and records both; create the app as above.
 
 ## Images and headers
 

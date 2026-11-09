@@ -570,7 +570,8 @@
       "target": "./.github/workflows/",
       "condition": "(workspace && ci)",
       "include": [
-        "web.yml"
+        "web.yml",
+        "web-node-version.yml"
       ]
     },
     {

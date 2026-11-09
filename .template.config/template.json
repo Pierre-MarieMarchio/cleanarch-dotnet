@@ -261,7 +261,7 @@
       "displayName": "GitHub Actions workflows",
       "datatype": "bool",
       "defaultValue": "true",
-      "description": "Include the GitHub Actions workflows that build, test, scan and release the solution (ci.yml, codeql.yml, release.yml; web.yml with a web app)."
+      "description": "Include the GitHub Actions workflows that build, test, scan and release the solution (ci.yml, codeql.yml, release.yml; web.yml and web-node-version.yml with a web app)."
     },
     "sonar": {
       "type": "parameter",
@@ -1729,6 +1729,7 @@
           "exclude": [
             "src/Web/**",
             ".github/workflows/web.yml",
+            ".github/workflows/web-node-version.yml",
             "docs/features/web-frontend.md",
             "tests/EndToEnd/AT.EndToEnd.Tests/WebAppTests.cs"
           ]
@@ -1986,7 +1987,8 @@
             ".github/workflows/ci.yml",
             ".github/workflows/codeql.yml",
             ".github/workflows/release.yml",
-            ".github/workflows/web.yml"
+            ".github/workflows/web.yml",
+            ".github/workflows/web-node-version.yml"
           ]
         },
         {

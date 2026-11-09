@@ -2,7 +2,9 @@
 
 The pnpm workspace holding every web app under `apps/` and every internal package under `packages/`,
 with one lockfile. pnpm is the version `package.json` pins in `packageManager`, which Corepack runs;
-Node is the version in `.node-version`. Nothing in the .NET build needs either.
+Node is the version in `.node-version`, which every app's image runs too, as
+[supply chain](../../docs/guides/build-and-ci.md#supply-chain) says. Nothing in the .NET build needs
+either.
 
 ## Commands
 
@@ -79,8 +81,9 @@ Pass the project's `--auth`, `--ci` and `--agent-files` too when they are not th
 
 `--workspace` writes this folder, the shared packages, the browser smoke among them, the API client,
 the web apps' end-to-end tests, `docs/features/web-frontend.md` and, unless `--ci false`,
-`.github/workflows/web.yml`. The API side is in every project already. The lines `--web` writes in
-files the item template cannot edit are listed below, then those of the app's own `README.md`.
+`.github/workflows/web.yml` and `.github/workflows/web-node-version.yml`. The API side is in every
+project already. The lines `--web` writes in files the item template cannot edit are listed below,
+then those of the app's own `README.md`.
 `dotnet cleanarch add web-app`, the first time it joins an app to a project whose `cleanarch.json`
 records no workspace, makes all of them, leaves those in place already, or makes none when one of
 the lines an edit is placed by is not found exactly once; then it records the workspace and the app,
@@ -438,7 +441,7 @@ its `pnpm-lock.yaml`.
   add:
 
   ```markdown
-     Move `web.yml` the same way.
+     Move `web.yml` and `web-node-version.yml` the same way.
 
   ```
 
@@ -605,6 +608,7 @@ its `pnpm-lock.yaml`.
 
   ```markdown
   | `.github/workflows/web.yml` | push to `main`, pull request to `main` or `develop`, and a manual run | in `src/Web`: frozen install, lint, test, build, and a failure when the API client differs from the API's document; one image per app |
+  | `.github/workflows/web-node-version.yml` | a failed run of `ci.yml` on a Dependabot pull request of the Dockerfiles | commits the web images' Node.js version to `src/Web/.node-version`, read from the pull request's Dockerfiles through the API; refuses a new major |
   ```
 
 <!--#endif-->
@@ -644,6 +648,20 @@ its `pnpm-lock.yaml`.
 
   ```markdown
   | Node, pnpm and the web packages | `src/Web/.node-version`, `src/Web/package.json`, `src/Web/pnpm-lock.yaml` |
+
+  `NodeVersionTests` holds Node.js to one version: the `node` image of every web app's Dockerfile
+  runs exactly the version in `src/Web/.node-version`, which CI and developers run, and `engines.node`
+  in `src/Web/package.json` and every `@types/node` of the workspace name its major.
+  <!--#if (ci)-->
+  A patch or a minor arrives in Dependabot's pull request on the images, and
+  `.github/workflows/web-node-version.yml` commits its version to `src/Web/.node-version` once CI fails
+  on the difference; update the branch, or close and reopen the pull request, to run the checks again.
+  <!--#else-->
+  A patch or a minor arrives in Dependabot's pull request on the images; write its version to
+  `src/Web/.node-version` in that pull request.
+  <!--#endif-->
+  A new major arrives from Dependabot too, and stays red, held by `NodeVersionTests`, until it is done
+  by hand: `src/Web/.node-version`, `engines.node`, `@types/node` and every `FROM node:` move together.
   ```
 
 - in `docs/guides/build-and-ci.md`, after the line:
