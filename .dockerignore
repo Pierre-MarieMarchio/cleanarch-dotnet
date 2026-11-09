@@ -60,7 +60,9 @@ ex.env
 **/.git
 **/.gitignore
 **/.gitattributes
+#if (githubHost)
 .github/
+#endif
 
 # ---------------------------------------------------------------------------
 # Build output. Copying host bin/obj into the image poisons the container build

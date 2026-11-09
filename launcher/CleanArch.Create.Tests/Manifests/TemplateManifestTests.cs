@@ -40,7 +40,7 @@ public sealed class TemplateManifestTests
             ["presentation", "web", "webName", "webAudience", "webRendering"],
             ["auth"],
             ["database", "examples", "files"],
-            ["ci", "sonar", "agentFiles", "agentFilesExample", "aspire"],
+            ["codeHost", "ci", "sonar", "agentFiles", "agentFilesExample", "aspire"],
         ];
 
         Repository.Source.Manifest(TemplateKind.Project).Options.Select(option => option.Symbol).ShouldBe(groups.SelectMany(group => group));

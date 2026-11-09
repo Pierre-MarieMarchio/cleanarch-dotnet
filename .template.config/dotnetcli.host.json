@@ -38,6 +38,10 @@
       "shortName": "",
       "isHidden": true
     },
+    "codeHost": {
+      "longName": "code-host",
+      "shortName": ""
+    },
     "database": {
       "longName": "database",
       "shortName": ""

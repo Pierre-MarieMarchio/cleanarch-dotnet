@@ -179,57 +179,57 @@ and IDE0049, whose analyzers the SDK's build does not carry. `verify` runs it be
 `.cs` files are UTF-8 with BOM: one created without it fails `format --check`, and `format` adds it.
 `.md` files are UTF-8 without BOM, with LF line endings: `MarkdownEncodingTests` fails on a BOM or a
 CR, and `format` removes both.
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 
 ## Workflows
 
 | Workflow | When | Does |
 |---|---|---|
 | <!--#endif--> |
-| <!--#if (ci && api)--> |
+| <!--#if (githubCi && api)--> |
 | `.github/workflows/ci.yml` | push and pull request to `main` or `develop`, and a manual run | restore, formatting, build, every test project in the solution, tests with coverage and the floor, and the Sonar analysis around them when it is set up; the `verify` gates; the vulnerability listing; the API image, unprivileged and exposing 8080 only; the Compose manifest; the end-to-end suite against the stack, then the browser smoke with a web app; the load smoke |
 | <!--#endif--> |
-| <!--#if (ci && !api)--> |
+| <!--#if (githubCi && !api)--> |
 | `.github/workflows/ci.yml` | push and pull request to `main` or `develop`, and a manual run | restore, formatting, build, every test project in the solution, tests with coverage and the floor, and the Sonar analysis around them when it is set up; the `verify` gates; the vulnerability listing; the Compose manifest |
 | <!--#endif--> |
-| <!--#if (ci && serverDatabase && api)--> |
+| <!--#if (githubCi && serverDatabase && api)--> |
 | `.github/workflows/release.yml` | a `v*.*.*` tag | the gate again, the migration bundles, and the API's image, with the worker's when the project holds one, pushed to GHCR |
 | <!--#endif--> |
-| <!--#if (ci && serverDatabase && !api)--> |
+| <!--#if (githubCi && serverDatabase && !api)--> |
 | `.github/workflows/release.yml` | a `v*.*.*` tag | the gate again, the migration bundles, and the worker's image pushed to GHCR |
 | <!--#endif--> |
-| <!--#if (ci && !anyWeb)--> |
+| <!--#if (githubCi && !anyWeb)--> |
 | `.github/workflows/codeql.yml` | push and pull request to `main` or `develop`, and weekly | CodeQL code scanning of the C# sources, read without a build; alerts land in the repository's Security tab |
 | <!--#endif--> |
-| <!--#if (ci && anyWeb)--> |
+| <!--#if (githubCi && anyWeb)--> |
 | `.github/workflows/codeql.yml` | push and pull request to `main` or `develop`, and weekly | CodeQL code scanning of the C# sources, read without a build, and of the TypeScript in `src/Web`; alerts land in the repository's Security tab |
 | <!--#endif--> |
-| <!--#if (ci && anyWeb)--> |
+| <!--#if (githubCi && anyWeb)--> |
 | `.github/workflows/web.yml` | push to `main`, pull request to `main` or `develop`, and a manual run | in `src/Web`: frozen install, lint, test, build, and a failure when the API client differs from the API's document; one image per app |
 | `.github/workflows/web-node-version.yml` | a failed run of `ci.yml` on a Dependabot pull request of the Dockerfiles | commits the web images' Node.js version to `src/Web/.node-version`, read from the pull request's Dockerfiles through the API; refuses a new major |
 <!--#endif-->
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 
 CodeQL reads the C# without building it, so it neither repeats the build `ci.yml` runs nor sees what
 a build generates: the output of a source generator is not analysed, the committed Kiota client and
 the migrations are.
 
 <!--#endif-->
-<!--#if (ci && api)-->
+<!--#if (githubCi && api)-->
 The load smoke never gates: its thresholds describe a broken system, and a `429` counts as a pass,
 because a hosted runner's timings say nothing about this code. Run it against your own stack with
 `k6 run -e BASE_URL=http://localhost:8080 tests/Load/smoke.js`.
 
 <!--#endif-->
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 Every action is pinned to a commit SHA and every image to a digest, `permissions` is
 `contents: read` unless a job needs more, and a newer run of `ci.yml` or `codeql.yml` on a branch other
 than `main` and `develop` cancels the older one.
 <!--#endif-->
-<!--#if (ci && anyWeb)-->
+<!--#if (githubCi && anyWeb)-->
 A newer run of `web.yml` cancels the older one on every branch but `main`.
 <!--#endif-->
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 `WorkflowPinningTests` reads every file under `.github/workflows` and fails on an action named by
 anything but its 40-character commit SHA, a local `./` action excepted, and on an image a workflow
 runs, as a `container:`, a service, a `docker://` step or the BuildKit driver, without its digest.
@@ -264,12 +264,12 @@ It builds into `artifacts/sonar`, leaving your `bin/` and `obj/` alone. It runs 
 only, so it reports less coverage than CI, and, the scanner running on Linux, names and leaves out
 [the ones that run on Windows alone](#tests-that-run-on-windows-alone).
 <!--#endif-->
-<!--#if (ci && serverDatabase)-->
+<!--#if (githubCi && serverDatabase)-->
 
 ## Release
 
 <!--#endif-->
-<!--#if (ci && serverDatabase && api)-->
+<!--#if (githubCi && serverDatabase && api)-->
 Push a tag such as `v1.2.3`. The release re-runs the gate, then publishes the API's image to GHCR, and
 the worker's when the project holds one, each as
 `1.2.3`, `1.2`, `1` and `latest` (a prerelease tag never moves `latest`), multi-arch, with an SBOM and
@@ -277,7 +277,7 @@ a signed provenance attestation, and uploads the migration bundles built from th
 needs no secret beyond `GITHUB_TOKEN`. Applying the bundles is yours:
 [deployment](deployment.md#migrations-at-release).
 <!--#endif-->
-<!--#if (ci && serverDatabase && !api)-->
+<!--#if (githubCi && serverDatabase && !api)-->
 Push a tag such as `v1.2.3`. The release re-runs the gate, then publishes the worker's image to GHCR as
 `1.2.3`, `1.2`, `1` and `latest` (a prerelease tag never moves `latest`), multi-arch, with an SBOM and
 a signed provenance attestation, and uploads the migration bundles built from the same commit. It
@@ -287,18 +287,33 @@ needs no secret beyond `GITHUB_TOKEN`. Applying the bundles is yours:
 
 ## Supply chain
 
+<!--#if (githubHost)-->
 Every dependency but the SDK is at an exact version, and `.github/dependabot.yml` proposes updates
 weekly, in bands; nothing is ignored. The SDK is a floor: `global.json` names the lowest version and
 lets a later feature band of the same major version run, and each Dockerfile pins the SDK image it
 builds with.
 The toolchain, the pinning and Dependabot are rows of [the stack](../architecture/README.md#the-stack).
+<!--#endif-->
+<!--#if (!githubHost)-->
+Every dependency but the SDK is at an exact version. The SDK is a floor: `global.json` names the
+lowest version and lets a later feature band of the same major version run, and each Dockerfile pins
+the SDK image it builds with.
+No dependency update is proposed: this project was generated without a code host's files, so its CI
+and its updates are its team's to add.
+The toolchain and the pinning are rows of [the stack](../architecture/README.md#the-stack).
+<!--#endif-->
 
 | Dependency | Pinned in |
 |---|---|
 | NuGet packages | `Directory.Packages.props` |
 | The SDK, as a floor | `global.json` |
 | The .NET tools | `.config/dotnet-tools.json` |
+| <!--#if (githubHost)--> |
 | Container images and actions | their digest or commit SHA, beside the tag |
+| <!--#endif--> |
+| <!--#if (!githubHost)--> |
+| Container images | their digest, beside the tag |
+| <!--#endif--> |
 | <!--#if (anyWeb)--> |
 | Node, pnpm and the web packages | `src/Web/.node-version`, `src/Web/package.json`, `src/Web/pnpm-lock.yaml` |
 <!--#endif-->
@@ -308,18 +323,23 @@ The toolchain, the pinning and Dependabot are rows of [the stack](../architectur
 runs exactly the version in `src/Web/.node-version`, which CI and developers run, and `engines.node`
 in `src/Web/package.json` and every `@types/node` of the workspace name its major.
 <!--#endif-->
-<!--#if (anyWeb && ci)-->
+<!--#if (anyWeb && githubCi)-->
 A patch or a minor arrives in Dependabot's pull request on the images, and
 `.github/workflows/web-node-version.yml` commits its version to `src/Web/.node-version` once CI fails
 on the difference; update the branch, or close and reopen the pull request, to run the checks again.
 <!--#endif-->
-<!--#if (anyWeb && !ci)-->
+<!--#if (anyWeb && githubHost && !ci)-->
 A patch or a minor arrives in Dependabot's pull request on the images; write its version to
 `src/Web/.node-version` in that pull request.
 <!--#endif-->
-<!--#if (anyWeb)-->
+<!--#if (anyWeb && githubHost)-->
 A new major arrives from Dependabot too, and stays red, held by `NodeVersionTests`, until it is done
 by hand: `src/Web/.node-version`, `engines.node`, `@types/node` and every `FROM node:` move together.
+<!--#endif-->
+<!--#if (anyWeb && !githubHost)-->
+No bot proposes a newer Node.js: a patch, a minor or a major is taken by hand, and
+`src/Web/.node-version`, `engines.node`, `@types/node` and every `FROM node:` move together, or
+`NodeVersionTests` fails.
 <!--#endif-->
 
 ### An advisory fails the build

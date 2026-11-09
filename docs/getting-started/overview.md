@@ -97,7 +97,7 @@ features grow beside them, and the documentation grows with them.
 | <!--#if (anyWeb)--> |
 | Web | `src/Web`, a pnpm workspace with one app, a generated API client and shared packages |
 | <!--#endif--> |
-| <!--#if (ci)--> |
+| <!--#if (githubCi)--> |
 | CI | GitHub Actions workflows under `.github/workflows` |
 <!--#endif-->
 
@@ -138,23 +138,32 @@ setting, table or test names it.
 | <!--#if (!files)--> |
 | `--files` | `false` | no Files feature and no object store |
 | <!--#endif--> |
-| <!--#if (ci && anyWeb && serverDatabase)--> |
+| <!--#if (githubHost)--> |
+| `--code-host` | `github` | GitHub's files under `.github`: Dependabot, the issue forms, the pull request template and, with `--ci`, the workflows |
+| <!--#endif--> |
+| <!--#if (!githubHost)--> |
+| `--code-host` | `none` | no code host's files: no workflow, no Dependabot, no issue form and no pull request template |
+| <!--#endif--> |
+| <!--#if (githubCi && anyWeb && serverDatabase)--> |
 | `--ci` | `true` | the build, code-scanning, release and web workflows |
 | <!--#endif--> |
-| <!--#if (ci && anyWeb && sqlite)--> |
+| <!--#if (githubCi && anyWeb && sqlite)--> |
 | `--ci` | `true` | the build, code-scanning and web workflows; no release, as SQLite is a development database |
 | <!--#endif--> |
-| <!--#if (ci && !anyWeb && serverDatabase)--> |
+| <!--#if (githubCi && !anyWeb && serverDatabase)--> |
 | `--ci` | `true` | the build, code-scanning and release workflows |
 | <!--#endif--> |
-| <!--#if (ci && !anyWeb && sqlite)--> |
+| <!--#if (githubCi && !anyWeb && sqlite)--> |
 | `--ci` | `true` | the build and code-scanning workflows; no release, as SQLite is a development database |
 | <!--#endif--> |
-| <!--#if (!ci)--> |
+| <!--#if (!githubCi)--> |
 | `--ci` | `false` | no workflow |
 | <!--#endif--> |
-| <!--#if (sonar)--> |
+| <!--#if (sonarWorkflow)--> |
 | `--sonar` | `true` | the Sonar analysis, locally and in CI |
+| <!--#endif--> |
+| <!--#if (sonar && !sonarWorkflow)--> |
+| `--sonar` | `true` | the Sonar analysis, locally |
 | <!--#endif--> |
 | <!--#if (!sonar)--> |
 | `--sonar` | `false` | no Sonar analysis |
@@ -236,10 +245,17 @@ To change a value, remove the part by hand or add it:
 <!--#if (canAddFeature)-->
 - [Adding a feature](../guides/adding-a-feature.md) generates a feature of your own.
 <!--#endif-->
-<!--#if (!anyWeb)-->
+<!--#if (!anyWeb && githubHost)-->
 - `dotnet new cleanarch-webapp -n PlaceholderSite --framework vite-react --project-name AppTemplate --scope app-template --workspace`
   adds a first web app and its workspace (`vite-vue`, `vite-svelte`, `react-router`,
   `angular` or `placeholder` work too). Pass this project's `--auth`, `--examples` and `--ci` when they are not
+  the defaults; then `dotnet cleanarch add web-app --name PlaceholderSite` makes the lines the
+  workspace's `README.md` and the app's list outside their folders, records the app and creates it.
+<!--#endif-->
+<!--#if (!anyWeb && !githubHost)-->
+- `dotnet new cleanarch-webapp -n PlaceholderSite --framework vite-react --project-name AppTemplate --scope app-template --workspace --code-host none --ci false`
+  adds a first web app and its workspace (`vite-vue`, `vite-svelte`, `react-router`,
+  `angular` or `placeholder` work too). Pass this project's `--auth` and `--examples` when they are not
   the defaults; then `dotnet cleanarch add web-app --name PlaceholderSite` makes the lines the
   workspace's `README.md` and the app's list outside their folders, records the app and creates it.
 <!--#endif-->

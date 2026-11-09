@@ -165,7 +165,7 @@ Each carries no connection string and needs no SDK on the target:
 ./efbundle --connection "Server=…;Database=…;User Id=<migration user>;Password=…;TrustServerCertificate=True"
 ```
 <!--#endif-->
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 
 The release workflow builds the bundles from the tagged commit and uploads them as artifacts;
 running them is the deployment's step.
@@ -295,7 +295,7 @@ probe, stays healthy while the process drains. Give the orchestrator a grace per
 timeout.
 <!--#endif-->
 
-<!--#if (ci && serverDatabase)-->
+<!--#if (githubCi && serverDatabase)-->
 ## Verifying an image
 
 The release workflow attests the provenance of each image it pushes to GHCR, signed with the

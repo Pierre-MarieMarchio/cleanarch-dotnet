@@ -61,6 +61,7 @@ the other passes are idempotent. The edits, to make by hand where the command st
   !src/Presentation/AT.Worker/appsettings.json
   ```
 
+<!--#if (githubHost)-->
 - in `.github/dependabot.yml`, after the line:
 
   ```yaml
@@ -73,7 +74,8 @@ the other passes are idempotent. The edits, to make by hand where the command st
         - /src/Presentation/AT.Worker
   ```
 
-<!--#if (ci)-->
+<!--#endif-->
+<!--#if (githubCi)-->
 - in `.github/workflows/release.yml`, replace the line:
 
   ```yaml
@@ -87,7 +89,7 @@ the other passes are idempotent. The edits, to make by hand where the command st
   ```
 
 <!--#endif-->
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 - in `.github/workflows/release.yml`, after the line:
 
   ```yaml

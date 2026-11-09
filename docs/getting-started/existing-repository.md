@@ -14,20 +14,30 @@ once, right after generation and bootstrap.
 | Shape | What you do | What it costs |
 |---|---|---|
 | At the root | the tree becomes the repository; merge by hand what both already have | nothing in the tooling: every command and gate assumes the solution sits at the repository root |
+| <!--#if (githubHost)--> |
 | In a subdirectory, such as `services/api/` | copy the tree there; the host keeps its own root files | the host's `global.json` learns the test runner; the workflows move to the git root |
+| <!--#endif--> |
+| <!--#if (!githubHost)--> |
+| In a subdirectory, such as `services/api/` | copy the tree there; the host keeps its own root files | the host's `global.json` learns the test runner |
+| <!--#endif--> |
 
 Take the root unless the repository must hold more than this service. At the root, the files to merge
 are the ones a host is likely to have already: `README.md`, `.gitignore`, `global.json`,
 `Directory.Build.props`, `Directory.Packages.props` and `.editorconfig`.
 
+<!--#if (githubCi)-->
 Three facts decide the subdirectory shape:
+<!--#endif-->
+<!--#if (!githubCi)-->
+Two facts decide the subdirectory shape:
+<!--#endif-->
 
 - `dotnet cleanarch` finds the repository root by walking up to `cleanarch.json`, so every command
   works from the subdirectory unchanged.
 - MSBuild stops at the nearest `Directory.Build.props` and `Directory.Packages.props`, and
   `.editorconfig` declares `root = true`: the host's root files do not reach these projects, and these
   do not reach the host's.
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 - GitHub reads workflows from `.github/workflows` at the git root only.
 <!--#endif-->
 
@@ -50,7 +60,7 @@ Three facts decide the subdirectory shape:
    }
    ```
 
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 3. Move the workflows to the git root, renaming them if the host has its own:
 
    ```bash
@@ -62,20 +72,26 @@ Three facts decide the subdirectory shape:
    ```
 
 <!--#endif-->
-<!--#if (ci && anyWeb)-->
+<!--#if (githubCi && anyWeb)-->
    Move `web.yml` and `web-node-version.yml` the same way.
 
 <!--#endif-->
-<!--#if (ci)-->
+<!--#if (githubCi)-->
    A workflow runs from the git root, so prefix every path its steps name (the solution,
    `.config/dotnet-tools.json`, `coverage.minimum`, `global.json`) with the subdirectory.
 
 <!--#endif-->
+<!--#if (githubHost)-->
 4. Merge `.github/dependabot.yml` into the host's, at the git root, each `directory` prefixed with
    the subdirectory. Dependabot reads that one file only.
 
 5. Keep Compose in the subdirectory. Its build contexts are relative to the compose file, so nothing
    needs re-pointing; copy `.env.example` to `.env` beside it.
+<!--#endif-->
+<!--#if (!githubHost)-->
+3. Keep Compose in the subdirectory. Its build contexts are relative to the compose file, so nothing
+   needs re-pointing; copy `.env.example` to `.env` beside it.
+<!--#endif-->
 
 ## Verify
 

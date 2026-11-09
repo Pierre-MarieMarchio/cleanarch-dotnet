@@ -138,6 +138,7 @@ internal static class AdoptCommand
                 ["database"] = project.Database,
                 ["examples"] = project.Examples,
                 ["files"] = project.Files,
+                ["codeHost"] = project.CodeHost,
                 ["ci"] = project.Ci,
                 ["sonar"] = GeneratedProjectFacts.Sonar(project),
                 ["agentFiles"] = project.AgentFiles,

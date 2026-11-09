@@ -98,8 +98,11 @@ any other.
 | <!--#endif--> |
 | .NET SDK pinned by `global.json`, package versions in `Directory.Packages.props`, warnings as errors, a diagnostic silenced only by a row of the gate's list | One toolchain on every machine and in CI; `SilencedDiagnosticTests` refuses a silence without its row | [Build and CI](../guides/build-and-ci.md#the-gate) | — |
 | One solution at the root, `AppTemplate.slnx` | A project added or removed is one line to review and merge, with no GUID to reconcile | [Adding a project](../guides/adding-a-project.md#steps) | — |
-| <!--#if (ci)--> |
+| <!--#if (githubCi)--> |
 | Every dependency at an exact version: packages, container images by digest, workflow actions by commit; Dependabot proposes updates in bands and ignores none | A tag or a range moves under you; an ignored dependency is one nobody revisits | [Supply chain](../guides/build-and-ci.md#supply-chain) | — |
+| <!--#endif--> |
+| <!--#if (!githubHost)--> |
+| Every dependency at an exact version: packages, container images by digest; no bot proposes updates, which the team takes | A tag or a range moves under you | [Supply chain](../guides/build-and-ci.md#supply-chain) | — |
 | <!--#endif--> |
 | <!--#if (api)--> |
 | ASP.NET Core MVC controllers, `Asp.Versioning`, `Microsoft.AspNetCore.OpenApi`; Scalar in Development | Attribute-routed controllers carry the conventions; the framework's own generator writes the document | [HTTP API](http-api.md#versioning-and-the-openapi-document) | — |
@@ -157,12 +160,15 @@ any other.
 | <!--#if (sqlite)--> |
 | xUnit v3, Shouldly, NSubstitute, NetArchTest | Integration tests run on a real SQLite file; the architecture is held by tests | [Testing](../guides/testing.md) | — |
 | <!--#endif--> |
-| <!--#if (ci)--> |
+| <!--#if (githubCi)--> |
 | GitHub Actions | The gate runs where the repository lives | [Workflows](../guides/build-and-ci.md#workflows) | — |
 | CodeQL code scanning beside the gate, weekly and on every change to `main` | Taint paths a test does not walk, reported where GitHub shows alerts | [Workflows](../guides/build-and-ci.md#workflows) | — |
 | <!--#endif--> |
-| <!--#if (sonar)--> |
+| <!--#if (sonarWorkflow)--> |
 | Sonar for static analysis and coverage | Issues and coverage read in one place, locally as in CI | [Sonar](../guides/build-and-ci.md#sonar) | — |
+| <!--#endif--> |
+| <!--#if (sonar && !sonarWorkflow)--> |
+| Sonar for static analysis and coverage | Issues and coverage read in one place, locally | [Sonar](../guides/build-and-ci.md#sonar) | — |
 | <!--#endif--> |
 | <!--#if (presentationBlazorServer)--> |
 | A Blazor Web App with server interactivity, its pages from `dotnet new blazor` at bootstrap, composing the use cases in process | A server-rendered site needs no client of the API and no token per user | [Presentation projects](../features/presentation.md) | — |

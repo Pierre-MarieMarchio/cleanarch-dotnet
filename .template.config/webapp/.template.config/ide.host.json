@@ -69,6 +69,13 @@
       "isVisible": true
     },
     {
+      "id": "codeHost",
+      "name": {
+        "text": "Project generated with --code-host"
+      },
+      "isVisible": true
+    },
+    {
       "id": "ci",
       "name": {
         "text": "Project generated with --ci"

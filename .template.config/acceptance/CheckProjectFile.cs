@@ -96,12 +96,14 @@ internal static class ProjectFileCheck
         string Value(string symbol) => given.GetValueOrDefault(symbol) ?? symbols.GetProperty(symbol).GetProperty("defaultValue").GetString()!;
 
         var options = new JsonObject();
-        foreach (string option in new[] { "auth", "database", "examples", "files", "ci", "sonar", "agentFiles", "agentFilesExample", "aspire" })
+        foreach (string option in new[] { "auth", "database", "examples", "files", "codeHost", "ci", "sonar", "agentFiles", "agentFilesExample", "aspire" })
         {
             options[option] = symbols.GetProperty(option).GetProperty("datatype").GetString() == "bool"
                 ? JsonValue.Create(bool.Parse(Value(option)))
                 : JsonValue.Create(Value(option));
         }
+
+        options["ci"] = options["ci"]!.GetValue<bool>() && Value("codeHost") != "none";
 
         string web = Value("web");
         string[] chosen = Value("presentation").Split('|');
@@ -175,7 +177,7 @@ internal static class ProjectFileCheck
 
         try
         {
-            string options = "--web vite-react --web-audience admin --presentation wpf --presentation worker --agent-files false --aspire true";
+            string options = "--web vite-react --web-audience admin --presentation wpf --presentation worker --agent-files false --aspire true --code-host none";
             File.WriteAllText(Path.Combine(scratch, "cleanarch.json"), Expected("Acme.Shop", [.. options.Split(' ')]));
 
             if (Run([scratch, "Acme.Shop", options]) != 0)
@@ -186,7 +188,7 @@ internal static class ProjectFileCheck
             string text = File.ReadAllText(Path.Combine(scratch, "cleanarch.json"));
             string[] expectations =
             [
-                "\"auth\": \"local\"", "\"agentFiles\": false", "\"aspire\": true", "\"client\": true", "\"scope\": \"acme-shop\"",
+                "\"auth\": \"local\"", "\"codeHost\": \"none\"", "\"ci\": false", "\"agentFiles\": false", "\"aspire\": true", "\"client\": true", "\"scope\": \"acme-shop\"",
                 "\"name\": \"Site\"", "\"audience\": \"admin\"", "\"rendering\": \"spa\"", "\"port\": 5173", "\"name\": \"Api\"",
                 "\"framework\": \"wpf\"", "\"name\": \"Worker\"",
             ];

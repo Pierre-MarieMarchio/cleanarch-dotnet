@@ -53,11 +53,19 @@ Each rule has one home, and a test holds it wherever a test can.
 - A constraint you checked by hand becomes a rule in `tests/Architecture`.
 - A choice goes on the page it concerns, with its reason; an ADR only as a last resort, as
   [when to write one](docs/decisions/README.md#when-to-write-one) says.
+<!--#if (githubHost)-->
 - Commits and pull requests name their human author only, with no `Co-Authored-By` or "Generated
   with" line naming an AI tool; the author answers for every line and can explain it. Where a tool
   wrote code, an `Assisted-by: <tool>:<model>` trailer and the pull request's Assistance section are
   recommended; bots such as Dependabot or release-please keep their own messages as they write them,
   emoji included, since a bot did write them.
+<!--#endif-->
+<!--#if (!githubHost)-->
+- Commits and pull requests name their human author only, with no `Co-Authored-By` or "Generated
+  with" line naming an AI tool; the author answers for every line and can explain it. Where a tool
+  wrote code, an `Assisted-by: <tool>:<model>` trailer is recommended; a bot keeps its own messages
+  as it writes them, emoji included, since a bot did write them.
+<!--#endif-->
 - Each commit follows [the commit message form](#commit-messages).
 
 ## Commit messages

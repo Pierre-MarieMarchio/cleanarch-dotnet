@@ -141,7 +141,7 @@ it once it has the rich shape, and `--dry-run` shows what it would write.
 ## Done means
 
 - `verify`, then `coverage`, pass without overrides.
-<!--#if (ci)-->
+<!--#if (githubCi)-->
   `.github/workflows/ci.yml` runs the same gate on every pull request.
 <!--#endif-->
 - Without Docker, or when a gate stops on the machine rather than on a test, run what can run

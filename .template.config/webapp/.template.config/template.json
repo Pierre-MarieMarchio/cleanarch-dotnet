@@ -169,12 +169,31 @@
       "defaultValue": "true",
       "description": "The project's --files value: the .NET client a Blazor WebAssembly app brings reads the errors its routes answer."
     },
+    "codeHost": {
+      "type": "parameter",
+      "displayName": "Project generated with --code-host",
+      "datatype": "choice",
+      "defaultValue": "github",
+      "choices": [
+        { "choice": "github", "description": "The project was generated with --code-host github." },
+        { "choice": "none", "description": "The project was generated with --code-host none." }
+      ],
+      "description": "The project's --code-host value: with --workspace, the workspace's Dependabot entries and its workflows join the .github files only where the project has them."
+    },
+    "githubHost": {
+      "type": "computed",
+      "value": "(codeHost == \"github\")"
+    },
     "ci": {
       "type": "parameter",
       "displayName": "Project generated with --ci",
       "datatype": "bool",
       "defaultValue": "true",
       "description": "The project's --ci value: with --workspace, the web workflow joins the others."
+    },
+    "githubCi": {
+      "type": "computed",
+      "value": "(ci && githubHost)"
     },
     "agentFiles": {
       "type": "parameter",
@@ -568,7 +587,7 @@
     {
       "source": "../../.github/workflows/",
       "target": "./.github/workflows/",
-      "condition": "(workspace && ci)",
+      "condition": "(workspace && githubCi)",
       "include": [
         "web.yml",
         "web-node-version.yml"

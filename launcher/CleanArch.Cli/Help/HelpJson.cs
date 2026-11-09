@@ -66,6 +66,11 @@ internal static class HelpJson
             options["files"] = JsonValue.Create(true);
         }
 
+        if (file.Options.CodeHost is { } codeHost)
+        {
+            options["codeHost"] = JsonValue.Create(codeHost);
+        }
+
         if (file.Options.Ci is true)
         {
             options["ci"] = JsonValue.Create(true);

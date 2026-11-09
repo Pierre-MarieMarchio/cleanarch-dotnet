@@ -45,6 +45,7 @@ public sealed class HelpCommandTests : IDisposable
         Text(options["database"]).ShouldBe("postgresql");
         Text(options["examples"]).ShouldBe("all");
         Flag(options["files"]).ShouldBeTrue();
+        Text(options["codeHost"]).ShouldBe("github");
         Flag(options["ci"]).ShouldBeTrue();
         Flag(options["agentFiles"]).ShouldBeTrue();
         options.ContainsKey("sonar").ShouldBeFalse("the project file records --sonar false, so sonar does not apply to this project");
