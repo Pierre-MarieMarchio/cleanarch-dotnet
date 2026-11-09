@@ -2558,7 +2558,7 @@
       "description": "Bootstrap also installs the web workspace.",
       "manualInstructions": [
         {
-          "text": "It installs src/Web and writes its TypeScript API client, which needs Node.js and pnpm: run corepack enable once per machine."
+          "text": "It installs src/Web and writes its TypeScript API client, which needs Node.js and pnpm: run npm install --global corepack, then corepack enable, once per machine."
         }
       ],
       "continueOnError": true

@@ -63,7 +63,7 @@ internal static partial class WebAppScaffold
             shell,
             call,
             $"Creating src/Web/apps/{app} runs {descriptor.Package}, the framework's official CLI, which pnpm fetches from the npm registry, "
-            + "so this step needs Node.js, pnpm (`corepack enable` once per machine) and the network; the output above says which failed. "
+            + "so this step needs Node.js, pnpm (`npm install --global corepack`, then `corepack enable`, once per machine) and the network; the output above says which failed. "
             + "The app's folder is unchanged, so running this again once the cause is fixed creates it.");
     }
 

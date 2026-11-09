@@ -19,7 +19,7 @@ still holds.
 | `tools/CheckDocPaths.cs` | every repository path in a Markdown code span exists, and every `docs/` path a workflow, script or `.http` file names; `CHANGELOG.md` and the plans folder are exempt |
 | `tools/CheckWorkflows.cs` | what a YAML parse misses: a dangling `needs:`, an action on a mutable tag, an image without a digest, a missing `permissions:`, an undeclared `$VAR`, a path absent from disk, a trigger filtered by `paths:` or `paths-ignore:`, a job-level `if:` on a pull request's matrix job, a job that runs `dotnet` on the runner image's SDK |
 | `tools/CheckComments.cs` | no comment outside the allowlist, one guidance line at a time in configuration files, no Markdown narrating the repository's history |
-| `tools/WebLockfiles.cs --check` | each generated web shape's lockfile equals what the pinned pnpm writes for it; needs pnpm (`corepack enable`) |
+| `tools/WebLockfiles.cs --check` | each generated web shape's lockfile equals what the pinned pnpm writes for it; needs pnpm (`npm install --global corepack`, then `corepack enable`) |
 | `openapi --check` | `src/Presentation/AT.Presentation.Client/Generated` equals what the pinned Kiota writes from the OpenAPI reference; needs the tools `dotnet tool restore` restores |
 
 The launcher's own build is a gate too: its analysis row under [the launcher](#the-launcher) gives the rules it holds.

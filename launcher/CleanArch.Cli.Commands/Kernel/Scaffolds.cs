@@ -3,7 +3,7 @@
 internal static class Scaffolds
 {
     private const string _workspaceHelp =
-        "The web workspace needs Node.js and pnpm: run `corepack enable` once, then `pnpm install` and `pnpm api` in src/Web.";
+        "The web workspace needs Node.js and pnpm: run `npm install --global corepack` and `corepack enable` once, then `pnpm install` and `pnpm api` in src/Web.";
 
     public static int Presentations(LocatedProject project, Shell shell, string? only) =>
         TestRuns.Guarded(shell, () => WriteTheClientWhereJoined(project, shell, CreatePresentations(project, shell, only)));

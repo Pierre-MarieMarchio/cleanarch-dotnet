@@ -41,7 +41,7 @@ WORKDIR /workspace
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
-RUN corepack enable && pnpm fetch
+RUN npm install --global corepack@0.36.0 && corepack enable && pnpm fetch
 
 COPY . .
 RUN pnpm install --offline --frozen-lockfile --filter framework-site... \

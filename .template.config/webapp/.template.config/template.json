@@ -607,7 +607,7 @@
       "description": "Create the app.",
       "manualInstructions": [
         {
-          "text": "The same dotnet cleanarch add web-app --name <name> then creates the app as src/Web/apps/<name>/scaffold.json describes and installs the web workspace; it needs Node.js, pnpm (corepack enable once per machine) and the network. Commit the app with src/Web/pnpm-lock.yaml."
+          "text": "The same dotnet cleanarch add web-app --name <name> then creates the app as src/Web/apps/<name>/scaffold.json describes and installs the web workspace; it needs Node.js, pnpm (npm install --global corepack, then corepack enable, once per machine) and the network. Commit the app with src/Web/pnpm-lock.yaml."
         }
       ],
       "continueOnError": true
@@ -618,7 +618,7 @@
       "description": "Install the web workspace.",
       "manualInstructions": [
         {
-          "text": "In src/Web, run pnpm install, which needs Node.js and pnpm (corepack enable once per machine), and commit src/Web/pnpm-lock.yaml."
+          "text": "In src/Web, run pnpm install, which needs Node.js and pnpm (npm install --global corepack, then corepack enable, once per machine), and commit src/Web/pnpm-lock.yaml."
         }
       ],
       "continueOnError": true
