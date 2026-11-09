@@ -63,6 +63,9 @@ ex.env
 #if (githubHost)
 .github/
 #endif
+#if (gitlabHost)
+.gitlab/
+#endif
 
 # ---------------------------------------------------------------------------
 # Build output. Copying host bin/obj into the image poisons the container build

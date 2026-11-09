@@ -141,7 +141,10 @@ setting, table or test names it.
 | <!--#if (githubHost)--> |
 | `--code-host` | `github` | GitHub's files under `.github`: Dependabot, the issue forms, the pull request template and, with `--ci`, the workflows |
 | <!--#endif--> |
-| <!--#if (!githubHost)--> |
+| <!--#if (gitlabHost)--> |
+| `--code-host` | `gitlab` | GitLab's files under `.gitlab`: the merge request and issue templates |
+| <!--#endif--> |
+| <!--#if (!anyCodeHost)--> |
 | `--code-host` | `none` | no code host's files: no workflow, no Dependabot, no issue form and no pull request template |
 | <!--#endif--> |
 | <!--#if (githubCi && anyWeb && serverDatabase)--> |
