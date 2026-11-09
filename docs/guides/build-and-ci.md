@@ -86,7 +86,8 @@ checkout, against the same `coverage.minimum`, as
 [maintaining the template](../template/maintaining-the-template.md#the-acceptance-matrix) says.
 <!--#endif-->
 When the project holds the .NET client, it runs `openapi --check` after `verify`, so a contract
-change without its regenerated client fails.
+change without its regenerated client fails: the check regenerates the client into a temporary folder
+with the Kiota the tool manifest pins and fails on any difference from the committed `Generated/`.
 <!--#if (anyWeb)-->
 With a web workspace it then runs `pnpm install --frozen-lockfile` and compares
 `src/Web/packages/api-client/src/generated/schema.ts` with what `openapi-typescript` writes from the
@@ -289,6 +290,7 @@ Every dependency but the SDK is at an exact version, and `.github/dependabot.yml
 weekly, in bands; nothing is ignored. The SDK is a floor: `global.json` names the lowest version and
 lets a later feature band of the same major version run, and each Dockerfile pins the SDK image it
 builds with.
+The toolchain, the pinning and Dependabot are rows of [the stack](../architecture/README.md#the-stack).
 
 | Dependency | Pinned in |
 |---|---|
@@ -304,9 +306,19 @@ builds with.
 
 `NuGetAudit` fails the build on any known advisory, `low` included, on a direct package as on a
 transitive one: `Directory.Build.props` sets `NuGetAuditMode` to `all` and `NuGetAuditLevel` to
-`low`, under `TreatWarningsAsErrors`. A project that is born vulnerable does not build in silence
-([ADR 0030](../decisions/0030-any-known-advisory-fails-the-build.md)), so a build can fail the day an
+`low`, under `TreatWarningsAsErrors`. A project that is born vulnerable does not build in silence,
+so a build can fail the day an
 advisory is published, with no change to the code.
+
+The level is `low` rather than `moderate` or `high`: a low advisory still reaches every instance of
+the project, and the line between low and moderate is the advisory author's judgement, not this
+project's. The audit fails rather than warns, because nobody reads a warning that has stood in the
+output for weeks, and a project generated on a vulnerable dependency would say so where no one looks.
+The mode is `all` because most advisories arrive through a package nobody references. Every failure
+ends in a decision recorded in `Directory.Packages.props` or in a dated `NuGetAuditSuppress`, so the
+list of what the project accepts is the list of those two. The rule is revisited when NuGet can tell
+advisories on a package's reachable code from the rest, or when a failing build the day an advisory
+is published costs more than a project born vulnerable.
 
 When the build stops on an `NU1901`, `NU1902`, `NU1903` or `NU1904`:
 
@@ -328,14 +340,9 @@ advisory fails, whatever its severity. The answer is the same too: raise the dep
 patched release under `overrides` in `src/Web/pnpm-workspace.yaml` with a comment saying when it can go;
 a package that cannot take the pinned release as it is gets a pnpm patch in `src/Web/patches/`.
 <!--#endif-->
-
 <!--#if (templateMaintenance)-->
+
 The template builds what nuget.org serves each week, so an advisory published since the last release
 shows before a user meets it:
 [the weekly build of the published package](../template/maintaining-the-template.md#the-published-package-each-week).
-
 <!--#endif-->
-## Decisions
-
-The toolchain, the pinning and Dependabot are rows of
-[ADR 0001](../decisions/0001-adopt-the-generated-baseline.md).

@@ -1,7 +1,7 @@
 ---
 type: reference
 title: Decisions
-description: When a choice deserves an ADR, how ADRs are numbered and superseded, and which decisions this project holds.
+description: Why an ADR is a last resort, when a choice still deserves one, how ADRs are numbered and superseded, and which decisions this project holds.
 ---
 
 # Decisions
@@ -13,15 +13,15 @@ alternative.
 
 ## When to write one
 
-Write an ADR for a decision that passes all three tests:
+An ADR is a last resort. The architecture pages say how this project is shaped and why, and the
+feature, guide and reference pages say how each part works and why; a choice they can explain
+belongs there. An ADR records only what they cannot carry: a significant, costly-to-reverse choice
+between real alternatives whose trade-offs and revisit condition must stay on record to be argued,
+revisited or superseded. A convention, a mechanism, a contributor rule (`CONTRIBUTING.md`), a
+consequence of another decision or a narrow technical detail is never an ADR.
 
-- a competent team could reasonably have decided otherwise;
-- a future maintainer must know its consequences before changing it;
-- it is not already obvious from the code, the conventions or mainstream .NET practice.
-
-A rule every change follows, or a fact about how something works, belongs on the page that
-describes it, not here. Where a test can hold a decision, it does, and the ADR names the test: a
-decision and the test that holds it change together, in the same commit.
+Where a test can hold a decision, it does, and the ADR names the test: a decision and the test that
+holds it change together, in the same commit.
 
 ## Numbering and status
 
@@ -42,10 +42,10 @@ not by the decision.
 
 ## Changing an inherited choice
 
-[ADR 0001](0001-adopt-the-generated-baseline.md) lists the choices this project inherited: its
+[The stack](../architecture/README.md#the-stack) lists the choices this project inherited: its
 stack, tools, foundations and deployment shape. To reverse or replace one of them, write a product
-ADR that names the row, then link that ADR from the row's "Changed by" cell. ADR 0001 stays
-Accepted, and its table shows which inherited choices still hold.
+ADR that names the row, then link that ADR from the row's "Changed by" cell, so the table shows which
+inherited choices still hold.
 
 ## The decisions
 

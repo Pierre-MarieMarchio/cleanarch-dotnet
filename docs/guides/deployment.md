@@ -23,8 +23,19 @@ of its own from one commit; the schema changes in a step of its own before any o
 <!--#endif-->
 <!--#if (sqlite)-->
 This project is not deployed. It runs on SQLite, a development database, and the API refuses to start
-outside Development; [ADR 0021](../decisions/0021-sqlite-is-a-development-database.md) says why and
-how to move to a server database. The rest of this page applies once the move is made.
+outside Development, for the reasons below, which also give the move to a server database. The rest
+of this page applies once the move is made.
+
+A file has one writer at a time, its locks live in the process that opened it, and its types are
+fewer than a server's: a project that started anywhere would meet these limits in production, under
+load, rather than on its first start. The host throws at composition when its environment is not
+`Development`, with a message that names the way out, and no setting lifts the refusal: every
+deployment would set it, and the refusal would stop saying anything. No release workflow and no
+migration bundle are generated, since there is nothing to deploy.
+
+To deploy, generate the project again with `--database postgresql` or `sqlserver`, move the
+features' code across, and let `bootstrap` create the migrations for the new provider. The domain and
+the application do not change, since no provider reaches them.
 <!--#endif-->
 
 ## The local stack is no model
@@ -44,7 +55,7 @@ each of their values trades safety for a start that needs nothing. A deployment 
 | a database in a container, its password in `.env.example` for anyone to read, one principal for everything | a database you operate or rent, its password from a secret store, and a migration principal apart from the runtime one, as [migrations at release](#migrations-at-release) says |
 | <!--#endif--> |
 | <!--#if (sqlite)--> |
-| SQLite, in a file the containers share | a server database, as [ADR 0021](../decisions/0021-sqlite-is-a-development-database.md) says |
+| SQLite, in a file the containers share | a server database, as [when](#when) says |
 | <!--#endif--> |
 | Mailpit, which catches every mail, reached without TLS (`EMAIL_SECURITY=None`, `EMAIL_ALLOW_INSECURE_TRANSPORT=true`) | a relay over `StartTls` or `SslOnConnect`, with `Email:AllowInsecureTransport` false |
 | plain HTTP on ports bound to `127.0.0.1` | TLS at the proxy in front, as [behind a proxy](#behind-a-proxy) says |
@@ -160,7 +171,7 @@ The release workflow builds the bundles from the tagged commit and uploads them 
 running them is the deployment's step.
 <!--#endif-->
 
-Running migrations at release is a row of [ADR 0001](../decisions/0001-adopt-the-generated-baseline.md).
+Running migrations at release is a row of [the stack](../architecture/README.md#the-stack).
 Moving them into the process would give the runtime user DDL rights and race every replica on the
 history table.
 

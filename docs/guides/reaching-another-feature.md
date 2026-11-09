@@ -10,7 +10,7 @@ description: How one feature reads, changes or reacts to another through a port 
 
 A feature needs another one: to read its state, to change it, or to let it react to a fact. At the
 end, the two meet through a port or a domain event, the only ways
-[ADR 0034](../decisions/0034-features-meet-through-ports-their-owner-declares-and-events.md) allows, and each feature
+[modules and boundaries](../architecture/modules-and-boundaries.md#features-meet-through-ports-and-events) allows, and each feature
 can still be removed without editing the other's internals.
 
 | The feature needs to | Through | Runs |
@@ -21,6 +21,11 @@ can still be removed without editing the other's internals.
 
 A port is a synchronous call whose answer the use case needs. An event is a fact the raising
 feature does not wait on: if nobody needs the answer, it is an event.
+
+Two other ways in look shorter and are refused. Sending the other feature's use case from a handler
+is a use case inside a use case: two commits, the pipeline run twice, and a caller bound to a
+message shaped for a host. Changing the other feature's state through an event commits apart from
+the operation and at most once, so a state that must change with it can be left behind.
 
 ## A read port
 
@@ -42,12 +47,12 @@ both commit, or neither does.
 
 1. Declare the port in `<B>`'s application folder,
    `src/Application/AT.Application/Features/<B>/Ports/<Capability>/I<Capability>.cs`, as
-   [ADR 0034](../decisions/0034-features-meet-through-ports-their-owner-declares-and-events.md) says: the port belongs to
+   [modules and boundaries](../architecture/modules-and-boundaries.md#features-meet-through-ports-and-events) says: the port belongs to
    the feature that owns the state. It answers a `<Capability>Status` enum beside it that closes the
    ways the call can go, never a `Result`: the use case that calls it chooses the error code.
 <!--#if (accounts)-->
    It takes the owner, so another caller's record answers as a missing one
-   ([ADR 0009](../decisions/0009-ownership-is-in-the-query.md)).
+   ([ADR 0004](../decisions/0004-ownership-is-in-the-query.md)).
 <!--#endif-->
 2. Implement it in `<B>`'s `Services/` folder, as `<Capability>Service`, internal: it loads `<B>`'s
    aggregate through `<B>`'s repository and calls the aggregate method that holds the rule, so `<B>`'s
@@ -64,8 +69,10 @@ both commit, or neither does.
    handler with a substitute of the port, including a status that refuses and leaves nothing
    committed.
 
-When several features each answer the same request, the port is declared once, in
-`AppTemplate.Application.Core`, and each owner implements it.
+When several features each answer the same request, the port is declared once, under
+`Common/Ports/` of `AppTemplate.Application.Core`, and each owner implements it; the caller takes
+every implementation. The caller never declares the port it needs: the owner would then implement an
+interface from each caller's folder, and removing a caller would edit the owner.
 <!--#if (anyFeature)-->
 `IDeletedAccountDataPolicy` is the worked case, which every feature that owns user data implements
 and the account-deletion sweep calls.
@@ -74,7 +81,7 @@ and the account-deletion sweep calls.
 ## A domain event
 
 Feature `<A>` announces a fact; any feature, `<A>` included, reacts after the commit
-([ADR 0006](../decisions/0006-events-after-commit-without-an-outbox.md)).
+([ADR 0002](../decisions/0002-events-after-commit-without-an-outbox.md)).
 
 ### Raise it
 

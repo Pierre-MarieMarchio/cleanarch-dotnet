@@ -27,7 +27,7 @@ the pages this project holds, so a page appears there once it exists, and leaves
 
 [The decisions](decisions/README.md) say when a choice deserves an ADR, and
 [their index](decisions/index.md) lists every one with its status.
-[ADR 0001](decisions/0001-adopt-the-generated-baseline.md) records the choices this project started
+[The stack](architecture/README.md#the-stack) records the choices this project started
 with.
 
 ## Adding a page
@@ -44,7 +44,11 @@ Then run `dotnet cleanarch docs-index`, which lists the new page in its folder's
 `add feature` and `remove feature --apply` run it for the page they write or delete. `verify` fails
 while an index no longer lists its folder's pages as their frontmatter says.
 
-Every page opens with its frontmatter, at the first byte of the file, before its `# ` heading:
+The pages form a bundle in the [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
+(OKF v0.2), so a reader, an agent or a tool learns what a page is and what it answers from its
+frontmatter, without opening it, and each folder's index is written from that frontmatter rather
+than kept by hand. Every page opens with its frontmatter, at the first byte of the file, before its
+`# ` heading:
 
 ```yaml
 ---

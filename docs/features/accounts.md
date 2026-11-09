@@ -20,8 +20,20 @@ The email address is an account's only identifier: there is no user name, and Id
 `{"status":"pending"}`. The address learns by mail what happened: a confirmation link for a new
 account, a fresh link for one still unconfirmed, a notice with sign-in and reset hints for one
 already confirmed. A `400` only ever concerns the submitted values (address format, password
-policy), never whether the address is taken
-([ADR 0014](../decisions/0014-anonymous-routes-reveal-nothing.md)).
+policy), never whether the address is taken.
+
+Every anonymous route follows one rule: its answer never tells whether an address has an account
+here, since that answer is the first step of credential stuffing and of targeted phishing.
+Registration and an address change answer alike for every well-formed request, and the mail tells
+the address's holder, the only person entitled to know. A refused sign-in answers one error whatever
+the reason, down to the message, and reset and resend answer identically whether the address exists.
+The `400`s about the submitted values are judged before the address is looked up, so their order
+reveals nothing either, and the anonymous routes are rate-limited per client address, so the uniform
+answers are slow to probe. A client therefore cannot say "that address is taken" inline.
+`RegisterTests` and `RegistrationFlowTests` hold registration; `LoginUniformityTests` and
+`LoginTests` assert every refusal against a literal and against each other, so a change that moves
+them all and one that splits them both fail. The rule protects nothing once the product makes
+addresses public anyway.
 
 An account signs in only once its address is confirmed. The link's page posts the address and the
 token to `POST /api/v1/auth/confirm-email`; `resend-confirmation-email` mails a fresh link and
@@ -119,8 +131,17 @@ Each feature that owns user data decides the fate of its rows, delete or anonymi
 twice: a consumer of the fact is the fast path, and a leased sweep in the maintenance job
 (`Jobs:Maintenance:SweepDeletedAccountsDataEnabled`) is the guarantee, since in-process
 publication is at most once. Both check that the account is really gone before writing, and both
-are idempotent ([ADR 0012](../decisions/0012-account-deletion-each-feature-decides.md)). Every
-feature this project ships deletes. A generated feature states its choice with
+are idempotent. Every
+feature this project ships deletes.
+
+The account module deletes nothing but the account: the rest lives in features it does not know,
+in transactions it does not share. `UserAccountDeleted` is declared in the application core, so a
+feature consumes it without naming the module that deleted the account. The consumer asks
+`IUserAccountDirectory` whether the account is really gone and commits in a transaction of its own;
+the sweep asks each feature which owner ids still hold data and applies the same policy, so a fact
+that never reached a consumer costs an interval, not the data's fate. A feature added later joins
+with one consumer and one sweep query. `SweepDeletedAccountDataTests` holds the sweep, and each
+feature's consumer has its own test. A generated feature states its choice with
 `add feature --deletion delete|anonymise` ([Adding a feature](../guides/adding-a-feature.md)).
 <!--#endif-->
 <!--#if (!anyFeature)-->
@@ -142,7 +163,10 @@ only costs the row, never the sign-in.
 
 The log survives the account it describes, so an investigation after a deletion still has it, and
 it is purged after `SecurityEventLog:RetentionInDays` (90 days by default) by the maintenance job,
-or by `DELETE /api/v1/maintenance/security-events/expired`. An event never names an email address.
+or by `DELETE /api/v1/maintenance/security-events/expired`. An event never names an email address:
+it speaks in user ids, with none for an attempt against an address that names no account, so a log
+line cannot leak what the anonymous routes hide, and support investigates by user id, not by the
+address a person types.
 
 ## Development seed
 
@@ -158,14 +182,4 @@ Set `IdentitySeed:AdminPassword` with `dotnet user-secrets`; a blank password fa
 <!--#endif-->
 ## Decisions
 
-- [0009 Ownership is in the query](../decisions/0009-ownership-is-in-the-query.md)
-<!--#if (anyFeature)-->
-- [0012 Account deletion: each feature decides](../decisions/0012-account-deletion-each-feature-decides.md)
-<!--#endif-->
-<!--#if (localAuth)-->
-- [0013 A session is a refresh-token family](../decisions/0013-a-session-is-a-refresh-token-family.md)
-- [0014 Anonymous routes reveal nothing](../decisions/0014-anonymous-routes-reveal-nothing.md)
-<!--#endif-->
-<!--#if (externalAuth)-->
-- [0017 External subjects map to internal owners](../decisions/0017-external-subjects-map-to-internal-owners.md)
-<!--#endif-->
+- [0004 Ownership is in the query](../decisions/0004-ownership-is-in-the-query.md)

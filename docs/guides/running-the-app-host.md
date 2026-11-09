@@ -11,11 +11,23 @@ description: How to run the local stack from the Aspire app host, with every hos
 You want the local stack from one command, with every host's logs, traces and metrics in one
 dashboard and a debugger able to attach to each host: `src/AppHost/AT.AppHost`, an Aspire app host,
 starts what `docker compose up` starts. Compose stays the reference of the deployment and the app
-host follows it ([ADR 0032](../decisions/0032-the-app-host-follows-compose.md)): it reads each
+host follows it: it reads each
 container's image from the Compose files when it starts, and `LocalStackParityTests` fails when a
 service or a host setting of the Compose files is missing from the app host, when the app host
 starts something Compose does not, or when a web app listens on another port than its
 `src/Web/apps/<App>/compose.yml` publishes.
+
+Two descriptions of one stack drift unless one is the reference and a test holds the other to it.
+Compose is the reference because it is the shape a deployment copies: generating Compose from the
+app host would make every change to an image or a setting go through a generator the reviewers do not
+read, and copying the images into the app host would fail every Dependabot pull request on a Compose
+image until someone copied the reference across. `LocalStackParityTests` lists by name, with its
+reason, each service, setting or variable in which the two stacks differ. The dashboard and the
+orchestrator come from the Aspire CLI the app host's SDK pins, run through `dnx`, with no workload
+and no global tool installed. SQLite is refused with the app host: its file lives in a volume Compose
+shares between containers, which the processes the app host starts cannot share. The app host
+becomes the reference only once Aspire can import a Compose file as its model, or the deployment
+moves away from Compose.
 
 | Resource | Started as | Compose service |
 |---|---|---|

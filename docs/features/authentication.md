@@ -30,7 +30,7 @@ The mode was chosen when the project was generated, and it decides which modules
 accounts hold the identity schema and the account routes; an external provider holds a mapping
 from the provider's subjects to owner ids; a public API holds neither. Changing mode is a product
 decision recorded against the baseline:
-[ADR 0001](../decisions/0001-adopt-the-generated-baseline.md).
+[the stack](../architecture/README.md#the-stack).
 
 <!--#if (localAuth)-->
 ## Local accounts
@@ -48,7 +48,7 @@ apart by its `status` field:
 A client reads `status` rather than guessing from which fields are present. Every refusal is the
 same `401` `auth.login.invalidCredentials`: an unknown address, a wrong password, an unconfirmed
 address and a locked account cost the same time and read the same, so the route reveals nothing
-about who has an account ([ADR 0014](../decisions/0014-anonymous-routes-reveal-nothing.md)).
+about who has an account ([registration](accounts.md#registration-and-email-confirmation)).
 
 ### Access and refresh tokens
 
@@ -60,6 +60,12 @@ The refresh token is an opaque 32-byte random value, of which only a SHA-256 has
 `POST /api/v1/auth/refresh` consumes it and returns a new pair. Presenting a token that was already
 consumed is treated as theft: every session of the account is revoked.
 
+A token carries no key id, and no JWKS document publishes the keys: validation tries `Jwt:Key`,
+then each of `Jwt:PreviousKeys`, all read from configuration, since every host that validates a
+token already holds the secret and trying one or two HS256 keys costs nothing. An asymmetric key
+and a published key set are the shape to take once a party that holds no secret must validate the
+tokens; [rotating the signing key](../guides/rotating-the-signing-key.md) gives the steps.
+
 ### Sessions
 
 One sign-in is one session: the family of refresh tokens that sign-in started. The access token
@@ -68,8 +74,26 @@ carries a `sid` claim naming it. `GET /api/v1/auth/sessions` lists the caller's 
 `logout-all` ends them all.
 
 A credential change (password, second factor, passkey removal) ends every other session; a
-password reset through the mailed link ends them all
-([ADR 0013](../decisions/0013-a-session-is-a-refresh-token-family.md)).
+password reset through the mailed link ends them all.
+
+Which sessions end depends on where the change came from. Made from a session, a password change,
+arming or dropping the second factor, or removing a passkey spares that session, which has just
+proved the new posture; a reset through a mailed link comes from no session and spares none, nor
+does an administrator's lock or role change, nor a token that names no session. The security stamp
+fails every access token at its next validation, but refresh tokens are this project's own and
+outlive a stamp rotation, so every rotation goes through `CredentialInvalidationPolicy`, which
+revokes the grants; Identity leaves the stamp alone on some changes that take access away, and the
+adapters rotate it themselves there. A new operation that rotates the stamp calls the policy.
+`logout-all` revokes every grant and rotates nothing, so the access token that asked lives out its
+few minutes.
+
+A session records its client's `User-Agent` at last use, so a holder can tell devices apart, and no
+address. Ending a session is two conditional statements, the family then its live grants, never a
+loop over grants, since the replay path is one an attacker can trigger at will.
+`SecurityStampRotationTests` and `RefreshTokenTests` replay the token in circulation after each
+change; `RefreshTokenRotationTests` proves on a real database that one of two simultaneous
+rotations wins. An access token that must end the instant its session does would need a check on
+every request, which this project does not make.
 
 ### Two-factor
 
@@ -86,7 +110,24 @@ WebAuthn on ASP.NET Core Identity. Registering takes two calls (`passkeys/regist
 `passkeys/register`) and re-authenticates the caller; signing in takes two anonymous calls
 (`passkeys/sign-in/options`, then `passkeys/sign-in`). A user-verified passkey is a whole sign-in,
 so it never asks for the second factor. The ceremony state travels to the client sealed, lives
-five minutes and is spent once ([ADR 0015](../decisions/0015-passkeys-stand-on-their-own.md)).
+five minutes and is spent once.
+
+Identity keeps the state between the two calls in a cookie, and this API sets no cookie for sign-in
+and keeps no session between calls, so the client carries it: a time-limited data protector seals
+it under a purpose per ceremony kind and, for a registration, per account, for
+`Passkey:CeremonyLifetime`. It is spent on its first presentation, before anything is verified, by
+one insert keyed on its hash, so the database decides which of two presentations wins on any
+instance, and one captured state cannot sign in twice even with a synced passkey that keeps no
+signature counter. A rewritten, expired, wrong-kind or spent state is refused like a ceremony that
+does not verify.
+
+The ceremonies require user verification, which no setting relaxes, so possession and the user
+check happen together: the two factors a password and a code provide. Registering a passkey ends no
+session, and re-authenticating first keeps a stolen session from registering its thief's passkey;
+removing one counts as a password change, rotating the stamp and ending every other session.
+`PasskeyCeremonyStateTests` refuses tampered, foreign, wrong-kind and spent states with a verifier
+that accepts everything, so only the state can be what refuses; `CompletePasskeySignInTests` holds
+the sign-in rule.
 
 <!--#if (accessKeys)-->
 ### Access keys
@@ -102,8 +143,15 @@ a password change leaves them alive, a lockout refuses them and deleting the acc
 
 This API never accepts an access key: its bearer scheme reads JWTs only. The MCP server validates
 the key by sending `AuthenticateAccessKeyCommand` and acts as its owner. A malformed, unknown,
-revoked or expired key, and one whose account may not sign in, all answer `auth.accessKey.invalid`
-([ADR 0026](../decisions/0026-an-access-key-stands-for-its-owner-where-a-token-cannot-be-refreshed.md)).
+revoked or expired key, and one whose account may not sign in, all answer `auth.accessKey.invalid`.
+
+A key is a credential the owner can see and end without touching the password, whose theft costs
+less than the password's. Longer-lived access tokens would serve these clients but cannot be revoked
+before they expire, and lengthening every token for a few clients weakens all of them. Keys accepted
+by this API as well would give every endpoint a second credential that skips the security stamp and
+the sessions, and a key leaked from a tool would reach the account routes. An OAuth authorisation
+server with the device flow is the standard answer once third parties act for users, but a whole
+server and its consent screens for what is still the owner's own credential.
 
 <!--#endif-->
 ### Signing in with Google, Microsoft or Apple
@@ -123,16 +171,27 @@ A client sending `X-Refresh-Token-Mode: cookie` on `login`, `login/two-factor`, 
 cookie (`HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/api/v1/auth`) instead of in the body.
 The cookie is read only beside that header, which is the defence against cross-site requests;
 `refresh` and `logout` then take no body. Every local-accounts project answers the header, web app
-or not, and a client that never sends it works as above ([ADR 0016](../decisions/0016-browser-refresh-token-in-a-cookie.md)).
+or not, and a client that never sends it works as above.
+
+A browser cannot keep a refresh token where script reads it: a cross-site scripting flaw reads
+`localStorage` too, and the token outlives the page by days, so a flaw in the page can use the
+access token while the page lives but never keep the session. The cookie is host-only and carries
+no `__Host-` prefix, which would force `Path=/` and send it with every request. `SameSite=Strict`
+stops other sites, but another port of the same host is the same site; what such a page cannot do
+is send a custom header with credentials, since the request is preflighted and the CORS policy
+never allows credentials. The use cases see a string: `BrowserSession`, in the API layer, alone
+knows the cookie. Any header value other than `cookie` is a `400`. A backend-for-frontend that keeps
+every token on a server would spare the browser the cookie, at the price of a server beside every
+single-page app, which nginx serves alone. The deployment's ingress sends HSTS, which keeps a plain-HTTP page from planting a cookie of
+that name. `BrowserSessionTests` and `RefreshTokenCookieTests` hold the cookie, the header and the
+refusals. A browser app served from another site than the API is refused by `SameSite=Strict`, and
+calls for revisiting this mode.
 
 <!--#if (anyWeb)-->
 The single-page web apps of this project use this mode through the `api-client` package: the access
 token stays in a variable, the cookie carries the refresh token, and one refresh runs at a time. A
 server-rendered app uses neither: its server signs in in body mode, keeps both tokens, and gives the
 browser a session cookie of its own.
-<!--#if (webServerRendering)-->
-[ADR 0024](../decisions/0024-a-server-rendered-web-app-runs-on-its-own-server.md) says why.
-<!--#endif-->
 How an app signs in is in [Web front end](web-frontend.md#signing-in).
 
 <!--#endif-->
@@ -146,7 +205,16 @@ off.
 
 The provider's subject never becomes an owner id. The first request of each (issuer, subject)
 creates a mapping to an internal `UserId`, exactly once even under concurrency, and every business
-row carries that id ([ADR 0017](../decisions/0017-external-subjects-map-to-internal-owners.md)).
+row carries that id.
+Storing the subject on every row would spread the provider's identifier format through the schema,
+and changing provider would rewrite every table; with the mapping, it is the one place that knows a
+caller's subject. A mapping is written while the request is being authenticated, in a transaction
+of its own, and two first requests racing on the unique index over issuer and subject both end with
+the winner's owner id. Removing a mapping is final: a caller who signs in again is provisioned
+afresh, under a new owner id with none of the old one's data.
+`ExternalIdentityProvisioningTests`, `ExternalPrincipalMapperTests` and `TokenRoleMappingTests`
+hold provisioning and both role sources. Several providers resolving to one person would need
+account linking, which this mapping does not do.
 The mapping keeps the email and name the provider last sent, for notifications; an address the
 provider marks unverified is not kept. A token that does not validate, or names no issuer or
 subject, is `401` `auth.required`.
@@ -156,9 +224,6 @@ Authorization Code flow with PKCE, and sends its access token as `Authorization:
 <!--#if (anyWeb)-->
 A server-rendered web app runs that flow on its server, keeps the tokens there, and gives the
 browser a session cookie of its own.
-<!--#if (webServerRendering)-->
-[ADR 0024](../decisions/0024-a-server-rendered-web-app-runs-on-its-own-server.md) says why.
-<!--#endif-->
 How an app signs in is in [Web front end](web-frontend.md#signing-in).
 <!--#endif-->
 
@@ -186,7 +251,7 @@ The portal signs people in to itself, with a cookie, over the same accounts: the
 The MCP server authenticates its callers itself and acts for the owner its
 credential names: [presentation projects](presentation.md#calling-it) describes the credential a
 client sends and which tools it reaches
-([ADR 0027](../decisions/0027-an-mcp-server-acts-for-the-caller-its-credential-names.md)).
+([ADR 0005](../decisions/0005-an-mcp-server-acts-for-the-caller-its-credential-names.md)).
 
 <!--#endif-->
 ## Roles and policies
@@ -194,7 +259,7 @@ client sends and which tools it reaches
 Authorisation is default-deny: every endpoint requires an authenticated caller unless it carries
 `[AllowAnonymous]` ([Request pipeline](../architecture/request-pipeline.md#authorisation)). Ownership
 is checked in each query, never by a policy
-([ADR 0009](../decisions/0009-ownership-is-in-the-query.md)).
+([ADR 0004](../decisions/0004-ownership-is-in-the-query.md)).
 
 One policy, `Administrator`, guards the administration and maintenance routes.
 <!--#if (localAuth)-->
@@ -212,7 +277,7 @@ A new policy is a constant beside `Administrator` in
 `src/Presentation/AT.Presentation.Core/Common/Security/AuthorizationPolicies.cs` and one
 `AddPolicy` call where the module composes its authentication. A policy guards a route or a page of
 the host, never a use case, so a host that exposes an administration use case puts the policy on it
-again ([ADR 0039](../decisions/0039-a-role-is-checked-by-the-host-not-by-the-use-case.md)).
+again ([Request pipeline](../architecture/request-pipeline.md#authorisation)).
 
 <!--#endif-->
 ## Configure
@@ -273,26 +338,9 @@ with a test provider's keys.
 `ControllerContractTests` and the integration suite run without any authentication scheme.
 `Program.cs` refuses `[Authorize]` at start-up; no test exercises that refusal.
 <!--#endif-->
+<!--#if (accounts)-->
 
 ## Decisions
 
-- [0001 Adopt the generated baseline](../decisions/0001-adopt-the-generated-baseline.md): the authentication mode.
-<!--#if (accounts)-->
-- [0009 Ownership is in the query](../decisions/0009-ownership-is-in-the-query.md)
-<!--#endif-->
-<!--#if (localAuth)-->
-- [0013 A session is a refresh-token family](../decisions/0013-a-session-is-a-refresh-token-family.md)
-- [0014 Anonymous routes reveal nothing](../decisions/0014-anonymous-routes-reveal-nothing.md)
-- [0015 Passkeys stand on their own](../decisions/0015-passkeys-stand-on-their-own.md)
-- [0016 Browser refresh token in a cookie](../decisions/0016-browser-refresh-token-in-a-cookie.md)
-<!--#if (accessKeys)-->
-- [0026 An access key stands for its owner where a token cannot be refreshed](../decisions/0026-an-access-key-stands-for-its-owner-where-a-token-cannot-be-refreshed.md)
-<!--#endif-->
-- [0040 The signing key rotates through previous keys that only validate](../decisions/0040-the-signing-key-rotates-through-previous-keys-that-only-validate.md)
-<!--#endif-->
-<!--#if (externalAuth)-->
-- [0017 External subjects map to internal owners](../decisions/0017-external-subjects-map-to-internal-owners.md)
-<!--#endif-->
-<!--#if (accounts)-->
-- [0039 A role is checked by the host, not by the use case](../decisions/0039-a-role-is-checked-by-the-host-not-by-the-use-case.md)
+- [0004 Ownership is in the query](../decisions/0004-ownership-is-in-the-query.md)
 <!--#endif-->

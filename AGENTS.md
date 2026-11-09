@@ -108,8 +108,8 @@ it once it has the rich shape, and `--dry-run` shows what it would write.
   constraint, a reference. One that explains what the code does asks for a rename or an extraction.
 - Extract an abstraction only once two real cases prove its shape.
 - A test that buys a guarantee is seen failing once: break the code, watch it go red, restore it.
-- A rule checked by hand becomes a test in `tests/Architecture`; a decision is an ADR and the test
-  that holds it, changed together.
+- A rule checked by hand becomes a test in `tests/Architecture`; a decision is written down with the
+  test that holds it, changed together.
 
 ## Never
 
@@ -126,7 +126,7 @@ it once it has the rich shape, and `--dry-run` shows what it would write.
 - Lower `coverage.minimum` to pass: [re-measure it](docs/guides/testing.md#coverage).
 <!--#if (accounts)-->
 - Answer `403` for another caller's record: it answers `404`, the owner being in the query
-  ([ADR 0009](docs/decisions/0009-ownership-is-in-the-query.md)).
+  ([ADR 0004](docs/decisions/0004-ownership-is-in-the-query.md)).
 <!--#endif-->
 
 ## Writing docs
@@ -134,7 +134,8 @@ it once it has the rich shape, and `--dry-run` shows what it would write.
 - One question per page, in the voice of "this project": no history, no plan vocabulary.
 - A page starts from `docs/_page-templates/` with [its frontmatter](docs/README.md#adding-a-page),
   then `dotnet cleanarch docs-index` lists it.
-- A choice another team could have made otherwise is an ADR: [the criteria](docs/decisions/README.md).
+- A choice goes on the page it concerns; an ADR only as a last resort, as
+  [the criteria](docs/decisions/README.md#when-to-write-one) say.
 - Every path in backticks exists; write an illustration as a placeholder (`<Feature>`) or as prose.
 
 ## Done means
@@ -151,7 +152,7 @@ it once it has the rich shape, and `--dry-run` shows what it would write.
   row, a new choice's ADR.
 - One concern per change, as [pull requests](CONTRIBUTING.md#pull-requests) asks.
 - No `Co-Authored-By` nor "Generated with" in a commit or pull request: an `Assisted-by: <tool>:<model>`
-  trailer, and the author answers for every line ([ADR 0028](docs/decisions/0028-the-author-answers-for-every-line.md)).
+  trailer, and the author answers for every line ([pull requests](CONTRIBUTING.md#pull-requests)).
 
 ## This project
 

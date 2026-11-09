@@ -1,11 +1,11 @@
 ---
 type: decision
-title: 0017. A project runs its tasks from a pinned .NET tool
+title: 0003. A project runs its tasks from a pinned .NET tool
 description: Why a project runs its tasks from a .NET tool pinned at the template's version, while another tool only creates projects.
 status: Accepted
 ---
 
-# 0017. A project runs its tasks from a pinned .NET tool
+# 0003. A project runs its tasks from a pinned .NET tool
 
 Status: Accepted
 
@@ -34,7 +34,7 @@ expose one by one.
 - **A tool to create, a tool to work, as Vite does.** `dnx CleanArch.Create` creates a project and
   nothing else, as `npm create vite` does. Everything done inside a project, including adding a web
   app, a web package or a presentation project, belongs to the project's own tool, as `vite` does,
-  following [0019](0019-the-launcher-creates-and-the-project-tool-adds.md).
+  as [the launcher](../maintaining-the-template.md#the-launcher) says.
 - **The project's tool ships as a .NET tool.** `CleanArch.Cli` is packed from this repository under
   the `templateVersion` of `.template.config/template.json`, as the launcher is. Its command is
   `dotnet-cleanarch`, run as `dotnet cleanarch <command>`, and its commands, help and completion
@@ -48,6 +48,21 @@ expose one by one.
   project root by this file and reads it where the task launcher read a `//#if`.
   `dotnet cleanarch adopt` writes it for a project generated before the tool, from the facts the
   launcher already infers from a project's files.
+- **The project's facts come from the project file.** A question about the project is answered from
+  it, never inferred from files a team edits; inference survives only in `adopt`. `add web-app`,
+  `add web-package` and `add presentation` run the item template at the version the project file
+  records, so an addition matches the project's template version whatever launcher a user runs.
+- **Two things from the template reach a project, and only these two:** its provenance, the project
+  file and one sentence of `docs/getting-started/overview.md` naming the package, the version and
+  the options of the day of generation; and the tool, pinned in `.config/dotnet-tools.json` and
+  moved to a later version only by the team's `dotnet tool update`. The tool's help and messages
+  speak of "this project", as the pages do, and it never carries a template-maintenance gate.
+- **Both tools ask from the templates' manifests.** Each visible option of `ide.host.json`, in its
+  order and under its label, with the choices of `template.json` and the long names of
+  `dotnetcli.host.json`, embedded from the commit the tool is packed from. A refusal is evaluated,
+  never restated: the tool evaluates its `isRequired` on the answers and asks again the options it
+  reads, and a question offers only what some answer to the rest can generate. The launcher and the
+  tool share that code in `launcher/CleanArch.Tooling`.
 - **The commands follow five rules:**
   1. Each command prints what it runs, so the printed line gives the same result without the tool.
   2. A command takes the names of the tool its users already know: `add` and `remove` as
@@ -72,16 +87,20 @@ expose one by one.
   missing, so it also finishes an addition that the IDE started through an item template. The
   initial migrations are a step of `bootstrap`, and the repository checks are a step of `verify`.
 - **A team changes the tool at four depths**, each one costlier than the last:
-  1. **Configuration.** The project file adds steps to a command, before or after it, and adds
-     steps to `verify`. Removing a step of `verify` takes a project ADR, which the project file
-     names, and a test refuses the removal without it: `verify` is the gate the CI runs.
-  2. **Code templates.** A generator writes the files it creates from a reference feature written
-     as compilable C#, under placeholder names and with the template engine's conditions and name
-     forms, and instantiates it through the template engine. A template of the same path in the
-     project wins. `dotnet cleanarch templates copy <generator>` copies the built-in ones and
-     records the hash of each copy's source, so the tool warns when a later version changes a
-     template the project overrides, as `.feature-manifest/` does for a feature. The edits a
-     generator makes to existing files are the tool's code, outside this depth.
+  1. **Configuration**, planned and not offered yet: the project file would add steps to a
+     command, before or after it, and steps to `verify`; removing a step of `verify` would take a
+     project ADR, which the project file names, and a test would refuse the removal without it,
+     since `verify` is the gate the CI runs. The project file carries no steps today.
+  2. **Code templates**, planned and not offered yet
+     ([#376](https://github.com/Pierre-MarieMarchio/cleanarch-dotnet/issues/376)):
+     the generators still build their files in C# code, and no `templates copy` command exists. The
+     design: a generator writes the files it creates from a reference feature written as
+     compilable C#, under placeholder names and with the template engine's conditions and name
+     forms, and instantiates it through the template engine; a template of the same path in the
+     project wins; a `templates copy <generator>` command copies the built-in ones and records the
+     hash of each copy's source, so the tool warns when a later version changes a template the
+     project overrides, as `.feature-manifest/` does for a feature. The edits a generator makes to
+     existing files stay the tool's code, outside this depth.
   3. **Local commands.** A file-based app `tools/<name>.cs` runs as `dotnet cleanarch <name>`. A new
      name adds a command, a built-in name is replaced by it, and `help` says which is which. Only a
      name of lower-case words joined by hyphens is a command, so the scripts named in PascalCase
@@ -92,8 +111,8 @@ expose one by one.
      `help`, `eject` and `adopt` are not ejected, since they say what the project's own commands
      are, make them, and run before the tool knows the project. Nor are `add` and `remove`: they
      run on CleanArch.Tooling, the library they share with the launcher, on Spectre.Console and on
-     Roslyn, none of which a file-based app carries, and the code a generator writes changes
-     through its code templates instead.
+     Roslyn, none of which a file-based app carries; the code a generator writes is to change
+     through the code templates of the second depth once they exist.
 - **The template's own tasks and gates stay here.** `tools/CheckComments.cs`,
   `tools/CheckDocPaths.cs`, `tools/CheckWorkflows.cs` and the web lockfiles' task audit this
   repository and the generated trees, and the tool never carries them. This repository runs the tool
@@ -121,6 +140,11 @@ expose one by one.
   generators. A local tool pins each project's own.
 - **Team plugins loaded as assemblies.** Loading a team's assemblies into the tool's process brings
   version and isolation problems that a file-based app, run in a process of its own, does not have.
+- **The additions left in the launcher.** Two tools would add to a project, `dnx` would run the
+  latest launcher against a project pinned to an older template, and the facts would keep being
+  inferred from files a team edits.
+- **The options, or the refusals, written into the tools.** They would drift from the templates at
+  the first option added, and a user could answer into a combination the engine refuses.
 - **One tool for creating and working**, the way `ng` does it. Every project would carry for ever
   the machinery that asks a new project's questions, which runs once, before the project exists.
 
@@ -134,6 +158,9 @@ expose one by one.
   workspace's schema through `pnpm api <reference>` where it holds the `api-client` package. A
   project with the API and no .NET client still gets its reference.
 - The launcher and the tool share their process, terminal and manifest code in one solution.
+- A refusal keeps its shape, a hidden parameter whose only choice is `refused` with a conditional
+  `isRequired`, and `refusedOptions` stays its union: the launcher's tests fail on every combination
+  where the two disagree.
 - The tool becomes a public interface. The project file's schema, the code templates and the
   contract of a local command are versioned with care, and breaking one of them takes a major
   version.
@@ -142,12 +169,13 @@ expose one by one.
   generator's version.
 - The acceptance matrix tests one tool over each leg's project file instead of a conditioned copy
   per leg, and the generators gain unit tests of their own.
-- A project keeps in step with a package from the template, the condition under which
-  [0002](0002-nothing-about-the-template-reaches-a-project.md) says to revisit it. This ADR is
-  accepted together with [0018](0018-a-project-keeps-its-provenance-and-its-tool-from-the-template.md),
-  which supersedes 0002 and adds the tool to what reaches a project, and with 0019.
+- A project keeps in step with a package from the template: the tool joins its provenance among
+  what reaches a project, as
+  [what a project receives](../using-the-template.md#what-a-project-receives-and-what-stays-here)
+  says.
 
 ## Revisit when
 
-The .NET SDK comes to offer project-scoped commands of its own, or teams come to eject most of the
-commands.
+The .NET SDK comes to offer project-scoped commands of its own, teams come to eject most of the
+commands, the template engine comes to run post-actions that edit a project's existing files, or it
+exposes a template's parameters and constraints through an API a tool can call.

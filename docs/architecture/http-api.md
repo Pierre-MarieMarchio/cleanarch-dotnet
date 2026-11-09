@@ -36,14 +36,14 @@ generated client types them. The document carries both whichever endpoints remai
 included when none declares a `400`; `OpenApiDocumentTests` holds both.
 <!--#if (anyWeb)-->
 The web apps' API client is generated from the same document, written at build time
-([ADR 0019](../decisions/0019-one-generated-api-client.md)).
+([Web front end](../features/web-frontend.md#calling-the-api)).
 <!--#endif-->
 <!--#if (dotnetClient)-->
 The .NET client of `src/Presentation/AT.Presentation.Client` is generated from the reference itself:
 `dotnet cleanarch openapi` rewrites its `Generated/` folder with the Kiota the tool
 manifest pins, and `dotnet cleanarch openapi --check`, which `verify` runs, fails while
 the folder differs from what Kiota writes. Run it after `openapi`, and the review reads both
-([ADR 0023](../decisions/0023-a-dotnet-client-generated-by-kiota.md)).
+([the .NET client](layers-and-projects.md#the-net-client)).
 <!--#endif-->
 
 ## Errors and codes
@@ -109,6 +109,18 @@ PUT /api/v1/{resource}/{id}
 If-Match: "AAAABw"
 ```
 
+The version travels in the header alone: a representation carries no version field. A client that
+wants to be told before it overwrites sends `If-Match`, and answers `412` and `409` by reading again.
+A conflict is never retried by the server, since a retry would re-apply a decision made against a
+state that no longer exists; [concurrency](persistence-model.md#concurrency) says how the database
+decides. `EntityTagMappingTests` and `IfMatchPreconditionTests` hold the header contract.
+<!--#if (todoLists)-->
+`OptimisticConcurrencyTests` proves the conflict against a real database.
+<!--#endif-->
+<!--#if (notes)-->
+`NoteConcurrencyTests` proves it for the simple shape.
+<!--#endif-->
+
 ## Idempotency-Key
 
 A client that retries a create through a flaky network sends an `Idempotency-Key` header, an opaque
@@ -147,7 +159,20 @@ string of at most 128 characters, on an action that accepts one.
 | A key on a request with no identifiable caller | `400` `idempotency.callerNotIdentifiable` |
 
 Keys are scoped per user, so two callers may use the same string. A completed key stays replayable
-for `Idempotency:Retention`, and the maintenance job purges the expired ones.
+for `Idempotency:Retention`, and the maintenance job purges the expired ones, in bounded batches.
+
+On the server, a key is a lease per (user, key). The first request claims it with a fingerprint of
+the request, which tells a retry from a reuse; a reuse is a client error and never becomes
+reclaimable. Past `Idempotency:ClaimLease`, one conditional `UPDATE` reclaims an abandoned claim, so
+the database decides which of two retries wins. Claims commit through a context of their own,
+outside the request's unit of work, so they survive whether the business write commits or not, and
+once a response has started its claim is kept. Every `2xx` completes its key, whatever the action
+returned; only a failure status or an exception releases the claim, including an exception thrown
+after the business commit, which the filter cannot tell from one thrown before it. An action opts in
+with `[Idempotent]`, and only a `POST` may. `IdempotencyLeaseTests` proves the lease and the race
+against a real database, `IdempotentActionTests` holds the opt-in to `POST`, and
+`IdempotencyFilterTests` holds that every success completes its key. A verb other than `POST`, or
+keys shared between callers, as a service acting for many users would need, reopens this design.
 <!--#if (publicApi)-->
 
 This API identifies no caller, so it accepts no key; an action marks itself `[Idempotent]` once
@@ -215,12 +240,3 @@ A `GET` or `HEAD` answers `Cache-Control: private, no-cache`: a response may be 
 and must be revalidated, with `If-None-Match`, before reuse. An action marked `[NoStore]` answers
 `no-store`. Every response varies on `Authorization` and `Origin`, so a shared cache can never serve
 one caller's response to another. A value an endpoint sets itself is never overwritten.
-
-## Decisions
-
-- [0008. Optimistic concurrency end to end](../decisions/0008-optimistic-concurrency-end-to-end.md)
-- [0010. An idempotency key is a lease per user](../decisions/0010-idempotency-key-is-a-lease-per-user.md)
-- [0001. Adopt the generated baseline](../decisions/0001-adopt-the-generated-baseline.md): MVC controllers, `Asp.Versioning`, the framework's OpenAPI generator.
-<!--#if (anyWeb)-->
-- [0019. One generated API client](../decisions/0019-one-generated-api-client.md)
-<!--#endif-->

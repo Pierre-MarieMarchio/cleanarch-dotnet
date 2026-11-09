@@ -47,6 +47,12 @@ describe what a feature written by hand holds.
 
 Every refused combination is refused before anything is written, with the change that fixes it.
 
+`--concurrency etag` gives the feature the whole chain of
+[concurrency](../architecture/persistence-model.md#concurrency): the version stored, published as
+`ETag`, checked against `If-Match` and, last, in the `WHERE` of the write, so a lost update is refused.
+`--concurrency none` leaves a simple feature's writes last-wins, which suits a feature no two callers
+edit at once. The rich shape guards a state, so it always takes `etag`.
+
 ### Fields
 
 <!--#if (canAddFeature)-->
@@ -120,12 +126,12 @@ make by hand and names the one that failed. An edit already in place counts as m
 <!--#if ((presentationBlazorServer || presentationMcp) && api)-->
 Each host composes itself, so the call goes in the `Program.cs` of the portal or the MCP server too, and a first
 owner feature writes and registers each host's account directory beside the API's; the edits name
-both ([ADR 0022](../decisions/0022-a-presentation-project-reaches-the-core-through-the-api-or-the-application-layer.md)).
+both ([composition](../architecture/layers-and-projects.md#composition)).
 <!--#endif-->
 <!--#if (!api)-->
 Each host composes itself, so the call goes in every host's `Program.cs`, and a first owner feature
 writes and registers each host's account directory; the edits name every host
-([ADR 0022](../decisions/0022-a-presentation-project-reaches-the-core-through-the-api-or-the-application-layer.md)).
+([composition](../architecture/layers-and-projects.md#composition)).
 <!--#endif-->
 <!--#if (presentationMcp)-->
 The feature brings no tool: the MCP server offers a use case only once its tool is declared by hand,
@@ -150,7 +156,11 @@ changes the code, build again before the steps that remain.
 Run again with the same options, it writes nothing and resumes these steps; the migration it added
 is not added twice.
 <!--#if (accounts)-->
-Why it makes the edits rather than print them is [ADR 0031](../decisions/0031-the-feature-generator-composes-what-it-writes.md).
+It makes the edits rather than print them: a dozen lines copied by hand, in order, is where a feature
+goes wrong, and making the edits that can
+be made while printing the rest would leave a tree half composed, which neither builds nor says which
+half is missing. Discovering the features by reflection or a source generator would need no edit, at
+the price of a composition nobody reads in `Program.cs`, which every host states line by line.
 <!--#endif-->
 
 ## What you write by hand
@@ -272,8 +282,12 @@ manifest records each field with its default, the new SHA-256 of each file, and 
 the declaration, the migration and each file's change, so `remove feature` reads the files as
 untouched.
 <!--#if (accounts)-->
-Why a field is written through the syntax tree while the feature's edits are lines placed beside an
-anchor is [ADR 0031](../decisions/0031-the-feature-generator-composes-what-it-writes.md).
+A field is written through the syntax tree while the feature's edits are lines placed beside an
+anchor: the composing edits go beside a line a reader can see, in C# and Markdown alike, while a field rewrites
+members the generator wrote, which no line marks; placed beside anchors, a field's lines would land
+in the wrong place in a reformatted file instead of being refused. A field's default goes into its
+migration and never into the model, which would make EF Core leave out of an insert the value a
+caller set when it equals the type's empty one.
 <!--#endif-->
 
 ### By hand
@@ -384,7 +398,7 @@ repositories do not name one aggregate.
 ## Add a domain event
 
 A feature of the rich shape announces a fact as a domain event, which other features react to
-([ADR 0006](../decisions/0006-events-after-commit-without-an-outbox.md)):
+([ADR 0002](../decisions/0002-events-after-commit-without-an-outbox.md)):
 
 ```bash
 dotnet cleanarch add event <Features> <Event> --consumer <Features>:<Reaction> [--fields "<Name>:<Type>, ..."]
@@ -461,8 +475,9 @@ Some lists change only on purpose, and a test fails until they name what you add
    question the page answers, in one sentence.
 2. Run `dotnet cleanarch docs-index`, so that the features index shows the description you
    wrote.
-3. A choice another team could have made differently is an ADR: `docs/decisions/`, numbered from 1000,
-   linked from the page's `## Decisions`.
+3. A choice the feature makes goes on its page, with its reason. An ADR, in `docs/decisions/`, numbered
+   from 1000 and linked from the page's `## Decisions`, is a last resort, as
+   [when to write one](../decisions/README.md#when-to-write-one) says.
 <!--#if (anyFeature)-->
 
 ## Patterns from the examples

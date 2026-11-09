@@ -23,8 +23,7 @@ from the `packageManager` field of `src/Web/package.json`, which Corepack reads;
 
 Each app is its own deployable. Its development server, and in Compose its nginx container or, for
 an app rendered on the server, its Node server, relays `/api/` and `/health` to the API, so the
-browser talks to one origin per app and the API keeps CORS closed
-([ADR 0037](../decisions/0037-a-web-app-is-deployed-apart-behind-a-relay-to-the-api.md)).
+browser talks to one origin per app and the API keeps CORS closed ([running it](#running-it)).
 
 <!--#if (webNodeFramework)-->
 ## Creating the app
@@ -68,11 +67,11 @@ project owns, and adds the project to the solution: it builds, formats and is te
 under the same analyzers and central package versions.
 
 It calls the API through the .NET client of `src/Presentation/AT.Presentation.Client`, generated from the same document
-([ADR 0023](../decisions/0023-a-dotnet-client-generated-by-kiota.md)), at the page's own address, so
+([the .NET client](../architecture/layers-and-projects.md#the-net-client)), at the page's own address, so
 the `/api` relay of its server keeps the API on the same origin.
 <!--#if (localAuth)-->
 The client asks for the refresh token in the API's `HttpOnly` cookie
-([ADR 0016](../decisions/0016-browser-refresh-token-in-a-cookie.md)) and keeps the access token in
+([Authentication](authentication.md#browsers-the-refresh-token-cookie)) and keeps the access token in
 memory.
 <!--#endif-->
 
@@ -101,6 +100,23 @@ through nginx, or an app rendered on the server through its own Node server, on 
 `pnpm lint` and `pnpm test` in `src/Web` run every app and package; `pnpm test` runs them one after
 another, since Vitest keeps one module cache for the whole workspace and two runs clear it under
 each other once the installed lockfile changes.
+
+The API never serves an app, and no app of this workspace needs an entry in `Cors:AllowedOrigins`,
+which allows no origin by default. The relay keeps the browser on one origin per app: the client
+calls relative paths, an app's cookies and Content-Security-Policy concern its origin alone, and
+each app deploys, scales and rolls back apart from the API, though a contract change still releases
+both together. An API that served the built apps would carry every app's build in its image,
+redeploy for a change to a page, give the apps its own security headers and leave a server-rendered
+app nowhere to run. Apps on origins of their own would list each origin in the API's settings,
+preflight every call that sends a header, and need CORS to allow credentials for a cookie to cross.
+One gateway in front of every app and the API is one more service every project runs, whose routes
+follow each app added; a deployment can still put one in front of the relays. The relay is one more
+hop per call, whose timeouts and body limits the app keeps in step with the API's.
+`WebAppTests.AWebApp_ServesItsPageAndRelaysApiToTheApi` holds the relay of every app in the stack.
+
+A client that is not a web app of this workspace, a desktop or mobile app, a script or a site
+another team serves, calls the API on the API's own origin. A browser app on another origin needs
+its origin in `Cors:AllowedOrigins`, and gets no cookie-based session from the API.
 
 ## Driving the apps in a browser
 
@@ -154,10 +170,20 @@ time, because an answer from a proxy or a crash is not a problem document.
 
 After any change to the API's contract, run `pnpm api` in `src/Web`, or `dotnet cleanarch openapi`: it builds the API,
 writes its OpenAPI reference and regenerates `src/Web/packages/api-client/src/generated/schema.ts`, which is
-committed so an app type-checks without the .NET SDK
-([ADR 0019](../decisions/0019-one-generated-api-client.md)). `pnpm api --no-build` writes the
+committed so an app type-checks without the .NET SDK. `pnpm api --no-build` writes the
 reference from the API's last build instead. `add feature`, `add field` and `add use-case` run
 `dotnet cleanarch openapi` after theirs, which calls `pnpm api <reference>`.
+
+`openapi-typescript` writes the schema from the API's own document, because types written by hand
+drift from what the API returns: a change to the contract is a type error in every app that relied
+on the old one, found at build time.
+<!--#if (ci)-->
+CI regenerates the schema and fails on any difference.
+<!--#endif-->
+Every framework calls the API through the same wrapper, rather than each solving HTTP, errors and
+credentials in its own idiom: credentials enter through an `accessToken` provider and the
+`middleware` list, and a caller branches on codes alone. The wrapper is the shape to leave once an
+app needs its framework's own HTTP client for something it cannot carry.
 
 ## Signing in
 
@@ -195,9 +221,6 @@ presentation of a cookie as theft; only a refused refresh signs the page out.
 
 A server-rendered app keeps both tokens on its server, and the browser holds only the
 `__Host-session` cookie its server sets (`HttpOnly`, `Secure`, `SameSite=Lax`).
-<!--#if (webServerRendering)-->
-[ADR 0024](../decisions/0024-a-server-rendered-web-app-runs-on-its-own-server.md) says why.
-<!--#endif-->
 The page posts the same sign-in routes through the relay, which keeps the tokens the API answers and returns the
 answer without them, and calls the API without a token; `serverSessionMiddleware` adds the
 `X-CSRF: 1` header the server requires on every call that changes state, and answers `403`
@@ -222,6 +245,17 @@ and a refused refresh ends the session. A page rendered on the server reads the 
 from the context its server hands the framework with each request, Angular's request context or
 React Router's load context: `accessToken()`, beside `apiUpstream`, the API's address for a call
 made from the server.
+
+The tokens stay on the server because a page request carries neither a token held in a browser
+variable nor the refresh-token cookie scoped to `/api/v1/auth`, and the server needs the page's data
+before any script runs; rendering for an anonymous caller instead would render every signed-in page
+signed out. The tokens live in the server's memory rather than in an encrypted cookie, since two
+requests of one page would each rotate the refresh token and the API would read the second as a
+replay that ends every session of the account. A shared session store would survive a restart and
+serve several instances, at the cost of one more service every project runs before one needs it;
+the server therefore runs as one instance, and a restart signs everyone out. The cookie is
+`SameSite=Lax`, not `Strict`, so a person following a link from another site sees the first page
+signed in; the `X-CSRF` header guards every request that changes state.
 <!--#endif-->
 <!--#if (externalAuth)-->
 ### External provider
@@ -252,9 +286,6 @@ A server-rendered app signs people in itself: its server is the OpenID Connect c
 authorization code flow with PKCE at the provider, and keeps the provider's tokens in its own
 memory; the browser holds only the `__Host-session` cookie its server sets (`HttpOnly`, `Secure`,
 `SameSite=Lax`).
-<!--#if (webServerRendering)-->
-[ADR 0024](../decisions/0024-a-server-rendered-web-app-runs-on-its-own-server.md) says why.
-<!--#endif-->
 The page navigates to the server's routes and calls the API without a token, the server adding it;
 `serverSessionMiddleware` adds the `X-CSRF: 1` header the server requires on every call that
 changes state, and answers `403` `session.csrfHeaderRequired` without:
@@ -284,6 +315,18 @@ framework with each request, Angular's request context or React Router's load co
 
 The app's `README.md` gives the client to register at the provider; its settings are in
 [the configuration reference](../reference/configuration.md#a-server-rendered-web-app).
+
+The server runs the flow because a page request carries no token held in the browser, and the
+server needs the page's data before any script runs; rendering for an anonymous caller instead
+would render every signed-in page signed out. The tokens live in its memory rather than in an
+encrypted cookie: a provider's identity and refresh tokens can outgrow what a cookie holds, and two
+requests of one page would each refresh, which a provider rotating its refresh tokens reads as a
+replay. The flow runs on `openid-client`, a certified relying-party library loaded only by the
+server, since the state, the nonce, PKCE and the identity token's checks are where code written by
+hand goes wrong. The callback is a redirect, not `response_mode=form_post`, whose cross-site post
+`SameSite=Lax` would withhold the sign-in cookie from. A shared session store would survive a restart
+and serve several instances, at the cost of one more service every project runs before one needs
+it; the server therefore runs as one instance, and a restart signs everyone out.
 <!--#endif-->
 <!--#if (publicApi)-->
 ### No accounts
@@ -362,6 +405,10 @@ dotnet new cleanarch-webpackage -n tokens --scope app-template
 Record it with `dotnet cleanarch add web-package --name tokens`, run `pnpm install` in `src/Web` and add
 `"@app-template/tokens": "workspace:*"` to each app that uses it. Internal packages are private and export their TypeScript sources, which each app's bundler
 compiles. An app never imports another app. A package for one framework is the project's to write.
+Exporting sources leaves no build order between packages and no stale output: a change shows in
+every app's dev server at once, and a package's `build` is a type check. The shared compiler settings
+turn on what every framework's CLI turns on, so a package that passes its own build passes inside
+any app. A package that has to leave the workspace gets a build step of its own.
 
 Removing an app is deleting its folder, its `include:` line and its port line, then running
 `pnpm install`.
@@ -424,10 +471,19 @@ runs, but for the ones Angular's build writes into the page template, its event-
 which run by the SHA-256 the server computes from that template when it starts. Angular's policy
 allows inline styles, which Angular inserts at run time; React Router's takes styles from the
 app's origin alone. The page is `Cache-Control: no-store`, and every route renders per request,
-since a page prerendered at build cannot carry a response's nonce. The server's build bundles its
+since a page prerendered at build cannot carry a response's nonce. The Node server replaces nginx
+because each response is written anew and the framework adds inline scripts while it renders, which
+no hash computed when the image is built can know; nginx in front of it would make each app two
+services for a nonce the Node server writes anyway, and prerendering for nginx renders no request's
+data. The server calls the API at `API_UPSTREAM` directly, never through its own relay, a hop that
+call never needs. The server's build bundles its
 dependencies, so the image holds the build output alone. Angular's server answers `400` to a host
 `NG_ALLOWED_HOSTS` does not list: the image allows `localhost` and `127.0.0.1`, and a deployment
-adds the host its users reach.
+adds the host its users reach, since that list is Angular's defence against server-side request
+forgery. The API's rate limits see the browser's address once `ReverseProxy` names the web server,
+as for nginx. The server tests of the `api-client` package hold the relay and the session, and
+`WebAppTests` holds, for every web app in the stack, that an inline script runs only by its hash or
+by its response's nonce, and that no two responses share a nonce.
 <!--#if (accounts)-->
 It keeps its sessions in its own memory, so it runs as one instance, and a restart signs everyone
 out.
@@ -435,11 +491,8 @@ out.
 <!--#if (publicApi)-->
 It keeps no session, and runs as one instance.
 <!--#endif-->
-<!--#if (webServerRendering)-->
-[ADR 0024](../decisions/0024-a-server-rendered-web-app-runs-on-its-own-server.md) says why.
-<!--#endif-->
-
 <!--#if (ci)-->
+
 ## CI
 
 The web job installs with the frozen lockfile, lints, tests and builds every app and package, runs
@@ -447,16 +500,4 @@ The web job installs with the frozen lockfile, lints, tests and builds every app
 each app under `src/Web/apps` holding a `Dockerfile` and a `package.json`, and checks that it runs as
 a user other than root and exposes only 8080. Details are in
 [Build and CI](../guides/build-and-ci.md).
-
 <!--#endif-->
-## Decisions
-
-- [0019 One generated API client](../decisions/0019-one-generated-api-client.md)
-<!--#if (webServerRendering)-->
-- [0024 A server-rendered web app runs on its own server](../decisions/0024-a-server-rendered-web-app-runs-on-its-own-server.md)
-<!--#endif-->
-- [0037 A web app is deployed apart, behind a relay to the API](../decisions/0037-a-web-app-is-deployed-apart-behind-a-relay-to-the-api.md)
-<!--#if (localAuth)-->
-- [0016 Browser refresh token in a cookie](../decisions/0016-browser-refresh-token-in-a-cookie.md)
-<!--#endif-->
-- [0001 Adopt the generated baseline](../decisions/0001-adopt-the-generated-baseline.md): one pnpm workspace, Node and pnpm pinned.

@@ -17,7 +17,11 @@ the pages: the capital letters of the name in order, or a part's first letter wh
 none, so a product named Acme.Shop keeps its project Acme.Shop.Application.Auth in
 src/Application/AS.Application.Auth. A module promoted to a project of its own follows the rule, and
 a second product goes in a root folder of its own, since the tool finds a project by its
-`cleanarch.json` ([ADR 0029](../decisions/0029-a-project-folder-carries-the-products-initials-not-its-name.md)).
+`cleanarch.json`.
+A folder named after the whole project would lengthen every path by the product's name, twice for a
+test, and a long name checked out a few folders deep reaches the 260 characters Windows allows
+without long paths turned on, or the 200 past which NuGet warns NU5123 for a packed file; the
+project's name, its assembly and its namespace stay whole.
 The root folders `src`, `tests` and `tools` are lowercase, as every other root folder is;
 [upgrading](../guides/upgrading.md#a-project-whose-root-folders-are-capitalised) moves those of a
 project that has them capitalised.
@@ -45,7 +49,7 @@ their markup, in the shape `dotnet new wpf` gives them; a file named `<Type>.xam
 <!--#endif-->
 <!--#if (dotnetClient)-->
 The .NET client's root also holds `Generated/`, which `dotnet cleanarch openapi`
-writes and nobody edits ([ADR 0023](../decisions/0023-a-dotnet-client-generated-by-kiota.md)).
+writes and nobody edits ([the .NET client](../architecture/layers-and-projects.md#the-net-client)).
 <!--#endif-->
 
 A brace lists every word a project allows at that level; a feature holds only the words it has
@@ -239,6 +243,14 @@ feature leaves `examples` as it was. A part added later is recorded by the comma
 `add web-app` for a web app or package and `add presentation` for a presentation project. A key this
 table does not name is kept by every command that writes the file. `ProjectFileTests` fails when the
 file and the tree disagree.
+
+The solution beside it is `AppTemplate.slnx`, in the XML format `dotnet new sln` writes, and no
+`.sln` sits beside it or in its place; `ProjectFileTests` holds that too. A project is one
+`<Project Path="…" />` line in the folder of its layer, with no GUID and no configuration block, so
+adding one is one line to review, and two branches that each add one merge without conflict. The
+cost is an IDE older than Visual Studio 2022 17.13, which cannot open it; the pinned SDK reads it
+wherever the command line builds. A project generated with an `.sln` moves with
+`dotnet sln <Name>.sln migrate`, as [upgrading](../guides/upgrading.md#what-the-report-compares) says.
 <!--#if (localAuth && api)-->
 
 The API's `Features/Auth/` is one host feature over the authentication features: one route
