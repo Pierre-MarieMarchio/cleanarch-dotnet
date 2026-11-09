@@ -21,7 +21,7 @@ RUN script=/publish/wwwroot/_content/Microsoft.AspNetCore.Components.WebAssembly
     && gzip -9 --keep --force "$script"
 #endif
 
-FROM node:24.22.2-alpine3.24@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS build
+FROM node:26.13.0-alpine3.24@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS build
 
 WORKDIR /workspace
 
@@ -29,7 +29,7 @@ COPY --from=publish /publish/wwwroot/index.html apps/FrameworkSite/dist/client/i
 COPY src/Web/apps/FrameworkSite/nginx.conf apps/FrameworkSite/nginx.conf
 #else
 # Built from src/Web once web-scaffold has created the app: docker build -f apps/FrameworkSite/Dockerfile src/Web
-FROM node:24.22.2-alpine3.24@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS build
+FROM node:26.13.0-alpine3.24@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS build
 
 ENV CI=true \
 #if (webAngular)
@@ -74,7 +74,7 @@ HASHES
 #endif
 
 #if (webServerRendering)
-FROM node:24.22.2-alpine3.24@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS runtime
+FROM node:26.13.0-alpine3.24@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS runtime
 
 ENV NODE_ENV=production \
     PORT=8080 \
