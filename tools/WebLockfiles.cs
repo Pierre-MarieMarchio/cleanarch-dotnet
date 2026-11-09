@@ -1,4 +1,5 @@
 ﻿#:property UseAppHost=false
+#:property PublishAot=false
 #:property ManagePackageVersionsCentrally=false
 
 using System.ComponentModel;
