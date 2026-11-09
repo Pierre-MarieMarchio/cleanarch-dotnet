@@ -73,7 +73,7 @@ internal static class EventPlan
             + $"using {spec.EventNamespace};\n"
             + "using Shouldly;\nusing Xunit;\n\n"
             + $"namespace {spec.Prefix}.Domain.UnitTests.Features.{spec.Features}.Model.Events;\n\n"
-            + $"public sealed class {spec.Name}tests\n{{\n"
+            + $"public sealed class {spec.Name}Tests\n{{\n"
             + "    private static readonly DateTimeOffset _occurredOn = new(2026, 8, 3, 12, 0, 0, TimeSpan.Zero);\n\n"
             + "    [Fact]\n    public void TheEvent_CarriesWhatItWasGiven()\n    {\n"
             + declarations + (declarations.Length > 0 ? "\n" : string.Empty)
@@ -107,7 +107,7 @@ internal static class EventPlan
             + configuration
             + "using Microsoft.Extensions.DependencyInjection;\nusing Shouldly;\nusing Xunit;\n\n"
             + $"namespace {spec.Prefix}.Application.UnitTests.Features.{spec.ConsumerFeatures}.Services.Consumers.{spec.Base};\n\n"
-            + $"public sealed class {spec.ConsumerName}tests\n{{\n"
+            + $"public sealed class {spec.ConsumerName}Tests\n{{\n"
             + "    [Fact]\n"
             + $"    public void TheConsumer_IsRegisteredForItsEvent()\n    {{\n        var services = new ServiceCollection();\n        {call}\n\n"
             + $"        services.ShouldContain(descriptor =>\n            descriptor.ServiceType == typeof(IDomainEventConsumer<{spec.Name}>)\n            && descriptor.ImplementationType == typeof({spec.ConsumerName}));\n    }}\n\n"

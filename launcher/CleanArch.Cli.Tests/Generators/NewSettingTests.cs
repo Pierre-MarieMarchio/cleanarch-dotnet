@@ -1,6 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using CleanArch.Cli.Generators.AddSetting;
 using CleanArch.Cli.Generators.Shared;
 using Xunit;
@@ -389,6 +390,11 @@ public sealed class NewSettingTests
             }
         }
 
+        foreach (string finding in DeclaredTypeProblems(root, before))
+        {
+            expect(false, finding);
+        }
+
         string manifest = Read(root, ".feature-manifest/Invoices.json");
 
         Holds(manifest, options, "The feature's manifest");
@@ -447,6 +453,33 @@ public sealed class NewSettingTests
         }
     }
 
+    private static IEnumerable<string> DeclaredTypeProblems(string root, Dictionary<string, string> before)
+    {
+        string[] created = [.. Snapshot(root).Keys.Where(path => path.EndsWith(".cs", StringComparison.Ordinal) && !before.ContainsKey(path)).Order(StringComparer.Ordinal)];
+
+        if (created.Length == 0)
+        {
+            yield return "The run created no .cs file to check.";
+        }
+
+        foreach (string relative in created)
+        {
+            string stem = Path.GetFileNameWithoutExtension(relative);
+            string[] expected = stem.EndsWith("Tests", StringComparison.Ordinal) ? [stem] : [stem, stem + "Validator"];
+            string[] declared = [.. Regex.Matches(
+                    Read(root, relative),
+                    @"^(?:public |internal )(?:sealed |static |abstract )*(?:class|interface|record|enum)\s+([A-Za-z0-9_]+)",
+                    RegexOptions.Multiline,
+                    TimeSpan.FromSeconds(2))
+                .Select(match => match.Groups[1].Value)];
+
+            if (!declared.SequenceEqual(expected, StringComparer.Ordinal))
+            {
+                yield return $"{relative}: declares {(declared.Length == 0 ? "nothing" : string.Join(", ", declared))} where the file is named for {string.Join(" and ", expected)}.";
+            }
+        }
+    }
+
     private static void DefaultsOnlyCases(string scratch, Action<bool, string> expect)
     {
         string root = NewTree(scratch);
@@ -464,9 +497,16 @@ public sealed class NewSettingTests
     private static void ConfigurationParameterCases(string scratch, Action<bool, string> expect)
     {
         string root = NewTree(scratch);
+        var before = Snapshot(root);
         var result = Invoke(root, "Notes", "NoteRetention", "--keys", "Days:int(1..30)=7");
 
         expect(result.Code == 0, $"A feature taking the configuration was refused: {result.Error}");
+
+        foreach (string finding in DeclaredTypeProblems(root, before))
+        {
+            expect(false, finding);
+        }
+
         expect(
             Read(root, _module).Contains("            .Bind(configuration.GetSection(NoteRetentionOptions.SectionName))\n", StringComparison.Ordinal),
             "A feature that takes the configuration was not bound from it.");

@@ -315,6 +315,11 @@ public sealed class NewEventTests
             }
         }
 
+        foreach (string finding in DeclaredTypeProblems(root, before))
+        {
+            expect(false, finding);
+        }
+
         string manifest = Read(root, ".feature-manifest/Invoices.json");
 
         Holds(manifest, record, "The feature's manifest");
@@ -326,9 +331,16 @@ public sealed class NewEventTests
         ExpectRefusal(root, ["Invoices", "InvoicePaidDomainEvent", "--consumer", "Reminders:CancelReminders"], "already exists", expect);
         expect(Same(again, Snapshot(root)), "A second run changed the tree.");
 
+        var beforeConfigured = Snapshot(root);
         var configured = Invoke(root, "Invoices", "InvoiceVoidedDomainEvent", "--consumer", "Files:ReclaimFiles");
 
         expect(configured.Code == 0, $"A consumer in a feature taking the configuration was refused: {configured.Error}");
+
+        foreach (string finding in DeclaredTypeProblems(root, beforeConfigured))
+        {
+            expect(false, finding);
+        }
+
         Holds(
             Read(root, "tests/Application/A.Application.UnitTests/Features/Files/Services/Consumers/InvoiceVoided/ReclaimFilesOnInvoiceVoidedConsumerTests.cs"),
             "services.AddFiles(new ConfigurationBuilder().Build());",
@@ -344,6 +356,11 @@ public sealed class NewEventTests
 
         expect(result.Code == 0, $"An event with no consumer was refused: {result.Error}");
         expect(!Same(dry, Snapshot(root)), "An unconsumed event wrote nothing.");
+
+        foreach (string finding in DeclaredTypeProblems(root, dry))
+        {
+            expect(false, finding);
+        }
 
         string list = Read(root, _list);
 
@@ -389,6 +406,32 @@ public sealed class NewEventTests
         if (!Regex.IsMatch(text, @"^namespace Acme\.(?:Domain|Application)(?:\.UnitTests)?\.Features\.\w+\.", RegexOptions.Multiline, TimeSpan.FromSeconds(1)))
         {
             yield return $"{relative}: its namespace is not its project plus its folders.";
+        }
+    }
+
+    private static IEnumerable<string> DeclaredTypeProblems(string root, Dictionary<string, string> before)
+    {
+        string[] created = [.. Snapshot(root).Keys.Where(path => path.EndsWith(".cs", StringComparison.Ordinal) && !before.ContainsKey(path)).Order(StringComparer.Ordinal)];
+
+        if (created.Length == 0)
+        {
+            yield return "The run created no .cs file to check.";
+        }
+
+        foreach (string relative in created)
+        {
+            string stem = Path.GetFileNameWithoutExtension(relative);
+            string[] declared = [.. Regex.Matches(
+                    Read(root, relative),
+                    @"^(?:public |internal )(?:sealed |static |abstract )*(?:class|interface|record|enum)\s+([A-Za-z0-9_]+)",
+                    RegexOptions.Multiline,
+                    TimeSpan.FromSeconds(2))
+                .Select(match => match.Groups[1].Value)];
+
+            if (!declared.SequenceEqual([stem], StringComparer.Ordinal))
+            {
+                yield return $"{relative}: declares {(declared.Length == 0 ? "nothing" : string.Join(", ", declared))} where the file is named for {stem}.";
+            }
         }
     }
 
