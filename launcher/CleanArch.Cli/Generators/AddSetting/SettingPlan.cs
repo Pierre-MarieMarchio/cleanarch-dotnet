@@ -97,7 +97,7 @@ internal static class SettingPlan
         text.Append("using Microsoft.Extensions.Options;\n");
         text.Append("using Shouldly;\nusing Xunit;\n\n");
         text.Append($"namespace {spec.Prefix}.Application.UnitTests.Features.{f}.Configuration;\n\n");
-        text.Append($"public sealed class {options}tests\n{{\n");
+        text.Append($"public sealed class {options}Tests\n{{\n");
 
         foreach (var key in validated)
         {
