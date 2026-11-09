@@ -65,8 +65,9 @@ dotnet cleanarch add web-app --name FrameworkSite
 
 `bootstrap` runs the same step. It needs the network once, to fetch the CLI. It writes the starter,
 lays the overlay over it, merges the package settings of scaffold.json into its `package.json`,
-pins every dependency to the version installed, removes scaffold.json and overlay/, then runs
-`pnpm install` and `pnpm api` in `src/Web`. Commit the app with `src/Web/pnpm-lock.yaml`: from then
+moves an `@types/node` the CLI declares to the major of `src/Web/.node-version`, pins every
+dependency to the version installed, removes scaffold.json and overlay/, then runs `pnpm install`
+and `pnpm api` in `src/Web`. Commit the app with `src/Web/pnpm-lock.yaml`: from then
 on `pnpm install --frozen-lockfile`, CI and the image build use exactly those versions, and the step
 leaves the app alone.
 

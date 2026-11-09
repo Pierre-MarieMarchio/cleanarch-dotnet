@@ -35,8 +35,9 @@ and `vite-svelte`; `create-react-router` for
 `react-router`; the Angular CLI's `ng new` for `angular`. `bootstrap` runs that
 step once, as does `dotnet cleanarch add web-app`, and needs the network to fetch the CLI.
 It writes the CLI's starter, lays the wiring over it (the `/api` relay, the package name, the
-`api-client` dependency, the scripts the workspace runs), pins every dependency to the version
-installed, then runs `pnpm install` and `pnpm api`.
+`api-client` dependency, the scripts the workspace runs), moves an `@types/node` the CLI declares to
+the major of `src/Web/.node-version`, pins every dependency to the version installed, then runs
+`pnpm install` and `pnpm api`.
 
 The CLI runs with its input closed, from the scratch folder it writes into. A CLI that asks a
 question therefore makes `add web-app` fail, leaving the app's folder unchanged, instead of waiting

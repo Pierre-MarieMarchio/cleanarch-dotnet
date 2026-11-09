@@ -5,6 +5,8 @@ namespace CleanArch.Cli.Commands.Kernel;
 
 internal static partial class WebAppScaffold
 {
+    private const string _nodeTypes = "@types/node";
+
     public static void Create(Shell shell, string web, string folder)
     {
         string app = Path.GetFileName(folder);
@@ -22,6 +24,7 @@ internal static partial class WebAppScaffold
             }
 
             Shape(descriptor, starter, overlay);
+            TypeNodeAsTheWorkspaceRunsIt(web, starter);
             ScaffoldFiles.Copy(starter, folder, overwrite: false);
         }
         finally
@@ -89,6 +92,43 @@ internal static partial class WebAppScaffold
         }
     }
 
+    private static void TypeNodeAsTheWorkspaceRunsIt(string web, string starter)
+    {
+        string manifest = Path.Combine(starter, "package.json");
+        JsonObject package = ScaffoldJson.Read(manifest);
+        JsonObject[] declaring = [.. new[] { package["dependencies"], package["devDependencies"] }
+            .OfType<JsonObject>()
+            .Where(dependencies => dependencies.ContainsKey(_nodeTypes))];
+        if (declaring.Length == 0)
+        {
+            return;
+        }
+
+        string range = "^" + NodeMajor(web);
+        foreach (JsonObject dependencies in declaring)
+        {
+            dependencies[_nodeTypes] = range;
+        }
+
+        ScaffoldJson.Write(manifest, package);
+    }
+
+    private static string NodeMajor(string web)
+    {
+        string file = Path.Combine(web, ".node-version");
+        if (!File.Exists(file))
+        {
+            throw NodeVersionRefused("is missing");
+        }
+
+        Match version = NodeVersion().Match(File.ReadAllText(file));
+        return version.Success ? version.Groups["major"].Value : throw NodeVersionRefused("holds no exact version such as 26.13.0");
+    }
+
+    private static InvalidOperationException NodeVersionRefused(string why) =>
+        new($"The framework's CLI declares {_nodeTypes}, which follows the Node.js of src/Web/.node-version, and that file {why}. "
+            + "Write the version there; the app's folder is unchanged, so running this again creates it.");
+
     private static IEnumerable<(string Dependency, string Declared)> Ranges(JsonObject dependencies) =>
         [.. dependencies
             .Select(dependency => (dependency.Key, Declared: dependency.Value?.GetValue<string>() ?? string.Empty))
@@ -104,4 +144,7 @@ internal static partial class WebAppScaffold
 
     [GeneratedRegex(@"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$")]
     private static partial Regex ExactVersion();
+
+    [GeneratedRegex(@"\A(?<major>\d+)\.\d+\.\d+\n?\z")]
+    private static partial Regex NodeVersion();
 }
