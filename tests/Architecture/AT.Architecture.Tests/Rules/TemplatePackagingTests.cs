@@ -663,9 +663,55 @@ public sealed class TemplatePackagingTests
             .ShouldBeEmpty("A file generated into a project talks about the template: it is written for the project.");
     }
 
+    private static readonly Regex _formField = new(@"\n  - type: (?<type>\w+)\n(?<body>(?:(?!\n  - type: )[\s\S])*)", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _formLabel = new(@"^      label: (?<label>.+)$", RegexOptions.Multiline, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _formLabels = new(@"^labels: \[(?<labels>[^\]]*)\]$", RegexOptions.Multiline, TimeSpan.FromSeconds(5));
+
+    [Fact]
+    public void AGitLabProject_ReceivesTheSameIssueAndMergeRequestTemplatesAsAGitHubOne()
+    {
+        string variants = Path.Combine(ProjectReferenceGraph.RepositoryRoot, ".template.config", "variants");
+        string github = Path.Combine(variants, "project", ".github");
+        string gitlab = Path.Combine(variants, "code-host-gitlab", ".gitlab");
+        string mergeRequest = Path.Combine(gitlab, "merge_request_templates", "Default.md");
+
+        IssueTemplateTests.AssertTemplates(Path.Combine(gitlab, "issue_templates"));
+        MergeRequestTemplateTests.AssertCarriesTheAuthorshipRule(mergeRequest);
+        IssueTemplateTests.Headings(File.ReadAllText(mergeRequest)).ShouldBe(
+            IssueTemplateTests.Headings(File.ReadAllText(Path.Combine(github, "pull_request_template.md"))),
+            "The GitLab merge request template asks for other sections than the GitHub pull request template.");
+
+        foreach ((string form, string issue) in (ReadOnlySpan<(string, string)>)[("bug_report.yml", "Bug.md"), ("feature_request.yml", "Feature.md")])
+        {
+            string yaml = File.ReadAllText(Path.Combine(github, "ISSUE_TEMPLATE", form));
+            string markdown = File.ReadAllText(Path.Combine(gitlab, "issue_templates", issue));
+            string[] fields = [.. _formField.Matches(yaml)
+                .Where(field => field.Groups["type"].Value != "markdown")
+                .Select(field => _formLabel.Match(field.Groups["body"].Value).Groups["label"].Value.Trim())];
+            string[] labels = [.. _formLabels.Match(yaml).Groups["labels"].Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
+
+            fields.Length.ShouldBeGreaterThan(1, $"Far fewer fields were read from {form} than it asks for.");
+            labels.ShouldNotBeEmpty($"{form} sets no label, which {issue} must set too.");
+            IssueTemplateTests.Headings(markdown).ShouldBe(fields, $"{issue} does not ask, in order, for the fields {form} asks for.");
+            labels.Where(label => !markdown.Contains($"\n/label ~{label}\n", StringComparison.Ordinal)).ShouldBeEmpty(
+                $"{issue} does not set the labels {form} sets, with a /label quick action.");
+        }
+
+        var files = Directory.EnumerateFiles(gitlab, "*", SearchOption.AllDirectories)
+            .Select(file => File.ReadAllText(file))
+            .ToList();
+        files.Count.ShouldBeGreaterThanOrEqualTo(3, "The project's .gitlab overlay holds fewer files than its merge request and issue templates.");
+        files.Where(text => text.Contains("dotnet new", StringComparison.Ordinal) || text.Contains("template", StringComparison.OrdinalIgnoreCase))
+            .ShouldBeEmpty("A file generated into a project talks about the template: it is written for the project.");
+    }
+
     private const string _withoutGitHub = "(!githubHost)";
 
     private const string _githubFolder = ".github";
+
+    private const string _codeHostOverlay = "code-host-";
 
     [Fact]
     public void EverySourceThatWritesTheGitHubFolder_WritesNothingThereWithoutGitHub()
@@ -730,21 +776,28 @@ public sealed class TemplatePackagingTests
         Text(symbols.GetProperty("anyCodeHost"), "value").ShouldBe("(codeHost != \"none\")");
         Directory.Exists(Path.Combine(root, _githubFolder)).ShouldBeTrue("The tree holds no .github folder, which --code-host github writes.");
 
-        foreach (string host in hosts.Where(host => host != "github"))
+        string[] overlays = [.. Directory.GetDirectories(Path.Combine(root, ".template.config", "variants"), _codeHostOverlay + "*")
+            .Select(folder => Path.GetFileName(folder)[_codeHostOverlay.Length..])];
+
+        foreach (string host in hosts.Where(host => host != "github").Union(overlays, StringComparer.Ordinal))
         {
-            string variant = $"./.template.config/variants/code-host-{host}/";
+            string variant = $"./.template.config/variants/{_codeHostOverlay}{host}/";
             string[] conditions = [.. sources.Where(source => Text(source, "source") == variant).Select(source => Text(source, "condition") ?? "(true)")];
 
             if (host == "none")
             {
                 conditions.ShouldBeEmpty("--code-host none writes no file of its own.");
+                overlays.ShouldNotContain(host, "--code-host none writes no file of its own, so it has no overlay folder.");
                 sources.Select(source => Text(source, "condition")).OfType<string>().Where(condition => condition.Contains("codeHost == \"none\"", StringComparison.Ordinal)).ShouldBeEmpty(
                     "--code-host none writes nothing: no source is written for it alone.");
                 continue;
             }
 
             Directory.Exists(Path.Combine(root, variant)).ShouldBeTrue($"--code-host {host} has no {variant} to write its files from.");
-            conditions.ShouldBe([$"(codeHost == \"{host}\")"], $"{variant} must be written for --code-host {host} alone.");
+            symbols.TryGetProperty($"{host}Host", out var symbol).ShouldBeTrue($"template.json has no {host}Host symbol, which writes {variant}.");
+            Text(symbol, "value").ShouldBe($"(codeHost == \"{host}\")", $"{host}Host must read --code-host {host} alone.");
+            conditions.ShouldBe([$"({host}Host)"], $"{variant} must be written once, under {host}Host alone, which is true for --code-host {host} only: "
+                + "an overlay whose value is not yet a choice is unfinished, and no project receives it until the value is offered.");
         }
 
         foreach (string item in (string[])[WebAppItemManifestPath(), PresentationItemManifestPath()])

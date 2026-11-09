@@ -28,6 +28,7 @@ public sealed class FormatCommandTests : IDisposable
     {
         string readme = Write("README.md", _unnormalised);
         string template = Write(".github/PULL_REQUEST_TEMPLATE.md", _unnormalised);
+        string mergeRequest = Write(".gitlab/merge_request_templates/Default.md", _unnormalised);
         string built = Write("src/obj/notes.md", _unnormalised);
         string hook = Write(".git/hook.md", _unnormalised);
         byte[] csharp = "namespace Acme;\r\n"u8.ToArray();
@@ -37,10 +38,12 @@ public sealed class FormatCommandTests : IDisposable
 
         File.ReadAllBytes(readme).ShouldBe("# Hi\n"u8.ToArray());
         File.ReadAllBytes(template).ShouldBe("# Hi\n"u8.ToArray());
+        File.ReadAllBytes(mergeRequest).ShouldBe("# Hi\n"u8.ToArray());
         File.ReadAllBytes(built).ShouldBe(_unnormalised);
         File.ReadAllBytes(hook).ShouldBe(_unnormalised);
         File.ReadAllBytes(source).ShouldBe(csharp);
         _output.ToString().ShouldContain(".github/PULL_REQUEST_TEMPLATE.md: saved as UTF-8 without a BOM, with LF endings.");
+        _output.ToString().ShouldContain(".gitlab/merge_request_templates/Default.md: saved as UTF-8 without a BOM, with LF endings.");
         _output.ToString().ShouldContain("README.md: saved as UTF-8 without a BOM, with LF endings.");
     }
 

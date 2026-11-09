@@ -59,6 +59,10 @@
       "tags": ["web", "presentation-avalonia", "presentation-blazor-server", "presentation-mcp", "presentation-wpf"]
     },
     {
+      "paths": [".template.config/variants/code-host-gitlab/**"],
+      "tags": ["defaults"]
+    },
+    {
       "paths": [".template.config/variants/no-aspire/**"],
       "tags": ["all"]
     },

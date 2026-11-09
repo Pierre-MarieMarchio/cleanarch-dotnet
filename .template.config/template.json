@@ -277,6 +277,10 @@
       "type": "computed",
       "value": "(codeHost == \"github\")"
     },
+    "gitlabHost": {
+      "type": "computed",
+      "value": "(codeHost == \"gitlab\")"
+    },
     "anyCodeHost": {
       "type": "computed",
       "value": "(codeHost != \"none\")"
@@ -2039,6 +2043,13 @@
           ]
         },
         {
+          "condition": "(!gitlabHost)",
+          "exclude": [
+            "tests/Architecture/AT.Architecture.Tests/Rules/IssueTemplateTests.cs",
+            "tests/Architecture/AT.Architecture.Tests/Rules/MergeRequestTemplateTests.cs"
+          ]
+        },
+        {
           "condition": "(!githubCi)",
           "exclude": [
             ".github/workflows/ci.yml",
@@ -2154,6 +2165,11 @@
           ]
         }
       ]
+    },
+    {
+      "source": "./.template.config/variants/code-host-gitlab/",
+      "target": "./",
+      "condition": "(gitlabHost)"
     },
     {
       "source": "./.template.config/variants/no-aspire/",

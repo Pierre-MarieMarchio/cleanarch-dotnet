@@ -365,6 +365,7 @@ under `.github` carries `githubHost`, or `githubCi` for a workflow, so `--code-h
 |---|---|
 | `codeHost` | the host chosen: `github` by default, or `none` |
 | `githubHost` | `codeHost == "github"`: the `.github` folder, Dependabot, the issue forms, the pull request template |
+| `gitlabHost` | `codeHost == "gitlab"`: the overlay under `.template.config/variants/code-host-gitlab/`; never true while `gitlab` is not a choice |
 | `anyCodeHost` | `codeHost != "none"`: a host whose pipelines `--ci` can write |
 | `githubCi` | `ci && githubHost`: the GitHub Actions workflows |
 | `sonarWorkflow` | `githubCi && sonar`: the Sonar steps of `ci.yml` |
@@ -373,8 +374,25 @@ A page conditions a line that names a host's file on that host's symbol, and giv
 sentence that holds without it. Another host comes as a whole-file overlay under
 `.template.config/variants/code-host-<value>/`, its value kept out of the choices until the overlay is
 complete; `TemplatePackagingTests` fails until every choice is GitHub's tree, `none`, or a folder of
-its own. Its pipeline holds the same gate as `ci.yml`, and is proved by the options of a leg that fits
-it rather than a leg of its own.
+its own, and until every overlay folder is written once, under a `<value>Host` symbol that reads
+`codeHost == "<value>"`. An overlay whose value is not a choice yet is unfinished: no project can
+receive it, yet the package carries it, since `dotnet new` refuses a template whose source folder is
+missing. Its rule in `rules.json` runs the `defaults` leg, whose project a condition gone wrong would
+change, until the change that offers the value gives it the tag of the leg that generates it. Its pipeline holds the same gate as `ci.yml`, and is proved by the options of a leg that
+fits it rather than a leg of its own.
+
+GitLab's overlay holds the merge request and issue templates under `.gitlab`:
+`merge_request_templates/Default.md`, which GitLab fills a new merge request's description with, asks
+for the sections of the pull request template; `issue_templates/Bug.md` and `Feature.md` turn each
+field of the issue forms into a section, point to `SECURITY.md` as the forms do, and label the issue
+with a `/label` quick action. GitLab reads no form and no required field from a file, and no file
+refuses a blank issue there as `config.yml` does on GitHub, so the templates say nothing of it.
+`MergeRequestTemplateTests` and `IssueTemplateTests` hold them in a GitLab project, which alone
+receives them (`template.json` excludes both under `(!gitlabHost)`), and read the overlay in this
+checkout; `TemplatePackagingTests` holds them to the GitHub files, the sections of the pull
+request template and every field and label of the forms, so the two hosts cannot drift. A quick action
+adds a label only where the project has it: GitLab creates none, as GitHub does `bug` and
+`enhancement`.
 
 ## Adding an option
 
