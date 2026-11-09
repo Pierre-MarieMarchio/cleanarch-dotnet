@@ -206,6 +206,7 @@ CR, and `format` removes both.
 | <!--#endif--> |
 | <!--#if (ci && anyWeb)--> |
 | `.github/workflows/web.yml` | push to `main`, pull request to `main` or `develop`, and a manual run | in `src/Web`: frozen install, lint, test, build, and a failure when the API client differs from the API's document; one image per app |
+| `.github/workflows/web-node-version.yml` | a failed run of `ci.yml` on a Dependabot pull request of the Dockerfiles | commits the web images' Node.js version to `src/Web/.node-version`, read from the pull request's Dockerfiles through the API; refuses a new major |
 <!--#endif-->
 <!--#if (ci)-->
 
@@ -300,6 +301,25 @@ The toolchain, the pinning and Dependabot are rows of [the stack](../architectur
 | Container images and actions | their digest or commit SHA, beside the tag |
 | <!--#if (anyWeb)--> |
 | Node, pnpm and the web packages | `src/Web/.node-version`, `src/Web/package.json`, `src/Web/pnpm-lock.yaml` |
+<!--#endif-->
+<!--#if (anyWeb)-->
+
+`NodeVersionTests` holds Node.js to one version: the `node` image of every web app's Dockerfile
+runs exactly the version in `src/Web/.node-version`, which CI and developers run, and `engines.node`
+in `src/Web/package.json` and every `@types/node` of the workspace name its major.
+<!--#endif-->
+<!--#if (anyWeb && ci)-->
+A patch or a minor arrives in Dependabot's pull request on the images, and
+`.github/workflows/web-node-version.yml` commits its version to `src/Web/.node-version` once CI fails
+on the difference; update the branch, or close and reopen the pull request, to run the checks again.
+<!--#endif-->
+<!--#if (anyWeb && !ci)-->
+A patch or a minor arrives in Dependabot's pull request on the images; write its version to
+`src/Web/.node-version` in that pull request.
+<!--#endif-->
+<!--#if (anyWeb)-->
+A new major arrives from Dependabot too, and stays red, held by `NodeVersionTests`, until it is done
+by hand: `src/Web/.node-version`, `engines.node`, `@types/node` and every `FROM node:` move together.
 <!--#endif-->
 
 ### An advisory fails the build

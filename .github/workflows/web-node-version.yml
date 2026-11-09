@@ -1,0 +1,107 @@
+name: Web Node.js version
+
+# A Dependabot pull request that moves the web apps' node image fails CI until src/Web/.node-version names the same version; this commits it, read from the pull request's Dockerfiles as data through the API, so nothing from the pull request runs where the token can write.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+# One commit at a time per branch; a second run finds the branch moved, or already aligned, and stops.
+concurrency:
+  group: web-node-version-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+# Least privilege; the one job that writes opts in below.
+permissions:
+  contents: read
+
+jobs:
+  align:
+    name: Align .node-version with the web images
+    if: >-
+      github.event.workflow_run.event == 'pull_request'
+      && github.event.workflow_run.conclusion == 'failure'
+      && github.event.workflow_run.actor.login == 'dependabot[bot]'
+      && github.event.workflow_run.head_repository.full_name == github.repository
+      && startsWith(github.event.workflow_run.head_branch, 'dependabot/docker/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # contents writes the commit and moves the branch.
+    permissions:
+      contents: write
+
+    steps:
+      # Every FROM node: of every src/Web/apps/<App>/Dockerfile must name one exact version on the .node-version major; the ref moves only from the commit that was read, so a newer push wins.
+      - name: Commit the images' Node.js version to src/Web/.node-version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error title=Web Node.js version::$1"; exit 1; }
+          [[ "$BRANCH" =~ ^dependabot/docker/[A-Za-z0-9._/-]+$ ]] || fail "'$BRANCH' is not a branch Dependabot opens for the Dockerfiles."
+          [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "'$HEAD_SHA' is not a commit."
+          contents="repos/$GITHUB_REPOSITORY/contents"
+          raw="Accept: application/vnd.github.raw+json"
+          listing=$(gh api "$contents/src/Web/apps?ref=$HEAD_SHA" --jq '.[] | select(.type == "dir") | .name')
+          mapfile -t apps <<< "$listing"
+          versions=()
+          for app in "${apps[@]}"; do
+            [ -n "$app" ] || continue
+            [[ "$app" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$ ]] || fail "'$app' is not a web app's folder name."
+            entry=$(gh api "$contents/src/Web/apps/${app}?ref=$HEAD_SHA" --jq '.[] | select(.name == "Dockerfile") | "\(.type) \(.size)"')
+            [ -n "$entry" ] || continue
+            read -r kind size <<< "$entry"
+            [ "$kind" = file ] || fail "The Dockerfile of src/Web/apps/${app} is a $kind, not a regular file."
+            [[ "$size" =~ ^[0-9]+$ ]] && [ "$size" -le 1048576 ] || fail "The Dockerfile of src/Web/apps/${app} is larger than any Dockerfile."
+            dockerfile=$(gh api -H "$raw" "$contents/src/Web/apps/${app}/Dockerfile?ref=$HEAD_SHA")
+            while IFS= read -r line; do
+              read -r -a words <<< "$line"
+              [ "${#words[@]}" -ge 2 ] && [ "${words[0]^^}" = FROM ] || continue
+              reference=${words[1]}
+              if [[ "$reference" == --platform=* ]]; then
+                reference=${words[2]:-}
+              fi
+              [[ "$reference" == node:* ]] || continue
+              [[ "$reference" =~ ^node:([0-9]{1,3}\.[0-9]{1,4}\.[0-9]{1,4})-[a-z0-9.]{1,64}@sha256:[0-9a-f]{64}$ ]] \
+                || fail "The Dockerfile of src/Web/apps/${app} runs '$reference', which names no exact Node.js version pinned by digest."
+              versions+=("${BASH_REMATCH[1]}")
+            done <<< "$dockerfile"
+          done
+          if [ "${#versions[@]}" -eq 0 ]; then
+            echo "::notice title=Web Node.js version::No web app's Dockerfile runs a node image, so CI failed on something else; its log says what."
+            exit 0
+          fi
+          mapfile -t distinct < <(printf '%s\n' "${versions[@]}" | sort -u)
+          [ "${#distinct[@]}" -eq 1 ] || fail "The web apps' Dockerfiles run Node.js ${distinct[*]}: align them on one version by hand."
+          version=${distinct[0]}
+          current=$(gh api -H "$raw" "$contents/src/Web/.node-version?ref=$HEAD_SHA")
+          [[ "$current" =~ ^[0-9]{1,3}\.[0-9]{1,4}\.[0-9]{1,4}$ ]] || fail "src/Web/.node-version on $BRANCH holds no exact version."
+          if [ "$current" = "$version" ]; then
+            echo "::notice title=Web Node.js version::src/Web/.node-version already names Node.js $version, so CI failed on something else; its log says what."
+            exit 0
+          fi
+          [ "${current%%.*}" = "${version%%.*}" ] || fail "The images move Node.js from $current to $version, another major line: that is a change made by hand, with engines.node in src/Web/package.json."
+          moved() {
+            echo "::notice title=Web Node.js version::$BRANCH moved past $HEAD_SHA; the run of its newer commit aligns src/Web/.node-version."
+            exit 0
+          }
+          [ "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$BRANCH" --jq .object.sha)" = "$HEAD_SHA" ] || moved
+          blob=$(printf '%s\n' "$version" | base64 -w0 | jq -Rs '{content: ., encoding: "base64"}' | gh api "repos/$GITHUB_REPOSITORY/git/blobs" --input - --jq .sha)
+          base=$(gh api "repos/$GITHUB_REPOSITORY/git/commits/$HEAD_SHA" --jq .tree.sha)
+          tree=$(jq -n --arg base "$base" --arg sha "$blob" '{base_tree: $base, tree: [{path: "src/Web/.node-version", mode: "100644", type: "blob", sha: $sha}]}' \
+            | gh api "repos/$GITHUB_REPOSITORY/git/trees" --input - --jq .sha)
+          message="build(deps): run Node.js $version in CI, as the web images do"
+          commit=$(jq -n --arg tree "$tree" --arg parent "$HEAD_SHA" --arg message "$message" '{message: $message, tree: $tree, parents: [$parent]}' \
+            | gh api "repos/$GITHUB_REPOSITORY/git/commits" --input - --jq .sha)
+          if ! gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/heads/$BRANCH" -f sha="$commit" -F force=false --silent; then
+            [ "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$BRANCH" --jq .object.sha)" = "$HEAD_SHA" ] || moved
+            fail "GitHub refused to move $BRANCH from $HEAD_SHA to $commit."
+          fi
+          {
+            echo "Committed Node.js $version to \`src/Web/.node-version\` on \`$BRANCH\` as $commit."
+            echo
+            echo "A commit made with GITHUB_TOKEN starts no workflow: update the branch, or close and reopen the pull request, to run its checks."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=Web Node.js version::Committed Node.js $version to src/Web/.node-version on $BRANCH as $commit; update the branch, or close and reopen the pull request, to run its checks."

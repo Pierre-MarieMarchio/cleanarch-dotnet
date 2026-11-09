@@ -12,7 +12,8 @@ How web apps run beside the API in this project, call it, and sign their users i
 
 `src/Web` is one pnpm workspace with one lockfile. Node comes from `src/Web/.node-version`, pnpm
 from the `packageManager` field of `src/Web/package.json`, which Corepack reads; run pnpm from
-`src/Web`. Nothing in the .NET build needs Node.
+`src/Web`. Nothing in the .NET build needs Node. Each app's image runs the same Node.js version, and
+a new major is done by hand, as [supply chain](../guides/build-and-ci.md#supply-chain) says.
 
 | Path | What it is |
 |---|---|
@@ -414,10 +415,10 @@ Removing an app is deleting its folder, its `include:` line and its port line, t
 `pnpm install`.
 
 A project generated without a web app adds its first one with the same command plus
-`--workspace`, `--project-name <Project>` and `--scope`, which also creates `src/Web` and
-`.github/workflows/web.yml`; the API side is in every project already. `add web-app` then makes the
-lines `src/Web/README.md` lists for the workspace before the app's, and records both; create the
-app as above.
+`--workspace`, `--project-name <Project>` and `--scope`, which also creates `src/Web`,
+`.github/workflows/web.yml` and `.github/workflows/web-node-version.yml`; the API side is in every
+project already. `add web-app` then makes the lines `src/Web/README.md` lists for the workspace
+before the app's, and records both; create the app as above.
 
 ## Images and headers
 

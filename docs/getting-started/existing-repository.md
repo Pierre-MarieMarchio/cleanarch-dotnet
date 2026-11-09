@@ -63,7 +63,7 @@ Three facts decide the subdirectory shape:
 
 <!--#endif-->
 <!--#if (ci && anyWeb)-->
-   Move `web.yml` the same way.
+   Move `web.yml` and `web-node-version.yml` the same way.
 
 <!--#endif-->
 <!--#if (ci)-->
