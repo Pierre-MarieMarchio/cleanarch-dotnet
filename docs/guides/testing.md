@@ -247,7 +247,7 @@ It sets the file inspection to run every ten seconds, so a deposit becomes reada
 The project sets `IsTestingPlatformApplication` to `false`, so `dotnet test` over the solution, and
 with it `verify` and `coverage`, leaves it out; it stays in `AppTemplate.slnx`, so it builds and is
 formatted with the rest. `test --no-integration` and `check` build it, with every project that needs Docker, and name it as built and not run; `test --no-integration` runs only the projects that set `IsTestProject` and need no Docker.
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 CI runs the command in the `end-to-end` job, once the Compose manifest is checked, and fails on a red
 test.
 <!--#endif-->
@@ -289,7 +289,7 @@ Chromium is not installed by `pnpm install`. Install it once per machine with
 
 `end-to-end` fails with that command in its message when the browser is missing, and has no option to
 skip the smoke.
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 CI installs Chromium in the `end-to-end` job and caches it by the Playwright release the lockfile
 resolves.
 <!--#endif-->

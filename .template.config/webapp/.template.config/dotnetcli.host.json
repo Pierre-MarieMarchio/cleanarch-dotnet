@@ -9,6 +9,10 @@
       "longName": "agent-files",
       "shortName": ""
     },
+    "codeHost": {
+      "longName": "code-host",
+      "shortName": ""
+    },
     "hasClient": {
       "longName": "has-client",
       "shortName": ""

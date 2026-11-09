@@ -15,6 +15,7 @@ public sealed record ProjectOptions(
     string? Database = null,
     string? Examples = null,
     bool? Files = null,
+    string? CodeHost = null,
     bool? Ci = null,
     bool? Sonar = null,
     bool? AgentFiles = null,

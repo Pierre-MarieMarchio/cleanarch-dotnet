@@ -48,6 +48,19 @@ public sealed class GeneratedProjectTests : IDisposable
         GeneratedProject.Find(_root).ShouldNotBeNull().Auth.ShouldBe("none");
     }
 
+    [Fact]
+    public void Find_ReadsTheCodeHost_FromTheGitHubFolder()
+    {
+        AProject();
+        GeneratedProject.Find(_root).ShouldNotBeNull().CodeHost.ShouldBe("none");
+
+        Write(".github/dependabot.yml", string.Empty);
+
+        ProjectFacts project = GeneratedProject.Find(_root).ShouldNotBeNull();
+        project.CodeHost.ShouldBe("github");
+        project.Ci.ShouldBeFalse("a project on GitHub generated with --ci false holds no ci.yml");
+    }
+
     [Theory]
     [InlineData("all", "TodoLists", "Reminders", "Notes", "Maintenance")]
     [InlineData("notes", "Notes", "Maintenance")]

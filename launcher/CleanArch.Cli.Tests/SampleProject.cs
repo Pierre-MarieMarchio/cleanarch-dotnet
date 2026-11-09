@@ -11,6 +11,7 @@ internal sealed class SampleProject : IDisposable
             "database": "postgresql",
             "examples": "all",
             "files": true,
+            "codeHost": "github",
             "ci": true,
             "sonar": false,
             "agentFiles": true

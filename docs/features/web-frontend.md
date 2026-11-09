@@ -179,7 +179,7 @@ reference from the API's last build instead. `add feature`, `add field` and `add
 `openapi-typescript` writes the schema from the API's own document, because types written by hand
 drift from what the API returns: a change to the contract is a type error in every app that relied
 on the old one, found at build time.
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 CI regenerates the schema and fails on any difference.
 <!--#endif-->
 Every framework calls the API through the same wrapper, rather than each solving HTTP, errors and
@@ -370,6 +370,7 @@ Add an app at the project root; it gets its own folder, image and Compose servic
 dotnet new cleanarch-webapp -n BackOffice --framework angular --audience admin --scope app-template --port 8082
 ```
 
+<!--#if (githubHost)-->
 `--framework` is `vite-react`, `vite-vue`, `vite-svelte`, `react-router`, `angular` or
 `placeholder`; `--scope` is the package scope of
 `src/Web/package.json`; `--auth` repeats this project's value. The app's `README.md` lists the lines
@@ -383,6 +384,22 @@ lockfile. CI and Dependabot find apps by folder.
 `--rendering ssr` with `--framework angular` or `react-router` renders the app on its own Node
 server instead, as [images and headers](#images-and-headers) describes; the other frameworks are
 single-page apps only, and `--rendering spa` is the default.
+<!--#endif-->
+<!--#if (!githubHost)-->
+`--framework` is `vite-react`, `vite-vue`, `vite-svelte`, `react-router`, `angular` or
+`placeholder`; `--scope` is the package scope of
+`src/Web/package.json`; `--auth` repeats this project's value. The app's `README.md` lists the lines
+it adds outside its folder: an `include:` entry in `docker-compose.yml` and `WEB_<NAME>_HOST_PORT` in
+`.env.example`. `dotnet cleanarch add web-app --name BackOffice --framework angular --audience admin`, run once the
+folder holds the app and adding `--rendering ssr` for an app rendered on the server, makes them,
+leaving those in place already, records the app in `cleanarch.json` with the values it was given and
+the port its `compose.yml` holds (`--port` states it, and is refused when it differs), then creates
+the app for a framework app. A placeholder needs `pnpm install` instead; commit the app with the
+lockfile.
+`--rendering ssr` with `--framework angular` or `react-router` renders the app on its own Node
+server instead, as [images and headers](#images-and-headers) describes; the other frameworks are
+single-page apps only, and `--rendering spa` is the default.
+<!--#endif-->
 <!--#if (externalAuth)-->
 Such an app also needs its public origin, `WEB_<NAME>_ORIGIN`, in `.env.example`, and the
 provider's client of [an app rendered on the server](#an-app-rendered-on-the-server), lines its
@@ -415,11 +432,19 @@ any app. A package that has to leave the workspace gets a build step of its own.
 Removing an app is deleting its folder, its `include:` line and its port line, then running
 `pnpm install`.
 
+<!--#if (githubCi)-->
 A project generated without a web app adds its first one with the same command plus
 `--workspace`, `--project-name <Project>` and `--scope`, which also creates `src/Web`,
 `.github/workflows/web.yml` and `.github/workflows/web-node-version.yml`; the API side is in every
 project already. `add web-app` then makes the lines `src/Web/README.md` lists for the workspace
 before the app's, and records both; create the app as above.
+<!--#endif-->
+<!--#if (!githubCi)-->
+A project generated without a web app adds its first one with the same command plus
+`--workspace`, `--project-name <Project>` and `--scope`, which also creates `src/Web`; the API side
+is in every project already. `add web-app` then makes the lines `src/Web/README.md` lists for the
+workspace before the app's, and records both; create the app as above.
+<!--#endif-->
 
 ## Images and headers
 
@@ -493,7 +518,7 @@ out.
 <!--#if (publicApi)-->
 It keeps no session, and runs as one instance.
 <!--#endif-->
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 
 ## CI
 

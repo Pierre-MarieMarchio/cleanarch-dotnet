@@ -240,10 +240,10 @@ jobs:
           problems=()
           [ ! -e src/Web ] || problems+=("src/Web exists.")
           [ ! -e .github/workflows/web.yml ] || problems+=(".github/workflows/web.yml exists.")
-          workflows=$(grep -rIl -e 'pnpm' -e 'src/Web' -e 'web-' .github/workflows || true)
+          workflows=$(grep -rIls -e 'pnpm' -e 'src/Web' -e 'web-' .github/workflows || true)
           [ -z "$workflows" ] || problems+=("A workflow runs pnpm or a web job: $workflows")
           ! grep -qE '^include:|^  web-|src/Web' docker-compose.yml || problems+=("docker-compose.yml includes or declares a web service.")
-          ! grep -qE 'package-ecosystem: npm|src/Web' .github/dependabot.yml || problems+=(".github/dependabot.yml watches the web workspace.")
+          [ ! -e .github/dependabot.yml ] || ! grep -qE 'package-ecosystem: npm|src/Web' .github/dependabot.yml || problems+=(".github/dependabot.yml watches the web workspace.")
           ! grep -qE '^WEB_[A-Z0-9_]+_HOST_PORT=' .env.example || problems+=(".env.example names a web app's port.")
           ignored=$(grep -l 'src/Web' .dockerignore .gitignore || true)
           [ -z "$ignored" ] || problems+=("An ignore file names src/Web: $ignored")
@@ -278,7 +278,7 @@ jobs:
           set -euo pipefail
           # shellcheck disable=SC2086
           dotnet new cleanarch-webapp -n Site $FIRST_APP
-          leaked=$(grep -rIl -e AppTemplate -e app-template -e PlaceholderSite -e placeholder-site -e FrameworkSite -e framework-site src/Web .github docs || true)
+          leaked=$(grep -rIls -e AppTemplate -e app-template -e PlaceholderSite -e placeholder-site -e FrameworkSite -e framework-site src/Web .github docs || true)
           if [ -n "$leaked" ]; then
             echo "::error title=Item template token leaked::$leaked"
             exit 1

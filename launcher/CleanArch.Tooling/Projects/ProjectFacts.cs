@@ -10,6 +10,7 @@ public sealed record ProjectFacts(
     bool Files,
     bool HasClient,
     string Database,
+    string CodeHost,
     bool Ci,
     bool AgentFiles,
     bool HasApi)

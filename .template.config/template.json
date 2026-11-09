@@ -256,23 +256,52 @@
       "type": "computed",
       "value": "(localAuth || (externalAuth && anyFeature))"
     },
+    "codeHost": {
+      "type": "parameter",
+      "displayName": "Code host",
+      "datatype": "choice",
+      "defaultValue": "github",
+      "choices": [
+        {
+          "choice": "github",
+          "description": "GitHub: the .github folder, with Dependabot, the issue forms, the pull request template and, with --ci true, the GitHub Actions workflows."
+        },
+        {
+          "choice": "none",
+          "description": "No code host: no .github folder, no pipeline and no dependency updates; --ci has nothing to write."
+        }
+      ],
+      "description": "Where the repository is hosted: the files that host reads, its pipelines among them."
+    },
+    "githubHost": {
+      "type": "computed",
+      "value": "(codeHost == \"github\")"
+    },
+    "anyCodeHost": {
+      "type": "computed",
+      "value": "(codeHost != \"none\")"
+    },
     "ci": {
       "type": "parameter",
-      "displayName": "GitHub Actions workflows",
+      "displayName": "CI pipelines",
       "datatype": "bool",
       "defaultValue": "true",
-      "description": "Include the GitHub Actions workflows that build, test, scan and release the solution (ci.yml, codeql.yml, release.yml; web.yml and web-node-version.yml with a web app)."
+      "description": "Include the chosen code host's pipelines that build, test, scan and release the solution: on GitHub, the Actions workflows ci.yml, codeql.yml and release.yml, with web.yml and web-node-version.yml with a web app. Without a code host there is none to write."
+    },
+    "githubCi": {
+      "type": "computed",
+      "value": "(ci && githubHost)"
     },
     "sonar": {
       "type": "parameter",
       "displayName": "Sonar analysis",
       "datatype": "bool",
       "defaultValue": "true",
-      "description": "Include the Sonar analysis: the local SonarQube compose profile, its scanner image and task, and the SonarQube Cloud workflow when --ci is true."
+      "description": "Include the Sonar analysis: the local SonarQube compose profile, its scanner image and task, and the SonarQube Cloud workflow with the GitHub Actions workflows (--code-host github, --ci true)."
     },
     "sonarWorkflow": {
       "type": "computed",
-      "value": "(ci && sonar)"
+      "value": "(githubCi && sonar)"
     },
     "agentFiles": {
       "type": "parameter",
@@ -1259,6 +1288,26 @@
       "replaces": "\"files\": true",
       "description": "The --files value cleanarch.json records."
     },
+    "projectFileCodeHost": {
+      "type": "generated",
+      "generator": "switch",
+      "parameters": {
+        "evaluator": "C++",
+        "datatype": "string",
+        "cases": [
+          {
+            "condition": "(codeHost == \"none\")",
+            "value": "\"codeHost\": \"none\""
+          },
+          {
+            "condition": "(true)",
+            "value": "\"codeHost\": \"github\""
+          }
+        ]
+      },
+      "replaces": "\"codeHost\": \"github\"",
+      "description": "The --code-host value cleanarch.json records."
+    },
     "projectFileCi": {
       "type": "generated",
       "generator": "switch",
@@ -1267,7 +1316,7 @@
         "datatype": "string",
         "cases": [
           {
-            "condition": "(ci)",
+            "condition": "(ci && anyCodeHost)",
             "value": "\"ci\": true"
           },
           {
@@ -1277,7 +1326,7 @@
         ]
       },
       "replaces": "\"ci\": true",
-      "description": "The --ci value cleanarch.json records."
+      "description": "The --ci value cleanarch.json records: false without a code host, which has no pipeline to hold."
     },
     "projectFileSonar": {
       "type": "generated",
@@ -1982,7 +2031,15 @@
           ]
         },
         {
-          "condition": "(!ci)",
+          "condition": "(!githubHost)",
+          "exclude": [
+            ".github/**",
+            "tests/Architecture/AT.Architecture.Tests/Rules/IssueFormTests.cs",
+            "tests/Architecture/AT.Architecture.Tests/Rules/PullRequestTemplateTests.cs"
+          ]
+        },
+        {
+          "condition": "(!githubCi)",
           "exclude": [
             ".github/workflows/ci.yml",
             ".github/workflows/codeql.yml",
@@ -2084,6 +2141,12 @@
       "source": "./.template.config/variants/project/",
       "target": "./",
       "modifiers": [
+        {
+          "condition": "(!githubHost)",
+          "exclude": [
+            ".github/**"
+          ]
+        },
         {
           "condition": "(!sonar || !dotnetClient)",
           "exclude": [

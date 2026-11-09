@@ -71,7 +71,7 @@ the API's last build instead.
 `pnpm lint`, `pnpm test` and `pnpm build` pass here, and the root gate too, which runs them and
 needs Node.js and pnpm. A change to what an app serves or relays is done once `end-to-end` passes:
 only the browser smoke runs the page.
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 `.github/workflows/web.yml` runs the same three and fails when the committed client differs from what
 `pnpm api` writes.
 <!--#endif-->

@@ -337,12 +337,31 @@
       "type": "computed",
       "value": "(framework == \"worker\")"
     },
+    "codeHost": {
+      "type": "parameter",
+      "displayName": "Project generated with --code-host",
+      "datatype": "choice",
+      "defaultValue": "github",
+      "choices": [
+        { "choice": "github", "description": "The project was generated with --code-host github." },
+        { "choice": "none", "description": "The project was generated with --code-host none." }
+      ],
+      "description": "The project's --code-host value: the worker's lines to add name the .github files only where the project has them."
+    },
+    "githubHost": {
+      "type": "computed",
+      "value": "(codeHost == \"github\")"
+    },
     "ci": {
       "type": "parameter",
       "displayName": "Project generated with --ci",
       "datatype": "bool",
       "defaultValue": "true",
       "description": "The project's --ci value: the worker's lines to add name the release workflow only where the project has it."
+    },
+    "githubCi": {
+      "type": "computed",
+      "value": "(ci && githubHost)"
     },
     "hasClient": {
       "type": "parameter",

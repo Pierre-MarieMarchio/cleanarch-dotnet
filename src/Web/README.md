@@ -77,13 +77,13 @@ dotnet new cleanarch-webapp -n PlaceholderSite --framework <vue|vite-react|vite-
 dotnet cleanarch add web-app --name PlaceholderSite --framework <framework>
 ```
 
-Pass the project's `--auth`, `--ci` and `--agent-files` too when they are not the defaults.
+Pass the project's `--auth`, `--code-host`, `--ci` and `--agent-files` too when they are not the defaults.
 
 `--workspace` writes this folder, the shared packages, the browser smoke among them, the API client,
-the web apps' end-to-end tests, `docs/features/web-frontend.md` and, unless `--ci false`,
-`.github/workflows/web.yml` and `.github/workflows/web-node-version.yml`. The API side is in every
-project already. The lines `--web` writes in files the item template cannot edit are listed below,
-then those of the app's own `README.md`.
+the web apps' end-to-end tests, `docs/features/web-frontend.md` and, unless `--ci false` or
+`--code-host none`, `.github/workflows/web.yml` and `.github/workflows/web-node-version.yml`. The
+API side is in every project already. The lines `--web` writes in files the item template cannot
+edit are listed below, then those of the app's own `README.md`.
 `dotnet cleanarch add web-app`, the first time it joins an app to a project whose `cleanarch.json`
 records no workspace, makes all of them, leaves those in place already, or makes none when one of
 the lines an edit is placed by is not found exactly once; then it records the workspace and the app,
@@ -199,6 +199,7 @@ its `pnpm-lock.yaml`.
 
   ```
 
+<!--#if (githubHost)-->
 - in `.github/dependabot.yml`, before the lines:
 
   ```yaml
@@ -266,7 +267,8 @@ its `pnpm-lock.yaml`.
 
   ```
 
-<!--#if (ci)-->
+<!--#endif-->
+<!--#if (githubCi)-->
 - in `.github/workflows/ci.yml`, before the line:
 
   ```yaml
@@ -312,7 +314,7 @@ its `pnpm-lock.yaml`.
   ```
 
 <!--#endif-->
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 - in `.github/workflows/codeql.yml`, after the lines:
 
   ```yaml
@@ -431,7 +433,7 @@ its `pnpm-lock.yaml`.
   ```
 
 <!--#endif-->
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 - in `docs/getting-started/existing-repository.md`, before the line:
 
   ```markdown
@@ -583,7 +585,7 @@ its `pnpm-lock.yaml`.
   stops before them and says how to install it, and no option skips them.
   ```
 
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 - in `docs/guides/build-and-ci.md`, replace the line:
 
   ```markdown
@@ -597,7 +599,7 @@ its `pnpm-lock.yaml`.
   ```
 
 <!--#endif-->
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 - in `docs/guides/build-and-ci.md`, after the line:
 
   ```markdown
@@ -612,7 +614,7 @@ its `pnpm-lock.yaml`.
   ```
 
 <!--#endif-->
-<!--#if (ci)-->
+<!--#if (githubCi)-->
 - in `docs/guides/build-and-ci.md`, after the line:
 
   ```markdown
@@ -641,7 +643,12 @@ its `pnpm-lock.yaml`.
 - in `docs/guides/build-and-ci.md`, after the line:
 
   ```markdown
+  <!--#if (githubHost)-->
   | Container images and actions | their digest or commit SHA, beside the tag |
+  <!--#endif-->
+  <!--#if (!githubHost)-->
+  | Container images | their digest, beside the tag |
+  <!--#endif-->
   ```
 
   add:
@@ -652,16 +659,24 @@ its `pnpm-lock.yaml`.
   `NodeVersionTests` holds Node.js to one version: the `node` image of every web app's Dockerfile
   runs exactly the version in `src/Web/.node-version`, which CI and developers run, and `engines.node`
   in `src/Web/package.json` and every `@types/node` of the workspace name its major.
-  <!--#if (ci)-->
+  <!--#if (githubCi)-->
   A patch or a minor arrives in Dependabot's pull request on the images, and
   `.github/workflows/web-node-version.yml` commits its version to `src/Web/.node-version` once CI fails
   on the difference; update the branch, or close and reopen the pull request, to run the checks again.
-  <!--#else-->
+  <!--#endif-->
+  <!--#if (githubHost && !ci)-->
   A patch or a minor arrives in Dependabot's pull request on the images; write its version to
   `src/Web/.node-version` in that pull request.
   <!--#endif-->
+  <!--#if (githubHost)-->
   A new major arrives from Dependabot too, and stays red, held by `NodeVersionTests`, until it is done
   by hand: `src/Web/.node-version`, `engines.node`, `@types/node` and every `FROM node:` move together.
+  <!--#endif-->
+  <!--#if (!githubHost)-->
+  No bot proposes a newer Node.js: a patch, a minor or a major is taken by hand, and
+  `src/Web/.node-version`, `engines.node`, `@types/node` and every `FROM node:` move together, or
+  `NodeVersionTests` fails.
+  <!--#endif-->
   ```
 
 - in `docs/guides/build-and-ci.md`, after the line:
@@ -801,7 +816,7 @@ its `pnpm-lock.yaml`.
 
   `end-to-end` fails with that command in its message when the browser is missing, and has no option to
   skip the smoke.
-  <!--#if (ci)-->
+  <!--#if (githubCi)-->
   CI installs Chromium in the `end-to-end` job and caches it by the Playwright release the lockfile
   resolves.
   <!--#endif-->

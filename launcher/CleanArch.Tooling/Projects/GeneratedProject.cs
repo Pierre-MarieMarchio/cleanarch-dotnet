@@ -38,6 +38,7 @@ public static class GeneratedProject
             Directory.Exists(Path.Combine(root, "src", "Infrastructure", ProjectFacts.FolderOf(name, "Infrastructure.Storage"))),
             File.Exists(Path.Combine(root, "src", "Presentation", ProjectFacts.FolderOf(name, "Presentation.Client"), name + ".Presentation.Client.csproj")),
             DatabaseProvider(root, name),
+            Directory.Exists(Path.Combine(root, ".github")) ? "github" : "none",
             File.Exists(Path.Combine(root, ".github", "workflows", "ci.yml")),
             File.Exists(Path.Combine(root, "AGENTS.md")),
             Directory.Exists(Path.Combine(root, "src", "Presentation", ProjectFacts.FolderOf(name, "Api"))));

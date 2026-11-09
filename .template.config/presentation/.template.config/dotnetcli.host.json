@@ -52,6 +52,10 @@
       "longName": "has-api",
       "shortName": ""
     },
+    "codeHost": {
+      "longName": "code-host",
+      "shortName": ""
+    },
     "ci": {
       "longName": "ci",
       "shortName": ""

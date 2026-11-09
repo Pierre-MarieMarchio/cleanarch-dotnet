@@ -100,13 +100,13 @@
   {
     "name": "no web, then a react app, its workspace and an angular back office",
     "tags": ["presentation-avalonia", "presentation-item", "starter-angular", "starter-blazor-wasm", "starter-vite-react", "web"],
-    "options": "",
+    "options": "--code-host none",
     "auth_context": "true",
     "web": "true",
-    "first_app": "--framework vite-react --project-name Sample.Generated.Project --scope sample-generated-project --workspace",
-    "first_presentation": "--framework avalonia",
-    "wasm_app": "--scope sample-generated-project --has-client true",
-    "second_app": "--framework angular --audience admin --rendering ssr --scope sample-generated-project"
+    "first_app": "--framework vite-react --project-name Sample.Generated.Project --scope sample-generated-project --workspace --code-host none",
+    "first_presentation": "--framework avalonia --code-host none",
+    "wasm_app": "--scope sample-generated-project --has-client true --code-host none",
+    "second_app": "--framework angular --audience admin --rendering ssr --scope sample-generated-project --code-host none"
   },
   {
     "name": "web, every starter",

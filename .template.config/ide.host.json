@@ -69,9 +69,16 @@
       "isVisible": true
     },
     {
+      "id": "codeHost",
+      "name": {
+        "text": "Code host"
+      },
+      "isVisible": true
+    },
+    {
       "id": "ci",
       "name": {
-        "text": "GitHub Actions workflows"
+        "text": "CI pipelines"
       },
       "isVisible": true
     },

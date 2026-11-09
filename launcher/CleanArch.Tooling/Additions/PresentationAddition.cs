@@ -30,6 +30,7 @@ internal sealed partial class PresentationAddition(AdditionFlow flow)
             ["hasClient"] = Condition.Of(project.HasClient),
             ["database"] = project.Database,
             ["hasApi"] = Condition.Of(project.HasApi),
+            ["codeHost"] = project.CodeHost,
             ["ci"] = Condition.Of(project.Ci),
         };
         flow.Detected(project, manifest, detected);

@@ -178,7 +178,7 @@ hosts.
 | web placeholder, sqlite, smallest project | `--web placeholder --database sqlite --auth none --examples none --files false --presentation blazor-server`, then `cleanarch-webapp --framework angular --rendering ssr` |
 | web react back office, local auth | `--web vite-react --web-audience admin --presentation blazor-server --agent-files-example true`, then `cleanarch-webapp --framework blazor-wasm` and `add web-app` before the build |
 | web angular, external auth, notes | `--web angular --web-rendering ssr --auth external --examples notes --presentation blazor-server`, then `cleanarch-webapp --framework blazor-wasm --auth external` and `add web-app` before the build |
-| no web, then a react app, its workspace and an angular back office | none, then `cleanarch-webapp --framework vite-react --workspace`, `cleanarch-presentation --framework avalonia`, `cleanarch-webapp --framework blazor-wasm --has-client true` and `cleanarch-webapp --framework angular --audience admin --rendering ssr` |
+| no web, then a react app, its workspace and an angular back office | `--code-host none`, then `cleanarch-webapp --framework vite-react --workspace`, `cleanarch-presentation --framework avalonia`, `cleanarch-webapp --framework blazor-wasm --has-client true` and `cleanarch-webapp --framework angular --audience admin --rendering ssr` |
 | web, every starter | `--web blazor-wasm --examples none --files false`, then `cleanarch-presentation --framework avalonia --has-client true` and `cleanarch-webapp` once per pnpm framework starter, each on its own `--port`, and once more for React Router with `--rendering ssr` |
 | windows, wpf, local auth | `--presentation wpf`, every other option at its default, on `windows-latest` |
 | windows, wpf, external auth, notes | `--presentation wpf --auth external --examples notes`, on `windows-latest` |
@@ -194,7 +194,8 @@ runs at most twenty jobs at once, which the acceptance legs share with the other
 Every leg also greps its project for the other database providers' packages and types, reading its own
 `database`; the SQLite legs run their integration suites on a file and start no database container, and
 the SQL Server leg starts one large image, so it has the longest timeout. A leg without a web app asserts no workflow, Dependabot entry, Compose file or ignore file names a
-workspace. The leg that adds a first app runs that assertion, then `cleanarch-webapp --workspace` and
+workspace. The leg that adds a first app passes `--code-host none`, so every join it runs lands in a
+project without a code host's files and must write none there; it runs that assertion, then `cleanarch-webapp --workspace` and
 `add web-app`, which makes the lines `src/Web/README.md` and the app's `README.md` list, and is a web leg
 from there. `--workspace` only adds files, and
 the engine refuses to overwrite one, so everything a web app needs from the API ships with every
@@ -349,6 +350,32 @@ leg's provider-leak check reads the leg's `database`.
 An overlay file starts as a copy of its PostgreSQL counterpart, so `git log` on both paths finds a
 change one of them missed.
 
+## Code hosts
+
+A project carries the files of one code host, or none
+([decision 0005](decisions/0005-a-project-carries-one-code-hosts-files.md)). GitHub is in-tree: the
+`.github` folder at the root, and the project's own issue forms and pull request template in
+`.template.config/variants/project/.github`, run by this repository's CI and held by
+`WorkflowPinningTests`, `IssueFormTests` and `PullRequestTemplateTests`. Every source that writes
+under `.github` carries `githubHost`, or `githubCi` for a workflow, so `--code-host none` writes no
+`.github` path, and the web app's workflows follow the project's `--code-host` and `--ci`, which
+`add web-app` and `add presentation` pass from `cleanarch.json`.
+
+| Symbol | Reads |
+|---|---|
+| `codeHost` | the host chosen: `github` by default, or `none` |
+| `githubHost` | `codeHost == "github"`: the `.github` folder, Dependabot, the issue forms, the pull request template |
+| `anyCodeHost` | `codeHost != "none"`: a host whose pipelines `--ci` can write |
+| `githubCi` | `ci && githubHost`: the GitHub Actions workflows |
+| `sonarWorkflow` | `githubCi && sonar`: the Sonar steps of `ci.yml` |
+
+A page conditions a line that names a host's file on that host's symbol, and gives `none` a whole
+sentence that holds without it. Another host comes as a whole-file overlay under
+`.template.config/variants/code-host-<value>/`, its value kept out of the choices until the overlay is
+complete; `TemplatePackagingTests` fails until every choice is GitHub's tree, `none`, or a folder of
+its own. Its pipeline holds the same gate as `ci.yml`, and is proved by the options of a leg that fits
+it rather than a leg of its own.
+
 ## Adding an option
 
 An option removes, it never disables: what it leaves out is absent from the generated project, its
@@ -447,7 +474,7 @@ No object store runs.
   the worker) only when the item template that adds the part rewrites the file or its join edits it;
   otherwise the project that gains the part reads otherwise than one generated with it, and
   `launcher/CleanArch.Create.Tests/EndToEndTests.cs` fails. The issue forms and the pull request
-  template under `.github` stay true in every form instead.
+  template under `.github` stay true in every form that has them instead.
 - Text that names a token (`AppTemplate`, `app-template`, the web app tokens) is replaced in a
   generated project; write a token only where its replacement reads right.
 - Project pages say "this project"; only `docs/template/` and the repository `README.md` say "the
@@ -1038,6 +1065,7 @@ project on the thread and fails on any glyph above Latin-1 outside the WGL4 list
 | `--examples` | `all` with `Features/TodoLists` in the application project, `notes` with `Features/Notes` alone, `none` otherwise |
 | `--files` | the `Infrastructure.Storage` project |
 | `--database` | the provider package `Infrastructure.Core` references: SQL Server, SQLite, PostgreSQL otherwise |
+| `--code-host` | `github` with a `.github` folder at the root, `none` otherwise |
 | `--ci`, `--agent-files` | `.github/workflows/ci.yml`, `AGENTS.md` |
 | `--agent-files-example` | nothing: recorded `false`, the lines it writes being the team's to replace |
 | `--has-api` | the `src/Presentation/<Initials>.Api` folder |

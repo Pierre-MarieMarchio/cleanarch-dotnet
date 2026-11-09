@@ -195,6 +195,7 @@ internal static class AddCommand
             file.Options.Files == true,
             file.Client,
             file.Options.Database ?? "postgresql",
+            file.Options.CodeHost ?? "github",
             file.Options.Ci == true,
             file.Options.AgentFiles == true,
             ProjectLayout.HoldsTheApi(project));

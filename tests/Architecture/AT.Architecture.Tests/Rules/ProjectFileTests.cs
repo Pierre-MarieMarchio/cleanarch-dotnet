@@ -92,6 +92,16 @@ public sealed class ProjectFileTests
     }
 
     [Fact]
+    public void TheCodeHost_IsTheOneWhoseFolderTheTreeHolds()
+    {
+        string codeHost = Option("codeHost");
+
+        Holds(".github").ShouldBe(
+            codeHost == "github",
+            $"cleanarch.json records --code-host {codeHost}, and the .github folder comes with github alone.");
+    }
+
+    [Fact]
     public void TheClient_IsRecordedExactlyWhenTheTreeHoldsIt()
     {
         bool client = ProjectFile["client"]?.GetValue<bool>() ?? false;

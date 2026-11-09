@@ -12,7 +12,7 @@ public sealed class ProjectLocatorTests
 
         file.Template.ShouldBe(new TemplateReference("CleanArch.WebApi.Templates", "1.2.3"));
         file.Name.ShouldBe("Acme.Shop");
-        file.Options.ShouldBe(new ProjectOptions("local", "postgresql", "all", Files: true, Ci: true, Sonar: false, AgentFiles: true));
+        file.Options.ShouldBe(new ProjectOptions("local", "postgresql", "all", Files: true, CodeHost: "github", Ci: true, Sonar: false, AgentFiles: true));
         file.Client.ShouldBeTrue();
         file.Web.ShouldNotBeNull().Scope.ShouldBe("acme-shop");
         file.Web.Apps.ShouldBe([new WebApp("Site", "vite-react", "public", "spa")]);

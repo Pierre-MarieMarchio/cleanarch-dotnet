@@ -26,7 +26,7 @@ public sealed class WorkflowPinningTests
     {
         var actions = References(_uses).Where(action => !action.Reference.StartsWith(_containerStep, StringComparison.Ordinal)).ToList();
 
-        //#if (ci)
+        //#if (githubCi)
         actions.ShouldNotBeEmpty("ci.yml checks out the repository; a search of .github/workflows that finds no action is broken.");
         //#endif
         actions

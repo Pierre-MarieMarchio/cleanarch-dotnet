@@ -31,6 +31,7 @@ internal sealed partial class WebAppAddition(AdditionFlow flow)
             ["examples"] = project.Examples,
             ["files"] = Condition.Of(project.Files),
             ["hasClient"] = Condition.Of(project.HasClient),
+            ["codeHost"] = project.CodeHost,
             ["ci"] = Condition.Of(project.Ci),
             ["agentFiles"] = Condition.Of(project.AgentFiles),
         };

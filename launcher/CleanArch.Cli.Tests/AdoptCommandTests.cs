@@ -50,7 +50,7 @@ public sealed class AdoptCommandTests : IDisposable
         ProjectFile file = ProjectLocator.Find(_root).ShouldNotBeNull().File;
         file.Template.ShouldBe(new TemplateReference("CleanArch.WebApi.Templates", "1.4.0"));
         file.Name.ShouldBe("Acme.Shop");
-        file.Options.ShouldBe(new ProjectOptions("local", "postgresql", "none", Files: false, Ci: true, Sonar: true, AgentFiles: false, Aspire: false));
+        file.Options.ShouldBe(new ProjectOptions("local", "postgresql", "none", Files: false, CodeHost: "github", Ci: true, Sonar: true, AgentFiles: false, Aspire: false));
         file.Client.ShouldBeFalse();
         file.Web.ShouldNotBeNull().Scope.ShouldBe("acme-shop");
         file.Web.Apps.ShouldBe([new WebApp("Site", "vite-react", "public", "spa", 8081)]);
@@ -59,6 +59,19 @@ public sealed class AdoptCommandTests : IDisposable
         _output.ToString().ShouldStartWith($"Wrote {Path.Combine(_root, ProjectLocator.FileName)}:");
         _output.ToString().ShouldContain("\"version\": \"1.4.0\"");
         _error.ToString().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Adopt_WithoutTheGitHubFolder_RecordsNoCodeHost_AndNoPipelines()
+    {
+        AProjectBeforeTheTool();
+        Directory.Delete(Path.Combine(_root, ".github"), recursive: true);
+
+        Run(["adopt"], _root).ShouldBe(CleanArchCommand.Succeeded);
+
+        ProjectOptions options = ProjectLocator.Find(_root).ShouldNotBeNull().File.Options;
+        options.CodeHost.ShouldBe("none");
+        options.Ci.ShouldBe(false);
     }
 
     [Fact]

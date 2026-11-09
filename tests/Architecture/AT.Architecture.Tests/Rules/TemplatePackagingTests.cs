@@ -631,16 +631,17 @@ public sealed class TemplatePackagingTests
     }
 
     [Fact]
-    public void ThePullRequestTemplate_ReachesEveryGeneratedProject()
+    public void ThePullRequestTemplate_ReachesEveryProjectGitHubHosts()
     {
         string[] templatePaths = [".github/pull_request_template.md", ".github/**"];
         using var manifest = JsonDocument.Parse(File.ReadAllText(ManifestPath()));
 
         var generationExcludes = manifest.RootElement.GetProperty("sources")[0].GetProperty("modifiers").EnumerateArray()
+            .Where(modifier => Text(modifier, "condition") != _withoutGitHub)
             .SelectMany(modifier => modifier.GetProperty("exclude").EnumerateArray().Select(pattern => pattern.GetString()!));
 
         generationExcludes.Intersect(templatePaths).ShouldBeEmpty(
-            "template.json leaves the pull request template out of a generated project, which carries the authorship rule.");
+            "template.json leaves the pull request template out of a project on GitHub, which carries the authorship rule.");
         PackageExcludes().Any(exclude => templatePaths.Any(path => exclude.EndsWith(path, StringComparison.Ordinal))).ShouldBeFalse(
             ".template.config/TemplatePackage.csproj leaves the pull request template out of the package.");
     }
@@ -661,6 +662,109 @@ public sealed class TemplatePackagingTests
         files.Where(text => text.Contains("dotnet new", StringComparison.Ordinal) || text.Contains("template", StringComparison.OrdinalIgnoreCase))
             .ShouldBeEmpty("A file generated into a project talks about the template: it is written for the project.");
     }
+
+    private const string _withoutGitHub = "(!githubHost)";
+
+    private const string _githubFolder = ".github";
+
+    [Fact]
+    public void EverySourceThatWritesTheGitHubFolder_WritesNothingThereWithoutGitHub()
+    {
+        string root = ProjectReferenceGraph.RepositoryRoot;
+        var writers = new List<string>();
+        var unguarded = new List<string>();
+
+        foreach (string manifestPath in (string[])[ManifestPath(), WebAppItemManifestPath(), PresentationItemManifestPath()])
+        {
+            using var manifest = JsonDocument.Parse(File.ReadAllText(manifestPath));
+            string templateRoot = Path.GetDirectoryName(Path.GetDirectoryName(manifestPath))!;
+
+            foreach (var source in manifest.RootElement.GetProperty("sources").EnumerateArray())
+            {
+                string from = Path.GetFullPath(Path.Combine(templateRoot, Text(source, "source") ?? "./"));
+                string target = Text(source, "target") ?? "./";
+                target = target.StartsWith("./", StringComparison.Ordinal) ? target[2..] : target;
+                string? written = target.StartsWith(_githubFolder + "/", StringComparison.Ordinal) ? from
+                    : target.Length == 0 && Directory.Exists(Path.Combine(from, _githubFolder)) ? Path.Combine(from, _githubFolder)
+                    : null;
+
+                if (written is null)
+                {
+                    continue;
+                }
+
+                string name = $"{Path.GetRelativePath(root, manifestPath)}: {Text(source, "source")}";
+                writers.Add(name);
+                Regex[] excluded = [.. Modifiers(source)
+                    .Where(modifier => Text(modifier, "condition") == _withoutGitHub)
+                    .SelectMany(modifier => modifier.GetProperty("exclude").EnumerateArray().Select(pattern => SourceGlob(pattern.GetString()!)))];
+                bool conditioned = Text(source, "condition") is { } condition
+                    && condition.Trim('(', ')').Split("&&").Select(conjunct => conjunct.Trim()).Any(conjunct => conjunct is "githubHost" or "githubCi");
+
+                unguarded.AddRange(Directory.EnumerateFiles(written, "*", SearchOption.AllDirectories)
+                    .Select(file => Path.GetRelativePath(from, file).Replace('\\', '/'))
+                    .Where(file => !conditioned && !excluded.Any(glob => glob.IsMatch(file)))
+                    .Select(file => $"{name} writes {file}"));
+            }
+        }
+
+        writers.Count.ShouldBeGreaterThanOrEqualTo(3, "Far fewer sources write the .github folder than the root, the project variant and the web app's workflows, so this rule is not reading them.");
+        unguarded.ShouldBeEmpty(
+            "A project generated with --code-host none holds no .github file: give each source that writes one the condition githubHost or githubCi, "
+            + $"or a modifier under {_withoutGitHub} that excludes {_githubFolder}/**.");
+    }
+
+    [Fact]
+    public void EveryCodeHost_IsGitHubsTree_ANoneThatWritesNothing_OrAVariantOfItsOwn()
+    {
+        string root = ProjectReferenceGraph.RepositoryRoot;
+        using var manifest = JsonDocument.Parse(File.ReadAllText(ManifestPath()));
+        JsonElement symbols = manifest.RootElement.GetProperty("symbols");
+        JsonElement codeHost = symbols.GetProperty("codeHost");
+        JsonElement[] sources = [.. manifest.RootElement.GetProperty("sources").EnumerateArray()];
+        string[] hosts = ChoiceValues(codeHost);
+
+        hosts.ShouldContain("github", "--code-host offers no github, the host this tree's .github folder serves.");
+        Text(codeHost, "defaultValue").ShouldBe("github", "A project is generated for GitHub unless told otherwise.");
+        Text(symbols.GetProperty("githubHost"), "value").ShouldBe("(codeHost == \"github\")");
+        Text(symbols.GetProperty("anyCodeHost"), "value").ShouldBe("(codeHost != \"none\")");
+        Directory.Exists(Path.Combine(root, _githubFolder)).ShouldBeTrue("The tree holds no .github folder, which --code-host github writes.");
+
+        foreach (string host in hosts.Where(host => host != "github"))
+        {
+            string variant = $"./.template.config/variants/code-host-{host}/";
+            string[] conditions = [.. sources.Where(source => Text(source, "source") == variant).Select(source => Text(source, "condition") ?? "(true)")];
+
+            if (host == "none")
+            {
+                conditions.ShouldBeEmpty("--code-host none writes no file of its own.");
+                sources.Select(source => Text(source, "condition")).OfType<string>().Where(condition => condition.Contains("codeHost == \"none\"", StringComparison.Ordinal)).ShouldBeEmpty(
+                    "--code-host none writes nothing: no source is written for it alone.");
+                continue;
+            }
+
+            Directory.Exists(Path.Combine(root, variant)).ShouldBeTrue($"--code-host {host} has no {variant} to write its files from.");
+            conditions.ShouldBe([$"(codeHost == \"{host}\")"], $"{variant} must be written for --code-host {host} alone.");
+        }
+
+        foreach (string item in (string[])[WebAppItemManifestPath(), PresentationItemManifestPath()])
+        {
+            using var itemManifest = JsonDocument.Parse(File.ReadAllText(item));
+            JsonElement declared = itemManifest.RootElement.GetProperty("symbols").GetProperty("codeHost");
+
+            ChoiceValues(declared).ShouldBe(hosts, $"{Path.GetRelativePath(root, item)} offers other code hosts than the project template.");
+            Text(declared, "defaultValue").ShouldBe(Text(codeHost, "defaultValue"), $"{Path.GetRelativePath(root, item)} takes another code host by default than the project template.");
+        }
+    }
+
+    private static JsonElement[] Modifiers(JsonElement source) =>
+        source.TryGetProperty("modifiers", out var modifiers) ? [.. modifiers.EnumerateArray()] : [];
+
+    private static Regex SourceGlob(string pattern) =>
+        new("^" + Regex.Escape(pattern).Replace(@"\*\*", ".*", StringComparison.Ordinal).Replace(@"\*", "[^/]*", StringComparison.Ordinal) + "$", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static string WebAppItemManifestPath() =>
+        Path.Combine(ProjectReferenceGraph.RepositoryRoot, ".template.config", "webapp", ".template.config", "template.json");
 
     [Fact]
     public void TheTemplatesCommunityFiles_ReachNeitherAProjectNorTheTemplatePackage()
