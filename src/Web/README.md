@@ -77,13 +77,26 @@ dotnet new cleanarch-webapp -n PlaceholderSite --framework <vue|vite-react|vite-
 dotnet cleanarch add web-app --name PlaceholderSite --framework <framework>
 ```
 
-Pass the project's `--auth`, `--code-host`, `--ci` and `--agent-files` too when they are not the defaults.
+<!--#if (githubHost)-->
+Pass the project's `--auth`, `--ci` and `--agent-files` too when they are not the defaults.
+<!--#endif-->
+<!--#if (!githubHost)-->
+Pass the project's `--auth`, `--code-host` and `--agent-files` too when they are not the defaults.
+<!--#endif-->
 
+<!--#if (githubCi)-->
 `--workspace` writes this folder, the shared packages, the browser smoke among them, the API client,
-the web apps' end-to-end tests, `docs/features/web-frontend.md` and, unless `--ci false` or
-`--code-host none`, `.github/workflows/web.yml` and `.github/workflows/web-node-version.yml`. The
-API side is in every project already. The lines `--web` writes in files the item template cannot
-edit are listed below, then those of the app's own `README.md`.
+the web apps' end-to-end tests, `docs/features/web-frontend.md` and, unless `--ci false`,
+`.github/workflows/web.yml` and `.github/workflows/web-node-version.yml`. The API side is in every
+project already. The lines `--web` writes in files the item template cannot edit are listed below,
+then those of the app's own `README.md`.
+<!--#endif-->
+<!--#if (!githubCi)-->
+`--workspace` writes this folder, the shared packages, the browser smoke among them, the API client,
+the web apps' end-to-end tests and `docs/features/web-frontend.md`. The API side is in every project
+already. The lines `--web` writes in files the item template cannot edit are listed below, then
+those of the app's own `README.md`.
+<!--#endif-->
 `dotnet cleanarch add web-app`, the first time it joins an app to a project whose `cleanarch.json`
 records no workspace, makes all of them, leaves those in place already, or makes none when one of
 the lines an edit is placed by is not found exactly once; then it records the workspace and the app,
