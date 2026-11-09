@@ -40,7 +40,7 @@ long paths on once per machine: set `LongPathsEnabled` in the registry, as
 says, and run `git config --global core.longpaths true`.
 
 <!--#if (anyWeb)-->
-Run `corepack enable` once per machine so the pinned pnpm is the one that runs.
+Run `npm install --global corepack`, then `corepack enable`, once per machine so the pinned pnpm is the one that runs.
 
 <!--#endif-->
 ## Bootstrap once

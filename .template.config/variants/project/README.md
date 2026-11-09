@@ -62,7 +62,7 @@ generated with.
 
 You need the .NET SDK `global.json` pins and Docker with Compose v2.
 <!--#if (anyWeb)-->
-The web workspace also needs Node.js and pnpm (`corepack enable`).
+The web workspace also needs Node.js and pnpm (`npm install --global corepack`, then `corepack enable`).
 <!--#endif-->
 
 ```bash

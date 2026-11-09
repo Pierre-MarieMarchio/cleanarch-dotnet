@@ -5,7 +5,7 @@ What a change under `src/Web` needs beyond [the root AGENTS.md](../../AGENTS.md)
 
 ## Commands
 
-From `src/Web`, after `corepack enable` once per machine:
+From `src/Web`, after `npm install --global corepack`, then `corepack enable`, once per machine:
 
 | When | Command |
 |---|---|

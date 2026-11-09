@@ -9,7 +9,8 @@ Node is the version in `.node-version`. Nothing in the .NET build needs either.
 From this folder:
 
 ```bash
-corepack enable          # once per machine
+npm install --global corepack   # once per machine
+corepack enable                 # once per machine
 pnpm install --frozen-lockfile
 pnpm lint
 pnpm test
@@ -121,7 +122,7 @@ its `pnpm-lock.yaml`.
   add:
 
   ```markdown
-  The web workspace also needs Node.js and pnpm (`corepack enable`).
+  The web workspace also needs Node.js and pnpm (`npm install --global corepack`, then `corepack enable`).
   ```
 
 - in `README.md`, after the line:
@@ -465,7 +466,7 @@ its `pnpm-lock.yaml`.
   add:
 
   ```markdown
-  Run `corepack enable` once per machine so the pinned pnpm is the one that runs.
+  Run `npm install --global corepack`, then `corepack enable`, once per machine so the pinned pnpm is the one that runs.
 
   ```
 

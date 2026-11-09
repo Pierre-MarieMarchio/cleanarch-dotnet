@@ -170,7 +170,7 @@ internal static class WebLockfiles
         }
         catch (Win32Exception)
         {
-            throw new InvalidOperationException($"Couldn't start {start.FileName}. Is pnpm installed (corepack enable)?");
+            throw new InvalidOperationException($"Couldn't start {start.FileName}. Is pnpm installed (npm install --global corepack, then corepack enable)?");
         }
     }
 
