@@ -9,10 +9,40 @@ using AppTemplate.Application.Features.Placeholders.Model.Policies; //?Placehold
 using AppTemplate.Application.Features.Placeholders.Ports.PlaceholderQueries; //?IPlaceholderQueries|PlaceholderFilter
 using AppTemplate.Application.Features.Placeholders.Ports.PlaceholderStore; //?IPlaceholderStore|PlaceholderChangeStatus
 using AppTemplate.Domain.Core.Common.Primitives; //?UserId
+using AppTemplate.Domain.Features.Placeholders.Model.Entities; //?Placeholder
+using AppTemplate.Domain.Features.Placeholders.Repositories; //?IPlaceholderRepository
 using FluentValidation; //?IValidator
 
 namespace AppTemplate.Application.Features.Placeholders.Services;
 
+#if aggregate
+internal sealed class PlaceholderService(IPlaceholderRepository repository, ICurrentUser currentUser) : IPlaceholderService
+{
+    public async Task<Result<Placeholder>> %Load%(
+        Guid placeholderId,
+        VersionPrecondition? precondition,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = currentUser.RequireUserId();
+
+        if (userId.IsFailure)
+        {
+            return userId.To<Placeholder>();
+        }
+
+        var aggregate = await repository.GetAsync(%SvcOwner%placeholderId, cancellationToken);
+
+        if (aggregate is null)
+        {
+            return Result.Failure<Placeholder>(PlaceholderErrors.PlaceholderNotFound(placeholderId));
+        }
+
+        return precondition is not null && !precondition.IsSatisfiedBy(aggregate.Version)
+            ? Result.Failure<Placeholder>(ConcurrencyErrors.PreconditionFailed)
+            : Result.Success(aggregate);
+    }
+}
+#else
 internal sealed class PlaceholderService(
 #if reads
     IPlaceholderQueries queries,
@@ -216,3 +246,4 @@ internal sealed class PlaceholderService(
     };
 #endif
 }
+#endif

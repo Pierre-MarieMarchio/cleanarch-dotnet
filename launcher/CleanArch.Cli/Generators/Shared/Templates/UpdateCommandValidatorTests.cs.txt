@@ -1,0 +1,21 @@
+using AppTemplate.Application.Features.Placeholders.UseCases.Commands.UpdatePlaceholder;
+using AppTemplate.Domain.Features.Placeholders.Model.Entities; //?Placeholder
+using Shouldly;
+using Xunit;
+
+namespace AppTemplate.Application.UnitTests.Features.Placeholders.UseCases.Commands.UpdatePlaceholder;
+
+public sealed class UpdatePlaceholderCommandValidatorTests
+{
+    private static readonly UpdatePlaceholderCommandValidator _validator = new();
+
+    private static CancellationToken TestToken => TestContext.Current.CancellationToken;
+
+%FUpdateValidatorTests%
+
+    private static UpdatePlaceholderCommand AValidCommand() => new(
+        Guid.CreateVersion7(),
+//#each field separator ",\n"
+        %field.Sample%
+//#end ");"
+}
