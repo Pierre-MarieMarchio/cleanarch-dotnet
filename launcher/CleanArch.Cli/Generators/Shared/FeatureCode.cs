@@ -179,7 +179,6 @@ internal static class FeatureCode
         OwnershipTokens(tokens, spec);
         ConcurrencyTokens(tokens, spec);
         ModelTokens(tokens, spec);
-        DeletionTokens(tokens, spec);
         tokens["ServiceArgs"] = ServiceArguments(spec, flags);
         CallTokens(tokens, spec);
         DocumentationTokens(tokens, spec, flags);
@@ -300,15 +299,6 @@ internal static class FeatureCode
     }
 
     private static string Limits(FeatureSpec spec) => IsRecord(spec) ? $"{spec.Type}InputPolicy" : spec.Type;
-
-    private static void DeletionTokens(Dictionary<string, string> tokens, FeatureSpec spec)
-    {
-        bool anonymises = Anonymises(spec);
-
-        tokens["Verb"] = anonymises ? "Anonymise" : "Delete";
-        tokens["Fate"] = anonymises ? "anonymised" : "deleted";
-        tokens["Stage"] = anonymises ? "StageAnonymisationForOwnerAsync" : "StageRemovalForOwnerAsync";
-    }
 
     private static string ServiceArguments(FeatureSpec spec, HashSet<string> flags) =>
         string.Join(
@@ -476,12 +466,10 @@ internal static class FeatureCode
             Add(application, $"{_feature}/Ports/%A%Queries/%A%Filter.cs", FeatureTemplates.Filter, "list");
             Add(application, $"{_feature}/Ports/%A%Store/I%A%Store.cs", FeatureTemplates.StorePort, "record && store");
             Add(application, $"{_feature}/Ports/%A%Store/%A%ChangeStatus.cs", FeatureTemplates.ChangeStatus, "record && changesOne");
-            Add(application, $"{_feature}/Services/I%A%Service.cs", FeatureTemplates.ServicePort, "record");
-            Add(application, $"{_feature}/Services/%A%Service.cs", FeatureTemplates.Service, "record");
-            Add(application, $"{_feature}/Model/Dtos/%A%ContentDtoValidator.cs", FeatureTemplates.ContentValidator, "record && takesContent");
             Add(application, $"{_feature}/Model/Mapping/%A%DtoMapping.cs", FeatureTemplates.DtoMapping, "aggregate && takesContent");
-            Add(application, $"{_feature}/Services/I%A%Service.cs", FeatureTemplates.AccessServicePort, "aggregate && changesOne");
-            Add(application, $"{_feature}/Services/%A%Service.cs", FeatureTemplates.AccessService, "aggregate && changesOne");
+            Add(application, $"{_feature}/Services/I%A%Service.cs", FeatureTemplates.ServicePort, "record || aggregate && changesOne");
+            Add(application, $"{_feature}/Services/%A%Service.cs", FeatureTemplates.Service, "record || aggregate && changesOne");
+            Add(application, $"{_feature}/Model/Dtos/%A%ContentDtoValidator.cs", FeatureTemplates.ContentValidator, "record && takesContent");
         }
 
         internal void UseCases()
@@ -497,15 +485,15 @@ internal static class FeatureCode
             Add(application, $"{_commands}/Update%A%/Update%A%CommandValidator.cs", FeatureTemplates.UpdateCommandValidator, "aggregate && update");
             Add(application, $"{_commands}/Delete%A%/Delete%A%.cs", FeatureTemplates.DeleteUseCase, "aggregate && delete");
             Add(application, $"{_commands}/Delete%A%/Delete%A%CommandValidator.cs", FeatureTemplates.DeleteCommandValidator, "aggregate && delete");
-            Add(application, $"{_feature}/Services/Consumers/%Verb%%A%OnAccountDeletedConsumer.cs", FeatureTemplates.AccountDeletedConsumer, "owner");
+            Add(application, $"{_feature}/Services/Consumers/Delete%A%OnAccountDeletedConsumer.cs", FeatureTemplates.DeleteAccountDeletedConsumer, "owner && erase");
+            Add(application, $"{_feature}/Services/Consumers/Anonymise%A%OnAccountDeletedConsumer.cs", FeatureTemplates.AnonymiseAccountDeletedConsumer, "owner && anonymise");
         }
 
         internal void Persistence()
         {
             string persistence = PersistenceProject(spec);
 
-            Add(persistence, $"{_feature}/Rows/Models/%A%Record.cs", FeatureTemplates.RecordPlain, "record");
-            Add(persistence, $"{_feature}/Rows/Models/%A%Record.cs", FeatureTemplates.RecordAudited, "aggregate");
+            Add(persistence, $"{_feature}/Rows/Models/%A%Record.cs", FeatureTemplates.Record);
             Add(persistence, $"{_feature}/Rows/Configurations/%A%RecordConfiguration.cs", FeatureTemplates.Configuration);
             Add(persistence, $"{_feature}/Access/Stores/%A%Store.cs", FeatureTemplates.Store, "record && store");
             Add(persistence, $"{_feature}/Rows/Mapping/I%A%Mapper.cs", FeatureTemplates.MapperPort, "aggregate");
@@ -514,7 +502,7 @@ internal static class FeatureCode
             Add(persistence, $"{_feature}/Rows/Tracking/%A%Tracker.cs", FeatureTemplates.Tracker, "aggregate");
             Add(persistence, $"{_feature}/Access/Repositories/%A%Repository.cs", FeatureTemplates.Repository, "aggregate && writes");
             Add(persistence, $"{_feature}/Access/Queries/%A%Queries.cs", FeatureTemplates.Queries, "reads");
-            Add(persistence, $"{_feature}/Access/Queries/%A%SortMap.cs", FeatureTemplates.FieldSortMap, "list");
+            Add(persistence, $"{_feature}/Access/Queries/%A%SortMap.cs", FeatureTemplates.SortMap, "list");
         }
 
         internal void Api()
@@ -536,13 +524,13 @@ internal static class FeatureCode
             string domainTests = ProjectOf(spec, "tests/Domain", "Domain.UnitTests");
             string persistenceTests = ProjectOf(spec, "tests/Infrastructure", "Infrastructure.Persistence.UnitTests");
 
-            AddTest(applicationTests, $"{_feature}/Model/Dtos/%A%ContentDtoValidatorTests.cs", FeatureTemplates.FieldContentValidatorTests, "record && takesContent");
+            AddTest(applicationTests, $"{_feature}/Model/Dtos/%A%ContentDtoValidatorTests.cs", FeatureTemplates.ContentValidatorTests, "record && takesContent");
             AddTest(applicationTests, $"{_feature}/Services/%A%ServiceTests.cs", FeatureTemplates.ServiceTests, "record");
-            CommandValidatorTests(applicationTests, "Create");
-            CommandValidatorTests(applicationTests, "Update");
-            AddTest(domainTests, $"{_feature}/Model/Entities/%A%Tests.cs", FeatureTemplates.FieldAggregateTests, "aggregate");
+            AddTest(applicationTests, $"{_commands}/Create%A%/Create%A%CommandValidatorTests.cs", FeatureTemplates.CreateCommandValidatorTests, "aggregate && create");
+            AddTest(applicationTests, $"{_commands}/Update%A%/Update%A%CommandValidatorTests.cs", FeatureTemplates.UpdateCommandValidatorTests, "aggregate && update");
+            AddTest(domainTests, $"{_feature}/Model/Entities/%A%Tests.cs", FeatureTemplates.AggregateTests, "aggregate");
             AddTest(persistenceTests, $"{_feature}/Rows/Configurations/%A%RecordConfigurationTests.cs", FeatureTemplates.ConfigurationTests);
-            AddTest(persistenceTests, $"{_feature}/%A%MapperFidelityTests.cs", FeatureTemplates.FieldMapperFidelityTests, "aggregate");
+            AddTest(persistenceTests, $"{_feature}/%A%MapperFidelityTests.cs", FeatureTemplates.MapperFidelityTests, "aggregate");
         }
 
         internal void FieldTests()
@@ -551,24 +539,6 @@ internal static class FeatureCode
             {
                 AddTest(IntegrationTests(spec), $"{_feature}/%A%FieldTests.cs", FeatureTemplates.FieldApiTests);
             }
-        }
-
-        private void CommandValidatorTests(string applicationTests, string operation)
-        {
-            var fields = spec.Fields;
-            var samples = fields.Select(field => FieldCode.Sample(field, 1));
-
-            AddTest(
-                applicationTests,
-                $"{_commands}/{operation}%A%/{operation}%A%CommandValidatorTests.cs",
-                FeatureTemplates.FieldCommandValidatorTests,
-                $"aggregate && {operation.ToLowerInvariant()}",
-                new()
-                {
-                    ["Op"] = operation,
-                    ["FValidatorTests"] = FieldCode.ValidatorTests(fields, $"{operation}{spec.Type}Command", "AValidCommand", spec.Type),
-                    ["FValidCommand"] = FieldCode.Construction(operation == "Create" ? samples : samples.Prepend("Guid.CreateVersion7()")),
-                });
         }
 
         private void Add(
@@ -653,6 +623,8 @@ internal static class FeatureCode
         {
             _tokens["FServiceInvalid"] = ServiceRefusal();
             _tokens["FContentValidatorTests"] = FieldCode.ValidatorTests(_fields, $"{_spec.Type}ContentDto", "AValidContentDto", _limits);
+            _tokens["FCreateValidatorTests"] = FieldCode.ValidatorTests(_fields, $"Create{_spec.Type}Command", "AValidCommand", _spec.Type);
+            _tokens["FUpdateValidatorTests"] = FieldCode.ValidatorTests(_fields, $"Update{_spec.Type}Command", "AValidCommand", _spec.Type);
             _tokens["FAggregateTests"] = FieldCode.AggregateTests(_fields, _flags.Contains("create"), _flags.Contains("update"));
             _tokens["FConfigurationTests"] = FieldCode.ConfigurationTests(_fields, _limits);
             _tokens["FApiInstants"] = ApiInstants();
