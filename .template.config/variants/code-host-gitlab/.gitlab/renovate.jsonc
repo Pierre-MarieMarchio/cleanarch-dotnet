@@ -1,0 +1,256 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  // What Dependabot updates on GitHub, and nothing more: no preset, no dashboard, no automerge.
+  "enabledManagers": [
+    "nuget",
+    "gitlabci",
+    "dockerfile",
+    //#if (anyWeb)
+    "npm",
+    "nodenv",
+    //#endif
+    "docker-compose",
+  ],
+  // Monday from 06:00 Paris, when Dependabot runs; Renovate opens nothing outside the window, which spans the hours a runner may start late.
+  "timezone": "Europe/Paris",
+  "schedule": ["* 6-9 * * 1"],
+  // Dependabot's limits added up: Renovate counts every open merge request against one limit, where Dependabot counts each ecosystem's apart.
+  //#if (anyWeb)
+  "prConcurrentLimit": 23,
+  //#endif
+  //#if (!anyWeb)
+  "prConcurrentLimit": 18,
+  //#endif
+  "prHourlyLimit": 0,
+  // One merge request per dependency or group, at its newest version, majors included, as Dependabot opens them.
+  "separateMajorMinor": false,
+  "dependencyDashboard": false,
+  "semanticCommits": "enabled",
+  "semanticCommitType": "build",
+  "semanticCommitScope": "deps",
+  "packageRules": [
+    // NuGet: every version lives in Directory.Packages.props; global.json's SDK band is not a package, and Dependabot leaves it alone.
+    {
+      "matchManagers": ["nuget"],
+      "labels": ["dependencies", "nuget"],
+    },
+    {
+      "matchManagers": ["nuget"],
+      "matchDepTypes": ["dotnet-sdk"],
+      "enabled": false,
+    },
+    // The 10.0.x runtime band, one merge request per servicing release.
+    {
+      "groupName": "microsoft-runtime",
+      "matchManagers": ["nuget"],
+      "matchPackageNames": [
+        "Microsoft.*",
+        "!Microsoft.IdentityModel.*",
+        "!Microsoft.Testing.*",
+        "!Microsoft.Kiota.*",
+        "!Microsoft.OpenApi.Kiota",
+      ],
+    },
+    // The Kiota tool and the runtime its output is written for, in one merge request, which api-client regenerates against.
+    {
+      "groupName": "kiota",
+      "matchManagers": ["nuget"],
+      "matchPackageNames": [
+        "Microsoft.Kiota.*",
+        "Microsoft.OpenApi.Kiota",
+      ],
+    },
+    {
+      "groupName": "identity-model",
+      "matchManagers": ["nuget"],
+      "matchPackageNames": [
+        "Microsoft.IdentityModel.*",
+      ],
+    },
+    {
+      "groupName": "test-tooling",
+      "matchManagers": ["nuget"],
+      "matchPackageNames": [
+        "Microsoft.Testing.*",
+        "xunit*",
+        "NSubstitute",
+        "Shouldly",
+        "NetArchTest.*",
+        "Testcontainers.*",
+      ],
+    },
+    {
+      "groupName": "third-party-runtime",
+      "matchManagers": ["nuget"],
+      "matchPackageNames": [
+        "Asp.Versioning.*",
+        "FluentValidation*",
+        "MailKit",
+        //#if (postgreSql)
+        "Npgsql.*",
+        //#endif
+        "Scalar.*",
+      ],
+    },
+    //#if (postgreSql)
+    // The OpenTelemetry 1.x band; Npgsql.OpenTelemetry stays with Npgsql.*.
+    //#endif
+    //#if (!postgreSql)
+    // The OpenTelemetry 1.x band.
+    //#endif
+    {
+      "groupName": "observability",
+      "matchManagers": ["nuget"],
+      "matchPackageNames": [
+        "OpenTelemetry.*",
+      ],
+    },
+    //#if (aspire)
+    // The Aspire band with the app host's SDK, which global.json pins under msbuild-sdks.
+    {
+      "groupName": "aspire",
+      "matchManagers": ["nuget"],
+      "matchPackageNames": [
+        "Aspire.*",
+      ],
+    },
+    //#endif
+    // The pipeline's images, pinned by digest; an image or a release archive a script names is bumped by hand, as its comment says.
+    {
+      "matchManagers": ["gitlabci"],
+      "labels": ["dependencies", "gitlab-ci"],
+      "semanticCommitType": "ci",
+    },
+    {
+      "groupName": "pipeline-images",
+      "matchManagers": ["gitlabci"],
+      "matchPackageNames": [
+        "*",
+      ],
+    },
+    // Dockerfile base images, in the folders Dependabot reads on GitHub; docker-compose.yml is its own manager, below.
+    {
+      "matchManagers": ["dockerfile"],
+      "labels": ["dependencies", "docker"],
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "enabled": false,
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "matchFileNames": [
+        //#if (api)
+        "src/Presentation/AT.Api/*",
+        //#endif
+        //#if (jobsWorker)
+        "src/Presentation/AT.Worker/*",
+        //#endif
+        //#if (sonar)
+        "tools/*",
+        //#endif
+        //#if (anyWeb)
+        "src/Web/apps/*/*",
+        //#endif
+      ],
+      "enabled": true,
+    },
+    {
+      "groupName": "container-images",
+      "matchManagers": ["dockerfile"],
+      "matchPackageNames": [
+        "*",
+      ],
+    },
+    // The pipeline builds and tests on the SDK image every Dockerfile builds with, so the image moves everywhere in one merge request.
+    {
+      "groupName": "container-images",
+      "matchManagers": ["dockerfile", "gitlabci"],
+      "matchPackageNames": [
+        "mcr.microsoft.com/dotnet/sdk",
+      ],
+      "enabled": true,
+      "semanticCommitType": "build",
+    },
+    //#if (anyWeb)
+    // The web workspace: the npm manager reads src/Web/pnpm-lock.yaml for every app and package.
+    {
+      "matchManagers": ["npm"],
+      "labels": ["dependencies", "javascript"],
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["devDependencies"],
+      "semanticCommitScope": "deps-dev",
+    },
+    // pnpm's own version, which packageManager names with its hash, and the overrides pnpm-workspace.yaml holds against an advisory are moved by hand.
+    {
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["packageManager", "pnpm-workspace.overrides"],
+      "enabled": false,
+    },
+    {
+      "groupName": "web-lint",
+      "matchManagers": ["npm"],
+      "matchPackageNames": [
+        "eslint",
+        "@eslint/*",
+        "typescript-eslint",
+        "globals",
+      ],
+    },
+    {
+      "groupName": "web-api-client",
+      "matchManagers": ["npm"],
+      "matchPackageNames": [
+        "openapi-fetch",
+        "openapi-typescript",
+      ],
+    },
+    {
+      "groupName": "web-tooling",
+      "matchManagers": ["npm"],
+      "matchPackageNames": [
+        "typescript",
+        "vitest",
+        "@playwright/*",
+      ],
+    },
+    // The web images' Node.js, src/Web/.node-version and @types/node move in one merge request within the major and in another across it, as NodeVersionTests holds them; the Node.js archive a pipeline job installs, and its checksum, are bumped by hand in it.
+    {
+      "groupName": "node",
+      "matchManagers": ["dockerfile", "nodenv", "npm"],
+      "matchPackageNames": [
+        "node",
+        "@types/node",
+      ],
+      "separateMajorMinor": true,
+      "labels": ["dependencies", "docker", "javascript"],
+      "semanticCommitScope": "deps",
+    },
+    //#endif
+    // docker-compose.yml's images and those of the files beside it.
+    {
+      "matchManagers": ["docker-compose"],
+      "labels": ["dependencies", "docker"],
+    },
+    {
+      "matchManagers": ["docker-compose"],
+      "enabled": false,
+    },
+    {
+      "matchManagers": ["docker-compose"],
+      "matchFileNames": [
+        "*.yml",
+      ],
+      "enabled": true,
+    },
+    {
+      "groupName": "compose-images",
+      "matchManagers": ["docker-compose"],
+      "matchPackageNames": [
+        "*",
+      ],
+    },
+  ],
+}

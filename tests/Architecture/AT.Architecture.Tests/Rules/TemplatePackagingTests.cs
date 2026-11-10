@@ -3057,7 +3057,7 @@ public sealed class TemplatePackagingTests
             .Select(pattern => pattern.Replace("$(TemplateRoot)", string.Empty, StringComparison.Ordinal))];
     }
 
-    private static List<string> ConditionedBlocks(string[] lines, string symbol)
+    internal static List<string> ConditionedBlocks(string[] lines, string symbol)
     {
         string opening = "#" + $"if ({symbol})";
         string closing = "#" + "endif";
@@ -3084,7 +3084,7 @@ public sealed class TemplatePackagingTests
         return blocks;
     }
 
-    private static List<string> AddedBlocksUnder(string[] lines, string bullet)
+    internal static List<string> AddedBlocksUnder(string[] lines, string bullet)
     {
         int[] starts = [.. Enumerable.Range(0, lines.Length).Where(index => lines[index].StartsWith(bullet, StringComparison.Ordinal))];
         starts.ShouldNotBeEmpty($"src/Web/README.md has no bullet starting '{bullet}'.");

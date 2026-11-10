@@ -1855,6 +1855,7 @@
             "tests/Architecture/AT.Architecture.Tests/Rules/ConditionedUsingTests.cs",
             "tests/Architecture/AT.Architecture.Tests/Rules/ConditionedMarkdownTests.cs",
             "tests/Architecture/AT.Architecture.Tests/Rules/AgentFileLengthTests.cs",
+            "tests/Architecture/AT.Architecture.Tests/Rules/RenovateParityTests.cs",
             "tests/Architecture/AT.Architecture.Tests/Fixtures/TemplateForms.cs"
           ]
         },
@@ -2055,7 +2056,8 @@
           "condition": "(!gitlabHost)",
           "exclude": [
             "tests/Architecture/AT.Architecture.Tests/Rules/IssueTemplateTests.cs",
-            "tests/Architecture/AT.Architecture.Tests/Rules/MergeRequestTemplateTests.cs"
+            "tests/Architecture/AT.Architecture.Tests/Rules/MergeRequestTemplateTests.cs",
+            "tests/Architecture/AT.Architecture.Tests/Rules/RenovateConfigurationTests.cs"
           ]
         },
         {

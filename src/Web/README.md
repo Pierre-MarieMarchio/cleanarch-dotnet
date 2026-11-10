@@ -292,6 +292,116 @@ its `pnpm-lock.yaml`.
   ```
 
 <!--#endif-->
+<!--#if (gitlabHost)-->
+- in `.gitlab/renovate.jsonc`, after the line:
+
+  ```jsonc
+      "dockerfile",
+  ```
+
+  add:
+
+  ```jsonc
+      "npm",
+      "nodenv",
+  ```
+
+- in `.gitlab/renovate.jsonc`, replace the line:
+
+  ```jsonc
+    "prConcurrentLimit": 18,
+  ```
+
+  with:
+
+  ```jsonc
+    "prConcurrentLimit": 23,
+  ```
+
+- in `.gitlab/renovate.jsonc`, before the lines:
+
+  ```jsonc
+        ],
+        "enabled": true,
+      },
+      {
+        "groupName": "container-images",
+        "matchManagers": ["dockerfile"],
+  ```
+
+  add:
+
+  ```jsonc
+          "src/Web/apps/*/*",
+  ```
+
+- in `.gitlab/renovate.jsonc`, before the line:
+
+  ```jsonc
+      // docker-compose.yml's images and those of the files beside it.
+  ```
+
+  add:
+
+  ```jsonc
+      // The web workspace: the npm manager reads src/Web/pnpm-lock.yaml for every app and package.
+      {
+        "matchManagers": ["npm"],
+        "labels": ["dependencies", "javascript"],
+      },
+      {
+        "matchManagers": ["npm"],
+        "matchDepTypes": ["devDependencies"],
+        "semanticCommitScope": "deps-dev",
+      },
+      // pnpm's own version, which packageManager names with its hash, and the overrides pnpm-workspace.yaml holds against an advisory are moved by hand.
+      {
+        "matchManagers": ["npm"],
+        "matchDepTypes": ["packageManager", "pnpm-workspace.overrides"],
+        "enabled": false,
+      },
+      {
+        "groupName": "web-lint",
+        "matchManagers": ["npm"],
+        "matchPackageNames": [
+          "eslint",
+          "@eslint/*",
+          "typescript-eslint",
+          "globals",
+        ],
+      },
+      {
+        "groupName": "web-api-client",
+        "matchManagers": ["npm"],
+        "matchPackageNames": [
+          "openapi-fetch",
+          "openapi-typescript",
+        ],
+      },
+      {
+        "groupName": "web-tooling",
+        "matchManagers": ["npm"],
+        "matchPackageNames": [
+          "typescript",
+          "vitest",
+          "@playwright/*",
+        ],
+      },
+      // The web images' Node.js, src/Web/.node-version and @types/node move in one merge request within the major and in another across it, as NodeVersionTests holds them; the Node.js archive a pipeline job installs, and its checksum, are bumped by hand in it.
+      {
+        "groupName": "node",
+        "matchManagers": ["dockerfile", "nodenv", "npm"],
+        "matchPackageNames": [
+          "node",
+          "@types/node",
+        ],
+        "separateMajorMinor": true,
+        "labels": ["dependencies", "docker", "javascript"],
+        "semanticCommitScope": "deps",
+      },
+  ```
+
+<!--#endif-->
 <!--#if (githubCi)-->
 - in `.github/workflows/ci.yml`, before the line:
 
@@ -718,7 +828,10 @@ its `pnpm-lock.yaml`.
   <!--#if (githubHost)-->
   | Container images and actions | their digest or commit SHA, beside the tag |
   <!--#endif-->
-  <!--#if (!githubHost)-->
+  <!--#if (gitlabCi)-->
+  | Container images, and a tool a pipeline job downloads | their digest, beside the tag; the tool's version and its SHA-256 |
+  <!--#endif-->
+  <!--#if (!githubHost && !gitlabCi)-->
   | Container images | their digest, beside the tag |
   <!--#endif-->
   ```
@@ -744,7 +857,18 @@ its `pnpm-lock.yaml`.
   A new major arrives from Dependabot too, and stays red, held by `NodeVersionTests`, until it is done
   by hand: `src/Web/.node-version`, `engines.node`, `@types/node` and every `FROM node:` move together.
   <!--#endif-->
-  <!--#if (!githubHost)-->
+  <!--#if (gitlabHost)-->
+  Renovate's `node` group moves the web images' `node`, `src/Web/.node-version` and `@types/node` in
+  one merge request within the major, and in another across it, which stays red, held by
+  `NodeVersionTests`, until `engines.node` follows by hand. pnpm's own version, in `packageManager`,
+  and the `overrides` of `src/Web/pnpm-workspace.yaml` are moved by hand.
+  <!--#endif-->
+  <!--#if (gitlabCi)-->
+  `GitLabPipelinePinningTests` holds that merge request red too until `.gitlab/ci/web.yml` installs the
+  same Node.js: set `node` and `node_sha256` there from the release's `SHASUMS256.txt`, since no bot
+  computes a checksum.
+  <!--#endif-->
+  <!--#if (!githubHost && !gitlabHost)-->
   No bot proposes a newer Node.js: a patch, a minor or a major is taken by hand, and
   `src/Web/.node-version`, `engines.node`, `@types/node` and every `FROM node:` move together, or
   `NodeVersionTests` fails.
