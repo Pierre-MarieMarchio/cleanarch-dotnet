@@ -1062,6 +1062,37 @@ model with the subset of each field profile. A change to a shared unit is made t
 `add setting --keys` reads its own grammar: a key is a bounded configuration value with a default,
 `duration` and `secret` among its types, which no field has; its names follow `CSharpNames`.
 
+### The template engine
+
+`Template.Render`, in `launcher/CleanArch.Cli/Generators/Shared/Template.cs`, renders a generator's
+template in two passes. The first is `Microsoft.TemplateEngine.Core`, the engine behind `dotnet new`,
+run in the tool's process: it keeps the lines of the `#if`, `#elif` and `#else` branches the
+generation's flags select, and replaces the reference names `AppTemplate`, `Placeholders`,
+`Placeholder` and `placeholder` by the project, feature, aggregate and lowered aggregate names. The
+second is the tool's own: its `%if%` directives, its `%Token%` substitution, the pruning of unused
+usings, and the tidying of blank lines. The BOM and the line endings are fixed afterwards, by
+`TextEdits`, so a generated file is the same bytes as before.
+
+A template written with `#if` and the reference names is C# that a compiler reads, where one written
+with `%if%` and `%Token%` is not. This is why the engine is this one and not a subprocess of
+`dotnet new`, whose start would cost every generation, nor a template language such as Scriban or
+Liquid, whose syntax no compiler or editor understands. Its version is pinned in
+`launcher/Directory.Packages.props` to the 10.0.1xx band of the SDK that `global.json` pins.
+
+- A symbol an `#if` names must be one of the flags `Template` knows: the engine reads an unknown one
+  as false without a word, so `Template` refuses it first. A generated file therefore cannot carry
+  a real `#if DEBUG`.
+- The reference names are replaced wherever they appear in a template, prose included: a template
+  that needs the word `placeholder` for itself cannot have it.
+- A template still written with `%if%` and `%Token%` passes through the first pass unchanged, so
+  one template moves to the new form at a time, its output held by the digests of
+  `NewFeatureTests.WithoutFields`.
+
+| Guarantee | Test |
+|---|---|
+| An `#if` naming an unknown flag is refused; each of `#if`, `#elif` and `#else` keeps only its own lines and the reference names are replaced | `NewFeatureTests.TemplateGuard` |
+| The output of `add feature` does not change when a template changes its form | `NewFeatureTests.WithoutFields` |
+
 ## The package
 
 `.template.config/TemplatePackage.csproj` packs the four templates into one NuGet package,

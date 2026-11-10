@@ -12,6 +12,8 @@
   </ItemGroup>
 
   <ItemGroup Label="Project tool">
+    <!-- The 10.0.1xx band of the SDK that global.json pins. -->
+    <PackageVersion Include="Microsoft.TemplateEngine.Core" Version="10.0.114" />
     <PackageVersion Include="System.CommandLine" Version="2.0.14" />
   </ItemGroup>
 
