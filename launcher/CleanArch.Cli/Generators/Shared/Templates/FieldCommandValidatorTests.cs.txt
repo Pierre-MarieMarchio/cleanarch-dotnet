@@ -1,17 +1,17 @@
-using %P%.Application.Features.%F%.UseCases.Commands.%Op%%A%;
-using %P%.Domain.Features.%F%.Model.Entities; //?%A%
+using AppTemplate.Application.Features.Placeholders.UseCases.Commands.%Op%Placeholder;
+using AppTemplate.Domain.Features.Placeholders.Model.Entities; //?Placeholder
 using Shouldly;
 using Xunit;
 
-namespace %P%.Application.UnitTests.Features.%F%.UseCases.Commands.%Op%%A%;
+namespace AppTemplate.Application.UnitTests.Features.Placeholders.UseCases.Commands.%Op%Placeholder;
 
-public sealed class %Op%%A%CommandValidatorTests
+public sealed class %Op%PlaceholderCommandValidatorTests
 {
-    private static readonly %Op%%A%CommandValidator _validator = new();
+    private static readonly %Op%PlaceholderCommandValidator _validator = new();
 
     private static CancellationToken TestToken => TestContext.Current.CancellationToken;
 
 %FValidatorTests%
 
-    private static %Op%%A%Command AValidCommand() => %FValidCommand%;
+    private static %Op%PlaceholderCommand AValidCommand() => %FValidCommand%;
 }

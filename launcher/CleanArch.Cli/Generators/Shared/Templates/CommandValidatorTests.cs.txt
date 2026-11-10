@@ -1,16 +1,16 @@
-using %P%.Application.Features.%F%.UseCases.Commands.%Op%%A%;
+using AppTemplate.Application.Features.Placeholders.UseCases.Commands.%Op%Placeholder;
 using Shouldly;
 using Xunit;
 
-namespace %P%.Application.UnitTests.Features.%F%.UseCases.Commands.%Op%%A%;
+namespace AppTemplate.Application.UnitTests.Features.Placeholders.UseCases.Commands.%Op%Placeholder;
 
-public sealed class %Op%%A%CommandValidatorTests
+public sealed class %Op%PlaceholderCommandValidatorTests
 {
-    private static readonly %Op%%A%CommandValidator _validator = new();
+    private static readonly %Op%PlaceholderCommandValidator _validator = new();
 
     private static CancellationToken TestToken => TestContext.Current.CancellationToken;
 
-    private static %Op%%A%Command ACommand(string? name, string? description) => %CommandNew%;
+    private static %Op%PlaceholderCommand ACommand(string? name, string? description) => %CommandNew%;
 
     [Fact]
     public async Task ANameAndADescription_AreAccepted() =>

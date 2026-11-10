@@ -1,12 +1,12 @@
-namespace %P%.Application.Features.%F%.Model.Policies;
+namespace AppTemplate.Application.Features.Placeholders.Model.Policies;
 
-public static class %A%InputPolicy
+public static class PlaceholderInputPolicy
 {
-%if fields%
+#if fields
 %FPolicyConstants%
-%else%
+#else
     public const int NameMaxLength = 200;
 
     public const int DescriptionMaxLength = 2_000;
-%end%
+#endif
 }

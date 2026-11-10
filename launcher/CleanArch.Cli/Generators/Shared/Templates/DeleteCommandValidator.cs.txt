@@ -1,10 +1,10 @@
 using FluentValidation;
 
-namespace %P%.Application.Features.%F%.UseCases.Commands.Delete%A%;
+namespace AppTemplate.Application.Features.Placeholders.UseCases.Commands.DeletePlaceholder;
 
-public sealed class Delete%A%CommandValidator : AbstractValidator<Delete%A%Command>
+public sealed class DeletePlaceholderCommandValidator : AbstractValidator<DeletePlaceholderCommand>
 {
-    public Delete%A%CommandValidator() =>
-        RuleFor(command => command.%A%Id)
-            .NotEmpty().WithMessage("%An% %L% id is required.");
+    public DeletePlaceholderCommandValidator() =>
+        RuleFor(command => command.PlaceholderId)
+            .NotEmpty().WithMessage("%An% placeholder id is required.");
 }

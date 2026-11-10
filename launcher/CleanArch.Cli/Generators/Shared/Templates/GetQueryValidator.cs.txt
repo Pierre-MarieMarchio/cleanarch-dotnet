@@ -1,10 +1,10 @@
 using FluentValidation;
 
-namespace %P%.Application.Features.%F%.UseCases.Queries.Get%A%;
+namespace AppTemplate.Application.Features.Placeholders.UseCases.Queries.GetPlaceholder;
 
-public sealed class Get%A%QueryValidator : AbstractValidator<Get%A%Query>
+public sealed class GetPlaceholderQueryValidator : AbstractValidator<GetPlaceholderQuery>
 {
-    public Get%A%QueryValidator() =>
-        RuleFor(query => query.%A%Id)
-            .NotEmpty().WithMessage("%An% %L% id is required.");
+    public GetPlaceholderQueryValidator() =>
+        RuleFor(query => query.PlaceholderId)
+            .NotEmpty().WithMessage("%An% placeholder id is required.");
 }

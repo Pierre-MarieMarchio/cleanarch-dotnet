@@ -1,29 +1,29 @@
-using %P%.Application.Core.Common.Concurrency;
-using %P%.Application.Core.Common.Ports;
-using %P%.Application.Core.Common.Results;
-using %P%.Application.Core.Common.Validation;
-using %P%.Application.Features.%F%.Model.Dtos;
-using %P%.Application.Features.%F%.Model.Mapping;
-using %P%.Domain.Features.%F%.Model.Entities;
-using %P%.Domain.Features.%F%.Repositories;
+using AppTemplate.Application.Core.Common.Concurrency;
+using AppTemplate.Application.Core.Common.Ports;
+using AppTemplate.Application.Core.Common.Results;
+using AppTemplate.Application.Core.Common.Validation;
+using AppTemplate.Application.Features.Placeholders.Model.Dtos;
+using AppTemplate.Application.Features.Placeholders.Model.Mapping;
+using AppTemplate.Domain.Features.Placeholders.Model.Entities;
+using AppTemplate.Domain.Features.Placeholders.Repositories;
 using Mediator;
 
-namespace %P%.Application.Features.%F%.UseCases.Commands.Create%A%;
+namespace AppTemplate.Application.Features.Placeholders.UseCases.Commands.CreatePlaceholder;
 
-%if fields%
-public sealed record Create%A%Command(
-%FParamList%) : ICommand<Result<Versioned<%A%Dto>>>;
-%else%
-public sealed record Create%A%Command(string Name, string Description) : ICommand<Result<Versioned<%A%Dto>>>;
-%end%
+#if fields
+public sealed record CreatePlaceholderCommand(
+%FParamList%) : ICommand<Result<Versioned<PlaceholderDto>>>;
+#else
+public sealed record CreatePlaceholderCommand(string Name, string Description) : ICommand<Result<Versioned<PlaceholderDto>>>;
+#endif
 
-public sealed class Create%A%CommandHandler(
-    I%A%Repository repository,
+public sealed class CreatePlaceholderCommandHandler(
+    IPlaceholderRepository repository,
     IUnitOfWork unitOfWork,
-    ICurrentUser currentUser) : ICommandHandler<Create%A%Command, Result<Versioned<%A%Dto>>>
+    ICurrentUser currentUser) : ICommandHandler<CreatePlaceholderCommand, Result<Versioned<PlaceholderDto>>>
 {
-    public async ValueTask<Result<Versioned<%A%Dto>>> Handle(
-        Create%A%Command command,
+    public async ValueTask<Result<Versioned<PlaceholderDto>>> Handle(
+        CreatePlaceholderCommand command,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -32,25 +32,25 @@ public sealed class Create%A%CommandHandler(
 
         if (userId.IsFailure)
         {
-            return userId.To<Versioned<%A%Dto>>();
+            return userId.To<Versioned<PlaceholderDto>>();
         }
 
-%if fields%
-        var created = DomainGuard.Try(() => %A%.Create(%SvcOwner%%FCommandArgs%));
-%else%
-        var created = DomainGuard.Try(() => %A%.Create(%SvcOwner%command.Name, command.Description));
-%end%
+#if fields
+        var created = DomainGuard.Try(() => Placeholder.Create(%SvcOwner%%FCommandArgs%));
+#else
+        var created = DomainGuard.Try(() => Placeholder.Create(%SvcOwner%command.Name, command.Description));
+#endif
 
         if (created.IsFailure)
         {
-            return created.To<Versioned<%A%Dto>>();
+            return created.To<Versioned<PlaceholderDto>>();
         }
 
-        var %L% = created.Value;
+        var placeholder = created.Value;
 
-        repository.Add(%L%);
+        repository.Add(placeholder);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return %A%DtoMapping.Detail(%L%);
+        return PlaceholderDtoMapping.Detail(placeholder);
     }
 }

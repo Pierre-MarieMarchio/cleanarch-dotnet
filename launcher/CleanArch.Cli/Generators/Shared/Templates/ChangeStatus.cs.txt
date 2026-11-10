@@ -1,12 +1,12 @@
-namespace %P%.Application.Features.%F%.Ports.%A%Store;
+namespace AppTemplate.Application.Features.Placeholders.Ports.PlaceholderStore;
 
-public enum %A%ChangeStatus
+public enum PlaceholderChangeStatus
 {
     Staged,
 
     NotFound,
-%if etag%
+#if etag
 
     VersionMismatch,
-%end%
+#endif
 }

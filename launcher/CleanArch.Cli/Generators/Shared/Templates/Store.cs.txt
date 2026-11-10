@@ -1,152 +1,152 @@
-using %P%.Application.Core.Common.Concurrency; //?VersionPrecondition
-using %P%.Application.Features.%F%.Model.Dtos; //?%A%ContentDto
-using %P%.Application.Features.%F%.Ports.%A%Store;
-using %P%.Domain.Core.Common.Primitives; //?UserId
-using %P%.Infrastructure.Persistence.Common.Contexts;
-using %P%.Infrastructure.Persistence.Features.%F%.Rows.Models;
+using AppTemplate.Application.Core.Common.Concurrency; //?VersionPrecondition
+using AppTemplate.Application.Features.Placeholders.Model.Dtos; //?PlaceholderContentDto
+using AppTemplate.Application.Features.Placeholders.Ports.PlaceholderStore;
+using AppTemplate.Domain.Core.Common.Primitives; //?UserId
+using AppTemplate.Infrastructure.Persistence.Common.Contexts;
+using AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Models;
 using Microsoft.EntityFrameworkCore; //?SingleOrDefaultAsync|ToListAsync
 
-namespace %P%.Infrastructure.Persistence.Features.%F%.Access.Stores;
+namespace AppTemplate.Infrastructure.Persistence.Features.Placeholders.Access.Stores;
 
-internal sealed class %A%Store(AppDbContext context) : I%A%Store
+internal sealed class PlaceholderStore(AppDbContext context) : IPlaceholderStore
 {
-%if create%
+#if create
     public void Add(
-%if owner%
+#if owner
         UserId ownerId,
-%end%
-        Guid %L%Id,
-        %A%ContentDto content,
+#endif
+        Guid placeholderId,
+        PlaceholderContentDto content,
         DateTimeOffset createdAt)
     {
-%if owner%
+#if owner
         ArgumentNullException.ThrowIfNull(ownerId);
-%end%
+#endif
         ArgumentNullException.ThrowIfNull(content);
 
-        context.%F%.Add(new %A%Record
+        context.Placeholders.Add(new PlaceholderRecord
         {
-            Id = %L%Id,
-%if owner%
+            Id = placeholderId,
+#if owner
             OwnerId = ownerId.Value,
-%end%
-%if fields%
+#endif
+#if fields
 %FStoreAssign%
-%else%
+#else
             Name = content.Name,
             Description = content.Description,
-%end%
+#endif
             CreatedAt = createdAt,
         });
     }
 
-%end%
-%if update%
-    public async Task<%A%ChangeStatus> StageReplacementAsync(
-%if owner%
+#endif
+#if update
+    public async Task<PlaceholderChangeStatus> StageReplacementAsync(
+#if owner
         UserId ownerId,
-%end%
-        Guid %L%Id,
-        %A%ContentDto content,
+#endif
+        Guid placeholderId,
+        PlaceholderContentDto content,
         DateTimeOffset modifiedAt,
-%if etag%
+#if etag
         VersionPrecondition? precondition,
-%end%
+#endif
         CancellationToken cancellationToken = default)
     {
-%if owner%
+#if owner
         ArgumentNullException.ThrowIfNull(ownerId);
-%end%
+#endif
         ArgumentNullException.ThrowIfNull(content);
 
         var (status, record) = await LoadForChangeAsync(
-%if owner%
+#if owner
             ownerId,
-%end%
-            %L%Id,
-%if etag%
+#endif
+            placeholderId,
+#if etag
             precondition,
-%end%
+#endif
             cancellationToken);
 
         if (record is not null)
         {
-%if fields%
+#if fields
 %FStoreUpdate%
-%else%
+#else
             record.Name = content.Name;
             record.Description = content.Description;
-%end%
+#endif
             record.LastModifiedAt = modifiedAt;
         }
 
         return status;
     }
 
-%end%
-%if delete%
-    public async Task<%A%ChangeStatus> StageRemovalAsync(
-%if owner%
+#endif
+#if delete
+    public async Task<PlaceholderChangeStatus> StageRemovalAsync(
+#if owner
         UserId ownerId,
-%end%
-        Guid %L%Id,
-%if etag%
+#endif
+        Guid placeholderId,
+#if etag
         VersionPrecondition? precondition,
-%end%
+#endif
         CancellationToken cancellationToken = default)
     {
-%if owner%
+#if owner
         ArgumentNullException.ThrowIfNull(ownerId);
 
-%end%
+#endif
         var (status, record) = await LoadForChangeAsync(
-%if owner%
+#if owner
             ownerId,
-%end%
-            %L%Id,
-%if etag%
+#endif
+            placeholderId,
+#if etag
             precondition,
-%end%
+#endif
             cancellationToken);
 
         if (record is not null)
         {
-            context.%F%.Remove(record);
+            context.Placeholders.Remove(record);
         }
 
         return status;
     }
 
-%end%
-%if change%
-    private async Task<(%A%ChangeStatus Status, %A%Record? Record)> LoadForChangeAsync(
-%if owner%
+#endif
+#if change
+    private async Task<(PlaceholderChangeStatus Status, PlaceholderRecord? Record)> LoadForChangeAsync(
+#if owner
         UserId ownerId,
-%end%
-        Guid %L%Id,
-%if etag%
+#endif
+        Guid placeholderId,
+#if etag
         VersionPrecondition? precondition,
-%end%
+#endif
         CancellationToken cancellationToken)
     {
-        var tracked = await context.%F%
-            .SingleOrDefaultAsync(record => record.Id == %L%Id%OwnerClause%, cancellationToken);
+        var tracked = await context.Placeholders
+            .SingleOrDefaultAsync(record => record.Id == placeholderId%OwnerClause%, cancellationToken);
 
         if (tracked is null)
         {
-            return (%A%ChangeStatus.NotFound, null);
+            return (PlaceholderChangeStatus.NotFound, null);
         }
 
-%if etag%
+#if etag
         return precondition is not null && !precondition.IsSatisfiedBy(tracked.Version)
-            ? (%A%ChangeStatus.VersionMismatch, null)
-            : (%A%ChangeStatus.Staged, tracked);
-%else%
-        return (%A%ChangeStatus.Staged, tracked);
-%end%
+            ? (PlaceholderChangeStatus.VersionMismatch, null)
+            : (PlaceholderChangeStatus.Staged, tracked);
+#else
+        return (PlaceholderChangeStatus.Staged, tracked);
+#endif
     }
-%end%
-%if purge%
+#endif
+#if purge
 
     public async Task<int> StageRemovalForOwnerAsync(
         UserId ownerId,
@@ -154,16 +154,16 @@ internal sealed class %A%Store(AppDbContext context) : I%A%Store
     {
         ArgumentNullException.ThrowIfNull(ownerId);
 
-        var records = await context.%F%
+        var records = await context.Placeholders
             .Where(record => record.OwnerId == ownerId.Value)
             .ToListAsync(cancellationToken);
 
-        context.%F%.RemoveRange(records);
+        context.Placeholders.RemoveRange(records);
 
         return records.Count;
     }
-%end%
-%if anon%
+#endif
+#if anon
 
     public async Task<int> StageAnonymisationForOwnerAsync(
         UserId ownerId,
@@ -171,25 +171,25 @@ internal sealed class %A%Store(AppDbContext context) : I%A%Store
     {
         ArgumentNullException.ThrowIfNull(ownerId);
 
-        var records = await context.%F%
+        var records = await context.Placeholders
             .Where(record => record.OwnerId == ownerId.Value)
             .ToListAsync(cancellationToken);
 
         foreach (var record in records)
         {
-%if fields%
+#if fields
 %FStoreAnonymise%
-%else%
+#else
             record.Name = AnonymisedText;
             record.Description = string.Empty;
-%end%
+#endif
         }
 
         return records.Count;
     }
-%if anontext%
+#if anontext
 
     private const string AnonymisedText = "[deleted account]";
-%end%
-%end%
+#endif
+#endif
 }

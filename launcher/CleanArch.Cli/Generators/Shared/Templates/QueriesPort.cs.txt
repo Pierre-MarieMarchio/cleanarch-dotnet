@@ -1,32 +1,32 @@
-using %P%.Application.Core.Common.Collections; //?FeaturePageRequest
-using %P%.Application.Core.Common.Concurrency; //?Versioned
-using %P%.Application.Core.Common.Results; //?PagedResult
-using %P%.Application.Features.%F%.Model.Dtos; //?%A%SummaryDto|%A%Dto
-using %P%.Domain.Core.Common.Primitives; //?UserId
+using AppTemplate.Application.Core.Common.Collections; //?FeaturePageRequest
+using AppTemplate.Application.Core.Common.Concurrency; //?Versioned
+using AppTemplate.Application.Core.Common.Results; //?PagedResult
+using AppTemplate.Application.Features.Placeholders.Model.Dtos; //?PlaceholderSummaryDto|PlaceholderDto
+using AppTemplate.Domain.Core.Common.Primitives; //?UserId
 
-namespace %P%.Application.Features.%F%.Ports.%A%Queries;
+namespace AppTemplate.Application.Features.Placeholders.Ports.PlaceholderQueries;
 
-public interface I%A%Queries
+public interface IPlaceholderQueries
 {
-%if list%
-    Task<PagedResult<%A%SummaryDto>> %ListQuery%(
-%if owner%
+#if list
+    Task<PagedResult<PlaceholderSummaryDto>> %ListQuery%(
+#if owner
         UserId ownerId,
-%end%
-        FeaturePageRequest<%A%Filter> request,
+#endif
+        FeaturePageRequest<PlaceholderFilter> request,
         CancellationToken cancellationToken = default);
 
-%end%
-%if single%
+#endif
+#if single
     Task<%ReadDto%?> GetAsync(
-%if owner%
+#if owner
         UserId ownerId,
-%end%
-        Guid %L%Id,
+#endif
+        Guid placeholderId,
         CancellationToken cancellationToken = default);
-%end%
-%if owner%
+#endif
+#if owner
 
     Task<IReadOnlyList<UserId>> ListDataOwnerIdsAsync(CancellationToken cancellationToken = default);
-%end%
+#endif
 }

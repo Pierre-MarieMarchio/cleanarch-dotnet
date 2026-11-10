@@ -1079,6 +1079,8 @@ with `%if%` and `%Token%` is not. This is why the engine is this one and not a s
 Liquid, whose syntax no compiler or editor understands. Its version is pinned in
 `launcher/Directory.Packages.props` to the 10.0.1xx band of the SDK that `global.json` pins.
 
+- A condition that joins flags with `&&` or `||` is written with parentheses around the whole of it,
+  `#if (a || b)`: the engine reads only the first flag of one without, so `Template` refuses it.
 - A symbol an `#if` names must be one of the flags `Template` knows: the engine reads an unknown one
   as false without a word, so `Template` refuses it first. A generated file therefore cannot carry
   a real `#if DEBUG`.
@@ -1090,7 +1092,7 @@ Liquid, whose syntax no compiler or editor understands. Its version is pinned in
 
 | Guarantee | Test |
 |---|---|
-| An `#if` naming an unknown flag is refused; each of `#if`, `#elif` and `#else` keeps only its own lines and the reference names are replaced | `NewFeatureTests.TemplateGuard` |
+| An `#if` naming an unknown flag, or joining flags without parentheses around the whole condition, is refused; each of `#if`, `#elif` and `#else` keeps only its own lines and the reference names are replaced | `NewFeatureTests.TemplateGuard` |
 | The output of `add feature` does not change when a template changes its form | `NewFeatureTests.WithoutFields` |
 
 ## The package

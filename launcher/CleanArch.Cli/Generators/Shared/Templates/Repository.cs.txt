@@ -1,22 +1,22 @@
-using %P%.Domain.Core.Common.Primitives; //?UserId
-using %P%.Domain.Features.%F%.Model.Entities;
-using %P%.Domain.Features.%F%.Repositories;
-using %P%.Infrastructure.Persistence.Common.Contexts;
-using %P%.Infrastructure.Persistence.Features.%F%.Rows.Mapping;
-using %P%.Infrastructure.Persistence.Features.%F%.Rows.Models; //?%A%Record
-using %P%.Infrastructure.Persistence.Features.%F%.Rows.Tracking;
+using AppTemplate.Domain.Core.Common.Primitives; //?UserId
+using AppTemplate.Domain.Features.Placeholders.Model.Entities;
+using AppTemplate.Domain.Features.Placeholders.Repositories;
+using AppTemplate.Infrastructure.Persistence.Common.Contexts;
+using AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Mapping;
+using AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Models; //?PlaceholderRecord
+using AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Tracking;
 using Microsoft.EntityFrameworkCore; //?FirstOrDefaultAsync|ToListAsync
 
-namespace %P%.Infrastructure.Persistence.Features.%F%.Access.Repositories;
+namespace AppTemplate.Infrastructure.Persistence.Features.Placeholders.Access.Repositories;
 
-internal sealed class %A%Repository(
+internal sealed class PlaceholderRepository(
     AppDbContext context,
-    I%A%Mapper mapper,
-    I%A%Tracker tracker) : I%A%Repository
+    IPlaceholderMapper mapper,
+    IPlaceholderTracker tracker) : IPlaceholderRepository
 {
-%if change%
-%if owner%
-    public async Task<%A%?> GetAsync(UserId ownerId, Guid id, CancellationToken cancellationToken)
+#if change
+#if owner
+    public async Task<Placeholder?> GetAsync(UserId ownerId, Guid id, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(ownerId);
 
@@ -25,41 +25,41 @@ internal sealed class %A%Repository(
             return alreadyLoaded.OwnerId == ownerId ? alreadyLoaded : null;
         }
 
-        var record = await context.%F%.FirstOrDefaultAsync(
+        var record = await context.Placeholders.FirstOrDefaultAsync(
             candidate => candidate.Id == id && candidate.OwnerId == ownerId.Value,
             cancellationToken);
 
         return record is null ? null : LoadOrTrack(record);
     }
-%else%
-    public async Task<%A%?> GetAsync(Guid id, CancellationToken cancellationToken)
+#else
+    public async Task<Placeholder?> GetAsync(Guid id, CancellationToken cancellationToken)
     {
         if (tracker.Find(id) is { } alreadyLoaded)
         {
             return alreadyLoaded;
         }
 
-        var record = await context.%F%.FirstOrDefaultAsync(
+        var record = await context.Placeholders.FirstOrDefaultAsync(
             candidate => candidate.Id == id,
             cancellationToken);
 
         return record is null ? null : LoadOrTrack(record);
     }
-%end%
+#endif
 
-%end%
-%if owner%
-    public async Task<IReadOnlyList<%A%>> GetForOwnerAsync(
+#endif
+#if owner
+    public async Task<IReadOnlyList<Placeholder>> GetForOwnerAsync(
         UserId ownerId,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(ownerId);
 
-        var records = await context.%F%
+        var records = await context.Placeholders
             .Where(record => record.OwnerId == ownerId.Value)
             .ToListAsync(cancellationToken);
 
-        var aggregates = new List<%A%>(records.Count);
+        var aggregates = new List<Placeholder>(records.Count);
 
         foreach (var record in records)
         {
@@ -69,21 +69,21 @@ internal sealed class %A%Repository(
         return aggregates;
     }
 
-%end%
-%if create%
-    public void Add(%A% aggregate)
+#endif
+#if create
+    public void Add(Placeholder aggregate)
     {
         ArgumentNullException.ThrowIfNull(aggregate);
 
         var record = mapper.ToNewRecord(aggregate);
 
-        context.%F%.Add(record);
+        context.Placeholders.Add(record);
         tracker.Track(aggregate, record);
     }
 
-%end%
-%if delete|owner%
-    public void Remove(%A% aggregate)
+#endif
+#if (delete || owner)
+    public void Remove(Placeholder aggregate)
     {
         ArgumentNullException.ThrowIfNull(aggregate);
 
@@ -92,13 +92,13 @@ internal sealed class %A%Repository(
             return;
         }
 
-        context.%F%.Remove(record);
+        context.Placeholders.Remove(record);
         tracker.MarkRemoved(aggregate, record);
     }
 
-%end%
-%if change|owner%
-    private %A% LoadOrTrack(%A%Record record)
+#endif
+#if (change || owner)
+    private Placeholder LoadOrTrack(PlaceholderRecord record)
     {
         var aggregate = mapper.ToAggregate(record);
 
@@ -106,5 +106,5 @@ internal sealed class %A%Repository(
 
         return aggregate;
     }
-%end%
+#endif
 }

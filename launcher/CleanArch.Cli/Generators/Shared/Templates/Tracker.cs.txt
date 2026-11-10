@@ -1,13 +1,13 @@
-using %P%.Domain.Features.%F%.Model.Entities;
-using %P%.Infrastructure.Core.Common.Saving.Tracking;
-using %P%.Infrastructure.Persistence.Features.%F%.Rows.Mapping;
-using %P%.Infrastructure.Persistence.Features.%F%.Rows.Models;
+using AppTemplate.Domain.Features.Placeholders.Model.Entities;
+using AppTemplate.Infrastructure.Core.Common.Saving.Tracking;
+using AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Mapping;
+using AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace %P%.Infrastructure.Persistence.Features.%F%.Rows.Tracking;
+namespace AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Tracking;
 
-internal sealed class %A%Tracker(I%A%Mapper mapper)
-    : AggregateTracker<%A%, %A%Record>(record => record.Version), I%A%Tracker
+internal sealed class PlaceholderTracker(IPlaceholderMapper mapper)
+    : AggregateTracker<Placeholder, PlaceholderRecord>(record => record.Version), IPlaceholderTracker
 {
     public override void FlushTo(DbContext context)
     {

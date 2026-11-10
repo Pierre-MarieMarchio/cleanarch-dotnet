@@ -1,27 +1,27 @@
-using %P%.Application.Core.Common.Collections;
-using %P%.Application.Core.Common.Policies;
+using AppTemplate.Application.Core.Common.Collections;
+using AppTemplate.Application.Core.Common.Policies;
 
-namespace %P%.Application.Features.%F%.Model.Policies;
+namespace AppTemplate.Application.Features.Placeholders.Model.Policies;
 
-public sealed class %A%CollectionPolicy : ICollectionPolicy
+public sealed class PlaceholderCollectionPolicy : ICollectionPolicy
 {
-%if fields%
+#if fields
 %FPolicyFields%
-%else%
+#else
     public const string NameField = "name";
-%end%
+#endif
 
     public const string CreatedAtField = "createdAt";
 
-    public static readonly %A%CollectionPolicy Instance = new();
+    public static readonly PlaceholderCollectionPolicy Instance = new();
 
     public IReadOnlyList<SortableField> SortableFields { get; } =
     [
-%if fields%
+#if fields
 %FSortables%
-%else%
+#else
         SortableField.Keyset(NameField),
-%end%
+#endif
         SortableField.Keyset(CreatedAtField),
     ];
 

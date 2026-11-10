@@ -1,49 +1,49 @@
-using %P%.Domain.Core.Common.Primitives; //?UserId
-using %P%.Domain.Features.%F%.Model.Entities;
-using %P%.Infrastructure.Core.Common.Saving.Tracking;
-using %P%.Infrastructure.Persistence.Features.%F%.Rows.Models;
+using AppTemplate.Domain.Core.Common.Primitives; //?UserId
+using AppTemplate.Domain.Features.Placeholders.Model.Entities;
+using AppTemplate.Infrastructure.Core.Common.Saving.Tracking;
+using AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Models;
 
-namespace %P%.Infrastructure.Persistence.Features.%F%.Rows.Mapping;
+namespace AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Mapping;
 
-internal sealed class %A%Mapper : I%A%Mapper
+internal sealed class PlaceholderMapper : IPlaceholderMapper
 {
-    public %A% ToAggregate(%A%Record record)
+    public Placeholder ToAggregate(PlaceholderRecord record)
     {
         ArgumentNullException.ThrowIfNull(record);
 
-        var aggregate = %A%.Rehydrate(
+        var aggregate = Placeholder.Rehydrate(
             record.Id,
-%if owner%
+#if owner
             UserId.Create(record.OwnerId),
-%end%
-%if fields%
+#endif
+#if fields
 %FMapperRehydrate%
-%else%
+#else
             record.Name,
             record.Description);
-%end%
+#endif
 
-        StoredStamps.ApplyTo(aggregate, record, record.Version, record.Id, "%A%");
+        StoredStamps.ApplyTo(aggregate, record, record.Version, record.Id, "Placeholder");
 
         return aggregate;
     }
 
-    public %A%Record ToNewRecord(%A% aggregate)
+    public PlaceholderRecord ToNewRecord(Placeholder aggregate)
     {
         ArgumentNullException.ThrowIfNull(aggregate);
 
-        return new %A%Record
+        return new PlaceholderRecord
         {
             Id = aggregate.Id,
-%if owner%
+#if owner
             OwnerId = aggregate.OwnerId.Value,
-%end%
-%if fields%
+#endif
+#if fields
 %FMapperNew%
-%else%
+#else
             Name = aggregate.Name,
             Description = aggregate.Description,
-%end%
+#endif
 
             Version = aggregate.Version,
 
@@ -54,16 +54,16 @@ internal sealed class %A%Mapper : I%A%Mapper
         };
     }
 
-    public void WriteTo(%A% aggregate, %A%Record record)
+    public void WriteTo(Placeholder aggregate, PlaceholderRecord record)
     {
         ArgumentNullException.ThrowIfNull(aggregate);
         ArgumentNullException.ThrowIfNull(record);
 
-%if fields%
+#if fields
 %FMapperWrite%
-%else%
+#else
         record.Name = aggregate.Name;
         record.Description = aggregate.Description;
-%end%
+#endif
     }
 }

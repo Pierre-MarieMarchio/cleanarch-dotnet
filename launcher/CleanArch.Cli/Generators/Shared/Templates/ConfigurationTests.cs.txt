@@ -1,78 +1,78 @@
-using %P%.Application.Features.%F%.Model.Policies; //?%A%InputPolicy|%A%CollectionPolicy
-%if agg%
-using %P%.Domain.Features.%F%.Model.Entities; //?%A%
-%end%
-using %P%.Infrastructure.Core.Common.Contexts;
-using %P%.Infrastructure.Persistence.Common.Contexts;
-using %P%.Infrastructure.Persistence.Features.%F%.Rows.Models;
+using AppTemplate.Application.Features.Placeholders.Model.Policies; //?PlaceholderInputPolicy|PlaceholderCollectionPolicy
+#if agg
+using AppTemplate.Domain.Features.Placeholders.Model.Entities; //?Placeholder
+#endif
+using AppTemplate.Infrastructure.Core.Common.Contexts;
+using AppTemplate.Infrastructure.Persistence.Common.Contexts;
+using AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Shouldly;
 using Xunit;
 
-namespace %P%.Infrastructure.Persistence.UnitTests.Features.%F%.Rows.Configurations;
+namespace AppTemplate.Infrastructure.Persistence.UnitTests.Features.Placeholders.Rows.Configurations;
 
-public sealed class %A%RecordConfigurationTests
+public sealed class PlaceholderRecordConfigurationTests
 {
-%if etag%
+#if etag
     [Fact]
     public void TheVersion_IsTheDatabasesOwnConcurrencyToken()
     {
-        var version = Entity().FindProperty(nameof(%A%Record.Version))!;
+        var version = Entity().FindProperty(nameof(PlaceholderRecord.Version))!;
 
         version.IsConcurrencyToken.ShouldBeTrue();
         version.GetColumnName().ShouldBe(DatabaseProvider.VersionColumnName);
     }
-%else%
+#else
     [Fact]
     public void NoPropertyIsAConcurrencyToken() =>
         Entity().GetProperties().ShouldAllBe(property => !property.IsConcurrencyToken);
-%end%
+#endif
 
-%if fields%
+#if fields
 %FConfigurationTests%
-%else%
+#else
     [Theory]
-    [InlineData(nameof(%A%Record.Name), %Limits%.NameMaxLength)]
-    [InlineData(nameof(%A%Record.Description), %Limits%.DescriptionMaxLength)]
+    [InlineData(nameof(PlaceholderRecord.Name), %Limits%.NameMaxLength)]
+    [InlineData(nameof(PlaceholderRecord.Description), %Limits%.DescriptionMaxLength)]
     public void EveryTextColumn_IsAsLongAsTheValidatorAllows(string property, int expected) =>
         Entity().FindProperty(property)!.GetMaxLength().ShouldBe(expected);
-%end%
+#endif
 
-%if list%
+#if list
     [Fact]
     public void EverySortIndex_ServesASortableField_AndEndsWithTheId()
     {
         var indexes = Entity().GetIndexes().ToList();
 
-        indexes.Count.ShouldBe(%A%CollectionPolicy.Instance.SortableFields.Count);
+        indexes.Count.ShouldBe(PlaceholderCollectionPolicy.Instance.SortableFields.Count);
 
         foreach (var index in indexes)
         {
             var names = index.Properties.Select(property => property.Name).ToList();
 
-%if owner%
-            names[0].ShouldBe(nameof(%A%Record.OwnerId));
-%end%
-            names[^1].ShouldBe(nameof(%A%Record.Id));
+#if owner
+            names[0].ShouldBe(nameof(PlaceholderRecord.OwnerId));
+#endif
+            names[^1].ShouldBe(nameof(PlaceholderRecord.Id));
         }
     }
 
-%end%
+#endif
     [Fact]
-%if prefixed%
-    public void TheTable_IsPrefixedWithThe%F%Schema()
+#if prefixed
+    public void TheTable_IsPrefixedWithThePlaceholdersSchema()
     {
-        Entity().GetTableName().ShouldBe($"{AppDbContext.%F%Schema}_%F%");
+        Entity().GetTableName().ShouldBe($"{AppDbContext.PlaceholdersSchema}_Placeholders");
         Entity().GetSchema().ShouldBeNull();
     }
-%else%
+#else
     public void TheTable_LivesInItsOwnSchema()
     {
-        Entity().GetTableName().ShouldBe("%F%");
-        Entity().GetSchema().ShouldBe(AppDbContext.%F%Schema);
+        Entity().GetTableName().ShouldBe("Placeholders");
+        Entity().GetSchema().ShouldBe(AppDbContext.PlaceholdersSchema);
     }
-%end%
+#endif
 
     private static IEntityType Entity()
     {
@@ -80,6 +80,6 @@ public sealed class %A%RecordConfigurationTests
             .UseDatabase(DatabaseProvider.DesignTimeConnectionString)
             .Options);
 
-        return context.Model.FindEntityType(typeof(%A%Record))!;
+        return context.Model.FindEntityType(typeof(PlaceholderRecord))!;
     }
 }

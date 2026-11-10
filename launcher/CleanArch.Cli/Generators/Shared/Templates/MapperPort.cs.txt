@@ -1,13 +1,13 @@
-using %P%.Domain.Features.%F%.Model.Entities;
-using %P%.Infrastructure.Persistence.Features.%F%.Rows.Models;
+using AppTemplate.Domain.Features.Placeholders.Model.Entities;
+using AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Models;
 
-namespace %P%.Infrastructure.Persistence.Features.%F%.Rows.Mapping;
+namespace AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Mapping;
 
-internal interface I%A%Mapper
+internal interface IPlaceholderMapper
 {
-    %A% ToAggregate(%A%Record record);
+    Placeholder ToAggregate(PlaceholderRecord record);
 
-    %A%Record ToNewRecord(%A% aggregate);
+    PlaceholderRecord ToNewRecord(Placeholder aggregate);
 
-    void WriteTo(%A% aggregate, %A%Record record);
+    void WriteTo(Placeholder aggregate, PlaceholderRecord record);
 }

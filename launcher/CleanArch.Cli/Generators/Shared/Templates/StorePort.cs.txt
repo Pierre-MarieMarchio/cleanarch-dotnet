@@ -1,56 +1,56 @@
-using %P%.Application.Core.Common.Concurrency; //?VersionPrecondition
-using %P%.Application.Features.%F%.Model.Dtos; //?%A%ContentDto
-using %P%.Domain.Core.Common.Primitives; //?UserId
+using AppTemplate.Application.Core.Common.Concurrency; //?VersionPrecondition
+using AppTemplate.Application.Features.Placeholders.Model.Dtos; //?PlaceholderContentDto
+using AppTemplate.Domain.Core.Common.Primitives; //?UserId
 
-namespace %P%.Application.Features.%F%.Ports.%A%Store;
+namespace AppTemplate.Application.Features.Placeholders.Ports.PlaceholderStore;
 
-public interface I%A%Store
+public interface IPlaceholderStore
 {
-%if create%
+#if create
     void Add(
-%if owner%
+#if owner
         UserId ownerId,
-%end%
-        Guid %L%Id,
-        %A%ContentDto content,
+#endif
+        Guid placeholderId,
+        PlaceholderContentDto content,
         DateTimeOffset createdAt);
 
-%end%
-%if update%
-    Task<%A%ChangeStatus> StageReplacementAsync(
-%if owner%
+#endif
+#if update
+    Task<PlaceholderChangeStatus> StageReplacementAsync(
+#if owner
         UserId ownerId,
-%end%
-        Guid %L%Id,
-        %A%ContentDto content,
+#endif
+        Guid placeholderId,
+        PlaceholderContentDto content,
         DateTimeOffset modifiedAt,
-%if etag%
+#if etag
         VersionPrecondition? precondition,
-%end%
+#endif
         CancellationToken cancellationToken = default);
 
-%end%
-%if delete%
-    Task<%A%ChangeStatus> StageRemovalAsync(
-%if owner%
+#endif
+#if delete
+    Task<PlaceholderChangeStatus> StageRemovalAsync(
+#if owner
         UserId ownerId,
-%end%
-        Guid %L%Id,
-%if etag%
+#endif
+        Guid placeholderId,
+#if etag
         VersionPrecondition? precondition,
-%end%
+#endif
         CancellationToken cancellationToken = default);
-%end%
-%if purge%
+#endif
+#if purge
 
     Task<int> StageRemovalForOwnerAsync(
         UserId ownerId,
         CancellationToken cancellationToken = default);
-%end%
-%if anon%
+#endif
+#if anon
 
     Task<int> StageAnonymisationForOwnerAsync(
         UserId ownerId,
         CancellationToken cancellationToken = default);
-%end%
+#endif
 }

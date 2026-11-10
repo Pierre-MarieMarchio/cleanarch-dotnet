@@ -1,12 +1,12 @@
-namespace %P%.Application.Features.%F%.Model.Dtos;
+namespace AppTemplate.Application.Features.Placeholders.Model.Dtos;
 
-public sealed record %A%Dto(
+public sealed record PlaceholderDto(
     Guid Id,
-%if fields%
+#if fields
 %FDtoParams%
-%else%
+#else
     string Name,
     string Description,
-%end%
+#endif
     DateTimeOffset CreatedAt,
     DateTimeOffset? LastModifiedAt);
