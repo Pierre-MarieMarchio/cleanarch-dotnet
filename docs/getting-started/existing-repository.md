@@ -17,7 +17,13 @@ once, right after generation and bootstrap.
 | <!--#if (githubHost)--> |
 | In a subdirectory, such as `services/api/` | copy the tree there; the host keeps its own root files | the host's `global.json` learns the test runner; the workflows move to the git root |
 | <!--#endif--> |
-| <!--#if (!githubHost)--> |
+| <!--#if (gitlabCi)--> |
+| In a subdirectory, such as `services/api/` | copy the tree there; the host keeps its own root files | the host's `global.json` learns the test runner; the pipeline and the `.gitlab` folder move to the git root |
+| <!--#endif--> |
+| <!--#if (gitlabHost && !ci)--> |
+| In a subdirectory, such as `services/api/` | copy the tree there; the host keeps its own root files | the host's `global.json` learns the test runner; the `.gitlab` folder moves to the git root |
+| <!--#endif--> |
+| <!--#if (!anyCodeHost)--> |
 | In a subdirectory, such as `services/api/` | copy the tree there; the host keeps its own root files | the host's `global.json` learns the test runner |
 | <!--#endif--> |
 
@@ -25,10 +31,10 @@ Take the root unless the repository must hold more than this service. At the roo
 are the ones a host is likely to have already: `README.md`, `.gitignore`, `global.json`,
 `Directory.Build.props`, `Directory.Packages.props` and `.editorconfig`.
 
-<!--#if (githubCi)-->
+<!--#if (githubCi || gitlabCi)-->
 Three facts decide the subdirectory shape:
 <!--#endif-->
-<!--#if (!githubCi)-->
+<!--#if (!githubCi && !gitlabCi)-->
 Two facts decide the subdirectory shape:
 <!--#endif-->
 
@@ -39,6 +45,9 @@ Two facts decide the subdirectory shape:
   do not reach the host's.
 <!--#if (githubCi)-->
 - GitHub reads workflows from `.github/workflows` at the git root only.
+<!--#endif-->
+<!--#if (gitlabCi)-->
+- GitLab reads the pipeline from `.gitlab-ci.yml` at the git root only, and a job runs there.
 <!--#endif-->
 
 ## In a subdirectory, step by step
@@ -81,14 +90,65 @@ Two facts decide the subdirectory shape:
    `.config/dotnet-tools.json`, `coverage.minimum`, `global.json`) with the subdirectory.
 
 <!--#endif-->
-<!--#if (githubHost)-->
+<!--#if (githubCi)-->
 4. Merge `.github/dependabot.yml` into the host's, at the git root, each `directory` prefixed with
    the subdirectory. Dependabot reads that one file only.
 
 5. Keep Compose in the subdirectory. Its build contexts are relative to the compose file, so nothing
    needs re-pointing; copy `.env.example` to `.env` beside it.
 <!--#endif-->
-<!--#if (!githubHost)-->
+<!--#if (githubHost && !ci)-->
+3. Merge `.github/dependabot.yml` into the host's, at the git root, each `directory` prefixed with
+   the subdirectory. Dependabot reads that one file only.
+
+4. Keep Compose in the subdirectory. Its build contexts are relative to the compose file, so nothing
+   needs re-pointing; copy `.env.example` to `.env` beside it.
+<!--#endif-->
+<!--#if (gitlabCi)-->
+3. Move the `.gitlab` folder to the git root, every path under it kept, renaming a template whose
+   name the host's already uses, then the pipeline:
+
+   ```bash
+   mkdir -p .gitlab
+   cp -a services/api/.gitlab/. .gitlab/
+   rm -r services/api/.gitlab
+   mv services/api/.gitlab-ci.yml .gitlab-ci.yml
+   ```
+
+   If the host has a `.gitlab-ci.yml` of its own, the last line moves this one to `.gitlab/ci/api.yml`
+   instead, and the host's includes it; its `local:` includes keep their paths:
+
+   ```yaml
+   include:
+     - local: .gitlab/ci/api.yml
+   ```
+
+   A project runs one pipeline, so the host's then holds `stages:`, `workflow:` and GitLab's SAST and
+   Secret Detection templates once, merged from both. A job runs from the git root, so prefix with the
+   subdirectory every other path a job names (the solution, the cache keys' files,
+   `.config/dotnet-tools.json`, `coverage.minimum`, `global.json`).
+
+<!--#endif-->
+<!--#if (gitlabHost && !ci)-->
+3. Move the `.gitlab` folder to the git root, every path under it kept, renaming a template whose
+   name the host's already uses:
+
+   ```bash
+   mkdir -p .gitlab
+   cp -a services/api/.gitlab/. .gitlab/
+   rm -r services/api/.gitlab
+   ```
+
+<!--#endif-->
+<!--#if (gitlabHost)-->
+   GitLab reads the merge request and issue templates from there only, beside the host's own.
+   Renovate reads one configuration file: if the host has one, merge `.gitlab/renovate.jsonc` into
+   it; either way, prefix each `matchFileNames` entry with the subdirectory.
+
+4. Keep Compose in the subdirectory. Its build contexts are relative to the compose file, so nothing
+   needs re-pointing; copy `.env.example` to `.env` beside it.
+<!--#endif-->
+<!--#if (!anyCodeHost)-->
 3. Keep Compose in the subdirectory. Its build contexts are relative to the compose file, so nothing
    needs re-pointing; copy `.env.example` to `.env` beside it.
 <!--#endif-->

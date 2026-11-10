@@ -125,6 +125,11 @@ integration suites:
 ```bash
 dotnet test --project tests/Integration/AT.AppHost.IntegrationTests
 ```
+<!--#if (gitlabCi)-->
+
+The GitLab pipeline leaves this project out of `build-test`: its Docker daemon is a Docker-in-Docker
+service, whose loopback the app host cannot reach, so run it where Docker is local.
+<!--#endif-->
 
 ## Undo
 

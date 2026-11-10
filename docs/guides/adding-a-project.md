@@ -35,12 +35,12 @@ says. A new folder in an existing project is not a new project.
    are internal, so a host composes them through that method alone; `AdapterVisibilityTests` holds it.
 5. Reference it from each host that composes it, and call `Add<Capability>Module` in that host's
    `Program.cs`. Only a host references an infrastructure module.
-<!--#if (githubCi)-->
+<!--#if (githubCi || gitlabCi)-->
 6. Add its project file's `COPY` line to the `Dockerfile` of each of those hosts, beside the other
    project files, before the restore. The build passes on your machine without it; only the image
    fails, in the CI's image job.
 <!--#endif-->
-<!--#if (!githubCi)-->
+<!--#if (!githubCi && !gitlabCi)-->
 6. Add its project file's `COPY` line to the `Dockerfile` of each of those hosts, beside the other
    project files, before the restore. The build passes on your machine without it; only the image
    fails, once it is built.
