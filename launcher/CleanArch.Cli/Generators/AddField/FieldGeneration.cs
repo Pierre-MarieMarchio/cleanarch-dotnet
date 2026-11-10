@@ -69,8 +69,10 @@ internal sealed class FieldGeneration(Addition addition, GenerationContext conte
 
     private static List<FieldChange> FieldChanges(string root, Addition addition, List<string> problems)
     {
-        var before = Plan(addition.Before, root, out _).ToDictionary(emission => emission.Path, StringComparer.Ordinal);
-        var after = Plan(addition.After, root, out _);
+        var templates = Overrides(root);
+        var before = Plan(addition.Before, root, templates, out _).ToDictionary(emission => emission.Path, StringComparer.Ordinal);
+        var after = Plan(addition.After, root, templates, out _);
+        problems.AddRange(templates.Problems);
         var recorded = addition.Manifest.Files.Keys.ToHashSet(StringComparer.Ordinal);
 
         foreach (string path in before.Keys.Where(path => after.All(emission => emission.Path != path)))

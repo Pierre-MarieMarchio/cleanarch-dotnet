@@ -21,6 +21,8 @@ internal sealed class FeatureGeneration(FeatureSpec spec, IReadOnlyList<string> 
 
     private Emission? _manifest;
 
+    private readonly TemplateOverrides _templates = Overrides(context.Root);
+
     protected override string Usage => NewFeature.Usage;
 
     protected override bool StopsAtDryRun => true;
@@ -48,8 +50,9 @@ internal sealed class FeatureGeneration(FeatureSpec spec, IReadOnlyList<string> 
 
     protected override bool Draft(List<string> problems)
     {
-        _plan = Plan(spec, Root, out _skipped);
+        _plan = Plan(spec, Root, _templates, out _skipped);
         problems.AddRange(checkedProblems);
+        problems.AddRange(_templates.Problems);
         problems.AddRange(NewFeature.Conflicts(Root, spec, _plan));
 
         if (problems.Count > 0)
@@ -59,7 +62,7 @@ internal sealed class FeatureGeneration(FeatureSpec spec, IReadOnlyList<string> 
 
         _page = FeaturePage.PageOf(Root, spec, _plan, out _unwritten);
         _editor = FeatureEdits.Edits(Root, spec, _plan);
-        _manifest = ManifestOf(spec, _plan, _page, _editor, version);
+        _manifest = ManifestOf(spec, _plan, _page, _editor, version, _templates.Used);
 
         return true;
     }
@@ -76,6 +79,7 @@ internal sealed class FeatureGeneration(FeatureSpec spec, IReadOnlyList<string> 
     {
         FeatureReport.Report(Output, Root, spec, _plan, _manifest!.Path, _skipped, mode);
         FeatureReport.ReportPage(Output, spec, _page, _unwritten, mode);
+        _templates.ReportUsed(Output);
 
         if (mode == ReportMode.Applied && _editor.Kept.Count > 0)
         {
@@ -131,7 +135,7 @@ internal sealed class FeatureGeneration(FeatureSpec spec, IReadOnlyList<string> 
         .. spec.HasApi ? TextEdits.ContractSteps(root, built: true) : [],
     ];
 
-    internal static Emission ManifestOf(FeatureSpec spec, List<Emission> plan, Emission? page, TextEdits.Editor editor, string version)
+    internal static Emission ManifestOf(FeatureSpec spec, List<Emission> plan, Emission? page, TextEdits.Editor editor, string version, IReadOnlyList<UsedTemplate> templates)
     {
         var options = new JsonObject
         {
@@ -154,6 +158,7 @@ internal sealed class FeatureGeneration(FeatureSpec spec, IReadOnlyList<string> 
         }
 
         manifest.Record(editor);
+        manifest.RecordTemplates(templates);
 
         return new Emission(manifest.Path, Encoding.UTF8.GetString(manifest.Bytes()));
     }

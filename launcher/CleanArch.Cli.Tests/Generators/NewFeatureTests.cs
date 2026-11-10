@@ -2065,9 +2065,9 @@ public sealed partial class NewFeatureTests
 
     private static List<Emission> FeedPlan(Action<string> feed, string root, FeatureSpec spec, Action<string, string> seen)
     {
-        var plan = Plan(spec, root, out var skipped);
+        var plan = Plan(spec, root, Overrides(root), out var skipped);
         var editor = Edits(root, spec, plan);
-        var manifest = ManifestOf(spec, plan, null, editor, Version);
+        var manifest = ManifestOf(spec, plan, null, editor, Version, []);
 
         using var report = new StringWriter();
         Report(report, root, spec, plan, manifest.Path, skipped, ReportMode.DryRun);

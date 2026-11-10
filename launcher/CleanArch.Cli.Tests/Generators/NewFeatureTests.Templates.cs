@@ -17,7 +17,7 @@ public sealed partial class NewFeatureTests
         string external = ExternallyAuthenticatedTree(scratch);
         var spec = DigestSpec(external, ["--access", "owner", "--deletion", "delete"], _operationNames, "none", fields: null, [])!;
 
-        written.UnionWith(Plan(spec, external, out _).Select(emission => emission.Path));
+        written.UnionWith(Plan(spec, external, Overrides(external), out _).Select(emission => emission.Path));
 
         var tokens = Tokens(spec);
         string[] unwritten =
