@@ -1,0 +1,20 @@
+using AppTemplate.Application.Features.Placeholders.UseCases.Commands.CreatePlaceholder;
+using AppTemplate.Domain.Features.Placeholders.Model.Entities; //?Placeholder
+using Shouldly;
+using Xunit;
+
+namespace AppTemplate.Application.UnitTests.Features.Placeholders.UseCases.Commands.CreatePlaceholder;
+
+public sealed class CreatePlaceholderCommandValidatorTests
+{
+    private static readonly CreatePlaceholderCommandValidator _validator = new();
+
+    private static CancellationToken TestToken => TestContext.Current.CancellationToken;
+
+%FCreateValidatorTests%
+
+    private static CreatePlaceholderCommand AValidCommand() => new(
+//#each field separator ",\n"
+        %field.Sample%
+//#end ");"
+}
