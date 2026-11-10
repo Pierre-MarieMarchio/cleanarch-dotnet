@@ -1,5 +1,6 @@
 ﻿using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using CleanArch.Cli.CodeTemplates;
 using CleanArch.Cli.Generators.Shared;
 using Xunit;
 using static CleanArch.Cli.Generators.Shared.FeatureCode;
@@ -21,7 +22,7 @@ public sealed partial class NewFeatureTests
     public void OverrideWinsForItsFileOnly() => Expectations.Hold(OverrideWinsForItsFileOnlyCases);
 
     [Fact]
-    public void AnUnchangedCopyWritesTheSameBytes() => Expectations.Hold(AnUnchangedCopyWritesTheSameBytesCases);
+    public void ACopyOfTheTemplatesWritesTheSameBytes() => Expectations.Hold(ACopyOfTheTemplatesWritesTheSameBytesCases);
 
     [Fact]
     public void AnOverrideNamingNoTemplateIsRefused() => Expectations.Hold(AnOverrideNamingNoTemplateIsRefusedCases);
@@ -89,30 +90,33 @@ public sealed partial class NewFeatureTests
             "The report does not list the override it wrote from, or lists one in a run that used none.");
     }
 
-    private static void AnUnchangedCopyWritesTheSameBytesCases(string scratch, Action<bool, string> expect)
+    private static void ACopyOfTheTemplatesWritesTheSameBytesCases(string scratch, Action<bool, string> expect)
     {
         string plain = NewTree(scratch, reaction: false);
         string copied = NewTree(scratch, reaction: false);
+        using var copyOutput = new StringWriter();
+        using var copyError = new StringWriter();
 
-        foreach (var (reference, text) in ToolTemplates.Of(TemplateFolder))
-        {
-            Put(copied, OverridePath(reference), text + "\n");
-        }
-
-        Put(copied, OverridePath(_controller), "﻿" + (ToolText(_controller) + "\n").ReplaceLineEndings("\r\n"));
+        int copy = TemplateCopy.Run(GeneratorRun.Project(copied), new TemplateCopyRequest(TemplateFolder, [], DryRun: false), copyOutput, copyError);
+        string controller = System.IO.Path.Combine(copied, OverridePath(_controller));
+        File.WriteAllText(controller, "\uFEFF" + File.ReadAllText(controller).ReplaceLineEndings("\r\n"));
 
         var expected = Invoke(plain, _overriddenFeature);
         var result = Invoke(copied, _overriddenFeature);
-        var recorded = ManifestOfThings(copied)["templates"] as JsonArray ?? [];
+        var recorded = (ManifestOfThings(copied)["templates"] as JsonArray ?? []).Select(entry => (Path: entry!["path"]!.GetValue<string>(), Sha256: entry["sha256"]!.GetValue<string>())).ToList();
 
+        expect(copy == 0, $"templates copy refused the copy the test compares: {copyError}");
         expect(expected.Code == 0 && result.Code == 0, $"add feature refused a run the copy test compares: {expected.Error}{result.Error}");
         expect(
             Same(WrittenFiles(plain), WrittenFiles(copied)),
-            $"A copy of each template, unchanged, did not write the bytes the tool's own text writes: {Differing(WrittenFiles(plain), WrittenFiles(copied))}");
+            $"After templates copy, add feature did not write the bytes it writes without the copy, a BOM and CRLF line endings in one: {Differing(WrittenFiles(plain), WrittenFiles(copied))}");
         expect(
-            recorded.Count > 0
-                && recorded.All(entry => entry!["sha256"]!.GetValue<string>() == ToolTemplates.Digest(ToolText(ReferenceOf(entry["path"]!.GetValue<string>())))),
-            "The manifest records an unchanged copy, a BOM and CRLF line endings among them, with another digest than the tool's text.");
+            recorded.Any(entry => entry.Path == OverridePath(_controller))
+                && result.Output.Contains($"Written from this project's code templates:{string.Concat(recorded.Select(entry => $"\n  {entry.Path}"))}\n", StringComparison.Ordinal),
+            $"The report of add feature does not list the copies it wrote from, as the feature's manifest records them: {result.Output}");
+        expect(
+            recorded.All(entry => entry.Sha256 == ToolTemplates.Digest(ToolText(ReferenceOf(entry.Path)))),
+            "The feature's manifest records an unchanged copy, a BOM and CRLF line endings among them, with another digest than the tool's text.");
 
         static string ReferenceOf(string path) => path[$"{ToolTemplates.Folder}/{TemplateFolder}/".Length..^ToolTemplates.Extension.Length];
     }
