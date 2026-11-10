@@ -83,6 +83,20 @@ the other passes are idempotent. The edits, to make by hand where the command st
   ```
 
 <!--#endif-->
+<!--#if (gitlabHost)-->
+- in `.gitlab/renovate.jsonc`, after the line:
+
+  ```jsonc
+          "src/Presentation/AT.Api/*",
+  ```
+
+  add:
+
+  ```jsonc
+          "src/Presentation/AT.Worker/*",
+  ```
+
+<!--#endif-->
 <!--#if (githubCi)-->
 - in `.github/workflows/release.yml`, replace the line:
 

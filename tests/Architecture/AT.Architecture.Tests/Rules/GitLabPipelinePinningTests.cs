@@ -37,6 +37,8 @@ public sealed class GitLabPipelinePinningTests
 
     private static readonly Regex _existsKey = new(@"^(?<indent>\s*)(?:-\s+)?exists:\s*$", RegexOptions.None, _budget);
 
+    private static readonly Regex _nodeArchive = new(@"^\s*node=v(?<version>\S+)\s*$", RegexOptions.None, _budget);
+
     /*#if (templateMaintenance)*/
     private static string PipelineRoot => Path.Combine(ProjectReferenceGraph.RepositoryRoot, ".template.config", "variants", "code-host-gitlab");
     /*#else
@@ -120,6 +122,27 @@ public sealed class GitLabPipelinePinningTests
     }
 
     [Fact]
+    public void TheNodeArchive_IsTheVersionInNodeVersion()
+    {
+        string web = Path.Combine(PipelineRoot, ".gitlab", "ci", "web.yml");
+        string nodeVersion = Path.Combine(ProjectReferenceGraph.RepositoryRoot, "src", "Web", ".node-version");
+        if (!File.Exists(web))
+        {
+            return;
+        }
+
+        File.Exists(nodeVersion).ShouldBeTrue("The web jobs install the Node.js src/Web/.node-version names; the web workspace holds none.");
+        string expected = File.ReadAllText(nodeVersion).Trim();
+        var archives = NodeArchives(File.ReadAllLines(web));
+
+        archives.ShouldNotBeEmpty("The web jobs install Node.js from its release archive; a read of .gitlab/ci/web.yml that finds no node= is broken.");
+        archives.Where(version => version != expected).ShouldBeEmpty(
+            $"src/Web/.node-version names Node.js {expected}, which the web images run, and the web jobs must test it: in the merge request that moves it, "
+            + $"set node=v{expected} in .gitlab/ci/web.yml, and node_sha256 to the SHA-256 https://nodejs.org/dist/v{expected}/SHASUMS256.txt lists for "
+            + $"node-v{expected}-linux-x64.tar.gz.");
+    }
+
+    [Fact]
     public void TheMatchers_AreSensitive()
     {
         const string digest = "sha256:08a98015fce594af7c382883bea080ea206de74402a95da9dc52b6428c8cd121";
@@ -141,6 +164,7 @@ public sealed class GitLabPipelinePinningTests
         _pinnedImage.IsMatch("docker:29.9.3-dind").ShouldBeFalse();
         _pinnedImage.IsMatch($"docker@{digest}").ShouldBeFalse("the tag is kept for the reader");
         _pinnedImage.IsMatch("$IMAGE").ShouldBeFalse("an image from a variable is pinned by nothing in the file");
+        NodeArchives([".node:", "  before_script:", "    - |", "      node=v26.13.0", "      node_sha256=5848", "      echo \"node=v1\""]).ShouldBe(["26.13.0"]);
 
         Includes(["include:", "  - template: Jobs/SAST.gitlab-ci.yml", "  - local: ci/build.yml", "  - remote: https://example.com/ci.yml", "  - project: group/ci", "    file: ci.yml", "stages:", "  - test"])
             .Select(include => $"{include.Kind}={include.Value}")
@@ -214,6 +238,9 @@ public sealed class GitLabPipelinePinningTests
             ? Directory.EnumerateFiles(folder, "*.yml", SearchOption.AllDirectories).Order(StringComparer.Ordinal)
             : [];
     }
+
+    private static List<string> NodeArchives(string[] lines) =>
+        [.. lines.Select(line => _nodeArchive.Match(line)).Where(match => match.Success).Select(match => match.Groups["version"].Value)];
 
     private static bool IsAllowed(string kind, string value) =>
         kind == "local" || (kind == "template" && _scannerTemplates.Contains(value, StringComparer.Ordinal));

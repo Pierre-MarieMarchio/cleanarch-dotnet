@@ -37,6 +37,7 @@ internal static class CheckComments
 
         Configuration files: appsettings*.json, .env.example, docker-compose*.yml|yaml,
         .github/workflows/*.yml|yaml, .github/dependabot.yml, .gitlab-ci.yml, .gitlab/ci/*.yml|yaml,
+        .gitlab/renovate.jsonc,
         .editorconfig, Directory.*.props, Directory.*.targets, coverage.runsettings, coverage.minimum,
         Dockerfile, *.Dockerfile, tests/Load/*.js, and
         in the web workspace src/Web: compose*.yml|yaml, nginx.conf, pnpm-workspace.yaml and the
@@ -191,6 +192,11 @@ internal static class CheckComments
         var name = relative[(relative.LastIndexOf('/') + 1)..];
 
         if (name.StartsWith("appsettings", StringComparison.Ordinal) && name.EndsWith(".json", StringComparison.Ordinal))
+        {
+            return Syntax.Slash;
+        }
+
+        if (Regex.IsMatch(relative, @"(?:^|/)\.gitlab/renovate\.jsonc$"))
         {
             return Syntax.Slash;
         }
@@ -1190,6 +1196,8 @@ internal static class CheckComments
         new("two guidance lines in the GitLab overlay's pipeline", ".template.config/variants/code-host-gitlab/.gitlab-ci.yml", "# one\n# two\nstages: []\n", 1),
         new("two guidance lines in a file the GitLab pipeline includes", ".gitlab/ci/web.yml", "# one\n# two\nweb:\n", 1),
         new("two guidance lines in a file the GitLab overlay's pipeline includes", ".template.config/variants/code-host-gitlab/.gitlab/ci/web.yml", "# one\n# two\nweb:\n", 1),
+        new("two guidance lines in the Renovate configuration", ".gitlab/renovate.jsonc", "{\n  // one\n  // two\n  \"a\": 1\n}\n", 1),
+        new("two guidance lines in the GitLab overlay's Renovate configuration", ".template.config/variants/code-host-gitlab/.gitlab/renovate.jsonc", "{\n  // one\n  //#if (a)\n  // two\n  //#endif\n}\n", 0),
         new("two guidance lines split by a blank line", "docker-compose.yml", "# one\n\n# two\nservices:\n", 1),
         new("two guidance lines in appsettings", "src/App/appsettings.json", "{\n  // one\n  // two\n  \"A\": 1\n}\n", 1),
         new("a two-line comment in a targets file", "Directory.Build.targets", "<Project>\n  <!-- one\n       two -->\n</Project>\n", 1),

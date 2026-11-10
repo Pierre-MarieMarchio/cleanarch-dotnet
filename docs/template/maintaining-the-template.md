@@ -445,6 +445,40 @@ carries BuildKit's SBOM and provenance, through Sigstore and the job's `SIGSTORE
 workflow's GitHub Actions cache has no counterpart: a release builds without one rather than push a
 cache image beside the release's.
 
+`.template.config/variants/code-host-gitlab/.gitlab/renovate.jsonc` is the counterpart of
+`.github/dependabot.yml` and of `web-node-version.yml`: Renovate reads `.gitlab/renovate.jsonc` on
+GitLab alone, and a `.jsonc` file takes the `//` comments and the trailing commas the template markers
+leave. Each Dependabot ecosystem is a manager, `gitlabci` standing for `github-actions`; each group is
+a `packageRules` entry with its `groupName` and its patterns, then its exclusions negated, in
+`matchPackageNames`; the folders Dependabot reads alone, those of the Dockerfiles and of the Compose
+files, are a rule that disables the manager and one that enables it in `matchFileNames`, which the
+worker's and the web workspace's README edits extend as they extend `dependabot.yml`. The schedule
+opens Monday at 06:00 Paris time and stays open until 10:00, for a run that starts late; the limits
+are added up into `prConcurrentLimit`, since Renovate counts every open merge request against one;
+`separateMajorMinor` is off, as Dependabot opens one pull request per dependency or group at its
+newest version; `prHourlyLimit` is off and the dashboard too. `applies-to: version-updates` needs no
+counterpart: Renovate leaves a vulnerability fix out of every group by default, and on GitLab it gets
+none, since its vulnerability alerts read GitHub's and `osvVulnerabilityAlerts` is experimental. The
+`templateMaintenance` lines of `dependabot.yml`, `target-branch: develop`, have none either, since no
+GitLab project is this repository. Two rules go past Dependabot, each because CI fails without it: the
+`node` group moves the web images' `node`, `src/Web/.node-version` through the `nodenv` manager, and
+`@types/node`, within the major and across it in another merge request, which is the job
+`web-node-version.yml` does on GitHub; and the .NET SDK image moves in every Dockerfile and the
+pipeline together, since `GitLabPipelinePinningTests` holds them to one image. Three take less:
+`global.json`'s SDK band, pnpm's `packageManager` and the `overrides` of `pnpm-workspace.yaml` stay
+by hand, and so does every image or archive a pipeline script names, as on GitHub. Renovate cannot
+update a checksum it has not computed, so the Node.js archive of `.gitlab/ci/web.yml` is bumped by hand
+in the `node` merge request, which `GitLabPipelinePinningTests` fails until it is.
+`RenovateParityTests`, template-only, resolves the markers of both files for every combination of the
+symbols they read and fails until each ecosystem, folder, group, pattern, exclusion, label, commit
+prefix, schedule and limit of `dependabot.yml` has its counterpart and nothing more, through a reader
+of `packageRules` that applies them in order, as Renovate does; it also holds the README edits to the
+blocks the worker and the web workspace write. `RenovateConfigurationTests`, which a GitLab project
+receives under `(gitlabHost)`, holds the `node` group and the SDK image to the files the project
+holds. `renovate-config-validator`, run on a generated project's file, is the schema's check; the
+project runs Renovate through the Mend-hosted app on GitLab.com or the `renovate-runner` template from
+a project of its own, so its pipeline holds no Renovate job.
+
 `AGitLabProject_RunsEveryCommandOfTheGitHubGate`, in `TemplatePackagingTests`, reads the `dotnet`
 commands of the three gate jobs of `ci.yml`, past its `templateMaintenance` blocks, and fails until
 the GitLab job of the same name runs each one, so the two gates cannot drift.
@@ -473,7 +507,7 @@ and it alone, takes a `SIGSTORE_ID_TOKEN` for the `sigstore` audience. This repo
 stand in until a first run on GitLab.com. Still missing before `gitlab` is a choice: the app host's `LocalStackTests` under `--aspire true`,
 which fail in `build-test` because the app host reaches the containers it starts through the Docker
 host's loopback, which a Docker-in-Docker service keeps to itself, so its health checks time out;
-Renovate in place of Dependabot, the
+the
 steps of `docs/getting-started/existing-repository.md` that move the pipeline to the git root, and
 the choice itself.
 
