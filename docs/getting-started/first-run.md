@@ -186,6 +186,8 @@ The web app relays `/api` to the API, so a browser talks to one origin.
 SQL Server runs capped at 1 GB of memory (`MSSQL_MEMORY_LIMIT_MB`); where a local SQL Server or the
 host already holds port 1433, set `MSSQL_HOST_PORT` in `.env`.
 <!--#endif-->
+`STACK_PUBLISH_ADDRESS`, when it is set, binds every port to that address instead, for a stack whose
+Docker daemon runs in another container.
 
 ```bash
 docker compose logs -f api    # follow the API
@@ -357,7 +359,8 @@ dotnet ef database update --project src/Infrastructure/AT.Infrastructure.Auth --
 <!--#endif-->
 
 Every port binds to `127.0.0.1`; [presentation projects](../features/presentation.md) describes each
-host.
+host. `STACK_PUBLISH_ADDRESS`, when it is set, binds every port to that address instead, for a stack
+whose Docker daemon runs in another container.
 
 ```bash
 docker compose logs -f    # follow the hosts

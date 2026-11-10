@@ -36,9 +36,9 @@ internal static class CheckComments
           allowed  <!--#...--> template conditionals; refused: every other <!-- -->.
 
         Configuration files: appsettings*.json, .env.example, docker-compose*.yml|yaml,
-        .github/workflows/*.yml|yaml, .github/dependabot.yml, .gitlab-ci.yml, .editorconfig, Directory.*.props,
-        Directory.*.targets, coverage.runsettings, coverage.minimum, Dockerfile, *.Dockerfile,
-        tests/Load/*.js, and
+        .github/workflows/*.yml|yaml, .github/dependabot.yml, .gitlab-ci.yml, .gitlab/ci/*.yml|yaml,
+        .editorconfig, Directory.*.props, Directory.*.targets, coverage.runsettings, coverage.minimum,
+        Dockerfile, *.Dockerfile, tests/Load/*.js, and
         in the web workspace src/Web: compose*.yml|yaml, nginx.conf, pnpm-workspace.yaml and the
         *.ts, *.tsx, *.js, *.mjs and *.cjs sources, a generated/ folder's excepted
           A line whose first non-blank characters open a comment (#, ; in .editorconfig, //, /*
@@ -222,7 +222,8 @@ internal static class CheckComments
             || Regex.IsMatch(name, @"^docker-compose.*\.ya?ml$")
             || Regex.IsMatch(relative, @"(?:^|/)\.github/workflows/[^/]+\.ya?ml$")
             || Regex.IsMatch(relative, @"(?:^|/)\.github/dependabot\.ya?ml$")
-            || Regex.IsMatch(relative, @"(?:^|/)\.gitlab-ci\.ya?ml$"))
+            || Regex.IsMatch(relative, @"(?:^|/)\.gitlab-ci\.ya?ml$")
+            || Regex.IsMatch(relative, @"(?:^|/)\.gitlab/ci/[^/]+\.ya?ml$"))
         {
             return Syntax.Hash;
         }
@@ -1187,6 +1188,8 @@ internal static class CheckComments
         new("two guidance lines in the Dependabot file", ".github/dependabot.yml", "# one\n# two\nversion: 2\n", 1),
         new("two guidance lines in the GitLab pipeline", ".gitlab-ci.yml", "# one\n# two\nstages: []\n", 1),
         new("two guidance lines in the GitLab overlay's pipeline", ".template.config/variants/code-host-gitlab/.gitlab-ci.yml", "# one\n# two\nstages: []\n", 1),
+        new("two guidance lines in a file the GitLab pipeline includes", ".gitlab/ci/web.yml", "# one\n# two\nweb:\n", 1),
+        new("two guidance lines in a file the GitLab overlay's pipeline includes", ".template.config/variants/code-host-gitlab/.gitlab/ci/web.yml", "# one\n# two\nweb:\n", 1),
         new("two guidance lines split by a blank line", "docker-compose.yml", "# one\n\n# two\nservices:\n", 1),
         new("two guidance lines in appsettings", "src/App/appsettings.json", "{\n  // one\n  // two\n  \"A\": 1\n}\n", 1),
         new("a two-line comment in a targets file", "Directory.Build.targets", "<Project>\n  <!-- one\n       two -->\n</Project>\n", 1),

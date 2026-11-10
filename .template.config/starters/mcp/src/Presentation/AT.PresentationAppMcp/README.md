@@ -395,7 +395,7 @@ dotnet cleanarch migrations add AddAccessKeys --context auth
 - in `docker-compose.yml`, after the mailpit service's last lines:
 
   ```yaml
-        - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+        - "${STACK_PUBLISH_ADDRESS:-127.0.0.1}:${MAILPIT_SMTP_PORT:-1025}:1025"
       networks: [backend]
 
   ```
@@ -419,7 +419,7 @@ dotnet cleanarch migrations add AddAccessKeys --context auth
         Mcp__Resource: ${MCP_RESOURCE:-http://localhost:8091/mcp}
   <!--#endif-->
       ports:
-        - "127.0.0.1:${PRESENTATION_PRESENTATION_APP_MCP_HOST_PORT:-8091}:8080"
+        - "${STACK_PUBLISH_ADDRESS:-127.0.0.1}:${PRESENTATION_PRESENTATION_APP_MCP_HOST_PORT:-8091}:8080"
       depends_on:
   <!--#if (api)-->
         api:

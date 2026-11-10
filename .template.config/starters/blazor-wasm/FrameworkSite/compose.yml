@@ -10,7 +10,7 @@ services:
       SIGN_IN_CLIENT_ID: ${EXTERNAL_AUTH_BROWSER_CLIENT_ID:-}
     #endif
     ports:
-      - "127.0.0.1:${WEB_FRAMEWORK_SITE_HOST_PORT:-5173}:8080"
+      - "${STACK_PUBLISH_ADDRESS:-127.0.0.1}:${WEB_FRAMEWORK_SITE_HOST_PORT:-5173}:8080"
     depends_on:
       api:
         condition: service_healthy

@@ -401,18 +401,55 @@ The overlay's `.template.config/variants/code-host-gitlab/.gitlab-ci.yml` is Git
 modifier of the overlay's source leaves it out unless `gitlabCi`, and `template.json` excludes
 `GitLabPipelinePinningTests` under `(!gitlabCi)`. It holds the gate of `ci.yml`: the `build-test`,
 `hygiene` and `vulnerable-packages` jobs, on the .NET SDK image the Dockerfiles build with, the
-integration tests on a Docker-in-Docker service, the Sonar steps under `sonarPipeline`, and GitLab's
-SAST and Secret Detection templates in place of CodeQL, the only includes allowed to float.
+Sonar steps under `sonarPipeline`, and GitLab's SAST and Secret Detection templates in place of
+CodeQL, the only includes allowed to float. Under `api` it holds the other jobs of `ci.yml` too:
+`docker`, `load`, `end-to-end`, which needs `compose`, and `compose` in every shape. Every job that
+runs containers extends the hidden `.docker`: the `docker:<version>-dind` service over TLS, with
+`TESTCONTAINERS_HOST_OVERRIDE`, `STACK_PUBLISH_ADDRESS` set to `0.0.0.0` and `STACK_HOST` set to
+`docker`. The Compose files publish every port on `${STACK_PUBLISH_ADDRESS:-127.0.0.1}` and the
+end-to-end suite and the browser smoke reach the stack on `STACK_HOST`, `localhost` and `127.0.0.1`
+without it, so a developer's stack is unchanged and the service's is reached through its host name;
+`StackAddressTests` holds both in every project, and the browser smoke's own test the host it reads.
+`load` and `end-to-end`, which run the Docker CLI on the SDK image, extend `.docker-client`, which
+installs the CLI, the Compose plugin and the Buildx plugin Compose builds with, from Docker's static
+release, each pinned by version and SHA-256. `docker` and `web-image` run on the
+`docker:<version>-cli` image. Under `files`, `end-to-end` sets `STORAGE_PUBLIC_ENDPOINT` to the
+service's host, since the object store signs the host it is reached on, and `.dockerignore` leaves
+out the `.cache` folder the browser is cached in, which GitLab's cache keeps inside the project.
+
+`.template.config/variants/code-host-gitlab/.gitlab/ci/web.yml` is the counterpart of `web.yml`: the
+`web` job, on the SDK image with Node.js from its release archive at the version
+`src/Web/.node-version` names and pnpm from corepack, as the web images get it; `web-image`, which
+finds the apps by folder as `web-apps` does and builds them one after the other, since a pipeline
+cannot fan a job out over the folders it finds; and the part of `end-to-end` a web app adds, the
+workspace and Chromium for the browser smoke, which GitLab merges into the root file's job of the
+same name. The root file includes it under `rules: exists`, so a project without a web app holds
+none and the item template adds it, under `(workspace && gitlabCi)`, without editing the root file;
+the overlay's source leaves it out under `(!anyWeb)`, as `template.json` does `web.yml`. The item
+templates define `gitlabHost` and `gitlabCi` as the project template does, so offering the value adds
+the choice alone.
+
 `AGitLabProject_RunsEveryCommandOfTheGitHubGate`, in `TemplatePackagingTests`, reads the `dotnet`
-commands of those three jobs of `ci.yml`, past its `templateMaintenance` blocks, and fails until the
-GitLab job of the same name runs each one, so the two gates cannot drift; `GitLabPipelinePinningTests`
-holds the images, services and includes of a GitLab project's pipeline, and its SDK image to the
-Dockerfiles', reading the overlay in this checkout; `tools/CheckGitLabCi.cs` checks the rest. This
-repository's CI never runs the pipeline: its schema, that gate and a local runner stand in until a
-first run on GitLab.com. Still missing before `gitlab` is a choice: the image, Compose, end-to-end,
-load, web and release jobs, Renovate in place of Dependabot, a Docker CLI in `build-test` for the
-app host's `LocalStackTests` under `--aspire true`, which the SDK image lacks, and the steps of
-`docs/getting-started/existing-repository.md` that move the pipeline to the git root.
+commands of the three gate jobs of `ci.yml`, past its `templateMaintenance` blocks, and fails until
+the GitLab job of the same name runs each one, so the two gates cannot drift.
+`AGitLabProject_RunsEveryCommandOfTheGitHubStackAndWebJobs` does the same for `docker`, `load`,
+`end-to-end` and `compose` of `ci.yml` and every job of `web.yml`: each command of a `run:` step whose
+program it pairs, its literal assignments, such as k6's version and checksum, `continue-on-error` and
+`needs`, and, for an action, what it stands for: the SDK image for `setup-dotnet`, the Node.js of
+`.node-version` for `setup-node`, corepack for `pnpm/action-setup`, the cached folder for
+`actions/cache` and the `docker build` that `build-push-action` runs; an action it does not know
+fails it. `GitLabPipelinePinningTests` holds the images, services and includes of a GitLab project's
+pipeline and of every file under its `.gitlab/ci` folder, its local includes to a file or an
+`exists:` guard, and its SDK image to the Dockerfiles', reading the overlay in this checkout;
+`tools/CheckGitLabCi.cs` checks the rest, the included files merged into the root file as GitLab
+merges them. This repository's CI never runs the pipeline: its schema, that gate and a local runner
+stand in until a first run on GitLab.com. Still missing before `gitlab` is a choice: the app host's `LocalStackTests` under `--aspire true`,
+which fail in `build-test` because the app host reaches the containers it starts through the Docker
+host's loopback, which a Docker-in-Docker service keeps to itself, so its health checks time out;
+the release job,
+Renovate in place of Dependabot, the
+steps of `docs/getting-started/existing-repository.md` that move the pipeline to the git root, and
+the choice itself.
 
 ## Adding an option
 

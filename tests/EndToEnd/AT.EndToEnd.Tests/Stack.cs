@@ -4,6 +4,10 @@ internal static class Stack
 {
     private const string _settingsFile = ".env.example";
 
+    private const string _hostSetting = "STACK_HOST";
+
+    private const string _defaultHost = "localhost";
+
     private static readonly Lazy<Dictionary<string, string>> _defaults = new(ReadDefaults);
 
     internal static Uri Api => Local("API_HOST_PORT");
@@ -14,7 +18,7 @@ internal static class Stack
     //#endif
     internal static IEnumerable<string> SettingNames => _defaults.Value.Keys;
 
-    internal static Uri Local(string portSetting) => new($"http://localhost:{Setting(portSetting)}/");
+    internal static Uri Local(string portSetting) => new($"http://{Host}:{Setting(portSetting)}/");
 
     internal static HttpClient Client(Uri baseAddress) =>
         new(new HttpClientHandler { AllowAutoRedirect = false })
@@ -22,6 +26,9 @@ internal static class Stack
             BaseAddress = baseAddress,
             Timeout = TimeSpan.FromSeconds(30),
         };
+
+    private static string Host =>
+        Environment.GetEnvironmentVariable(_hostSetting) is { Length: > 0 } host ? host : _defaultHost;
 
     private static string Setting(string name) =>
         Environment.GetEnvironmentVariable(name) is { Length: > 0 } value
