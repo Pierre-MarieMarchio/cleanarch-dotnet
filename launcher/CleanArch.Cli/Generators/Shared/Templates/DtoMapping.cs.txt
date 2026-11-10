@@ -13,7 +13,9 @@ internal static class PlaceholderDtoMapping
         var detail = new PlaceholderDto(
             placeholder.Id,
 #if fields
-%FDetailArgs%
+//#each field
+            placeholder.%field.Name%,
+//#end
 #else
             placeholder.Name,
             placeholder.Description,

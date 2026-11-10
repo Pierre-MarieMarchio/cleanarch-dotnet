@@ -4,7 +4,9 @@ namespace AppTemplate.Api.Features.Placeholders.Contracts.Responses;
 public sealed record PlaceholderSummaryResponse(
     Guid Id,
 #if fields
-%FSummaryParams%
+//#each field where summary
+    %field.Type% %field.Name%,
+//#end
 #else
     string Name,
 #endif

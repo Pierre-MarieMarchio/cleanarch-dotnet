@@ -40,7 +40,7 @@ internal static class FieldCode
 
         if (deletion == "anonymise")
         {
-            if (!fields.Any(field => FieldCode.Anonymised(field) is not null))
+            if (!fields.Any(IsAnonymised))
             {
                 problems.Add(
                     "--deletion anonymise rewrites the fields that can say who the owner was, its strings, texts and nullable "
@@ -105,6 +105,8 @@ internal static class FieldCode
         _ => null,
     };
 
+    internal static bool IsAnonymised(Field field) => Anonymised(field) is not null;
+
     internal static bool HasConstants(Field field) => IsReference(field) || field.Kind == FieldKind.Decimal || field.Bounds.Any();
 
     internal static string Grouped(int value) =>
@@ -120,18 +122,9 @@ internal static class FieldCode
     internal static string List(IEnumerable<string> items, string indent, string last = "") =>
         string.Join(",\n", items.Select(item => indent + item)) + last;
 
-    internal static string Constants(IEnumerable<Field> fields, bool ceilings) =>
-        Joined(
-            [
-                .. fields.SelectMany(ConstantsOf),
-                .. ceilings
-                    ? fields.Where(field => field.Kind == FieldKind.Decimal)
-                        .Select(field => $"    private const decimal {Ceiling(field)} = 1e{field.Precision - field.Scale}m;")
-                    : [],
-            ],
-            "\n\n");
+    internal static string Constants(IEnumerable<Field> fields) => Joined(fields.SelectMany(ConstantsOf), "\n\n");
 
-    private static IEnumerable<string> ConstantsOf(Field field)
+    internal static IEnumerable<string> ConstantsOf(Field field)
     {
         if (IsReference(field))
         {
@@ -150,7 +143,11 @@ internal static class FieldCode
         }
     }
 
-    private static string Ceiling(Field field) => $"_{Parameter(field)}Ceiling";
+    internal static string Ceiling(Field field) => $"_{Parameter(field)}Ceiling";
+
+    internal static int IntegerDigits(Field field) => field.Precision - field.Scale;
+
+    internal static string Trimmed(Field field, string source) => $"{source}.{field.Name}{(field.Nullable ? "?" : string.Empty)}.Trim()";
 
     private static string Subject(Field field) => $"%An% %L% {Label(field)}";
 
@@ -168,7 +165,7 @@ internal static class FieldCode
 
     private static string Digits(Field field)
     {
-        int before = field.Precision - field.Scale;
+        int before = IntegerDigits(field);
 
         if (field.Scale == 0)
         {
@@ -376,7 +373,7 @@ internal static class FieldCode
             FieldKind.DateOnly => $"{presence}, as yyyy-MM-dd",
             FieldKind.DateTimeOffset => $"{presence}, with its offset; kept as the instant, in UTC",
             FieldKind.Guid when !field.Nullable => "Required, and not the empty Guid",
-            FieldKind.Decimal => $"{presence}, with at most {field.Precision - field.Scale} digits before the decimal point and {field.Scale} after it",
+            FieldKind.Decimal => $"{presence}, with at most {IntegerDigits(field)} digits before the decimal point and {field.Scale} after it",
             _ => presence,
         };
 
@@ -442,6 +439,54 @@ internal static class FieldCode
             $"            .HasDatabaseName(\"{FieldCode.IndexName(features, field, owner)}\");",
         ]);
 
+    internal static string CursorKey(Field field) =>
+        field.Kind == FieldKind.String
+            ? $"summary.{field.Name}"
+            : $"summary.{field.Name}.ToString(\"O\", CultureInfo.InvariantCulture)";
+
+    internal static string KeysetMethod(Field field) =>
+        field.Kind == FieldKind.String
+            ? $$"""
+                    private static IQueryable<%A%Record> Apply{{field.Name}}Keyset(
+                        IQueryable<%A%Record> source,
+                        SortDirection direction,
+                        Cursor cursor) =>
+                        direction == SortDirection.Ascending
+                            ? source.Where(record =>
+                                record.{{field.Name}}.CompareTo(cursor.Key) > 0
+                                || (record.{{field.Name}} == cursor.Key && record.Id.CompareTo(cursor.Id) > 0))
+                            : source.Where(record =>
+                                record.{{field.Name}}.CompareTo(cursor.Key) < 0
+                                || (record.{{field.Name}} == cursor.Key && record.Id.CompareTo(cursor.Id) < 0));
+                """
+            : $$"""
+                    private static IQueryable<%A%Record> Apply{{field.Name}}Keyset(
+                        IQueryable<%A%Record> source,
+                        SortDirection direction,
+                        Cursor cursor)
+                    {
+                        if (!DateTimeOffset.TryParse(
+                            cursor.Key,
+                            CultureInfo.InvariantCulture,
+                            DateTimeStyles.RoundtripKind,
+                            out DateTimeOffset parsed))
+                        {
+                            throw new InvalidOperationException(
+                                "The cursor's key is not a valid date/time: CursorKeys should have rejected it first.");
+                        }
+
+                        var key = parsed.ToUniversalTime();
+
+                        return direction == SortDirection.Ascending
+                            ? source.Where(record =>
+                                record.{{field.Name}}.CompareTo(key) > 0
+                                || (record.{{field.Name}} == key && record.Id.CompareTo(cursor.Id) > 0))
+                            : source.Where(record =>
+                                record.{{field.Name}}.CompareTo(key) < 0
+                                || (record.{{field.Name}} == key && record.Id.CompareTo(cursor.Id) < 0));
+                    }
+                """;
+
     internal static (decimal Low, decimal High) Range(Field field)
     {
         decimal step = field.Kind == FieldKind.Decimal ? FieldGrammar.Step(field.Scale) : 1m;
@@ -506,7 +551,7 @@ internal static class FieldCode
         [
             .. KindCases(field),
             .. IsReference(field) ? [("OverTheLimit", $"new string('a', {Constant(field, holder, "MaxLength", field.Length)} + 1)")] : Array.Empty<(string, string)>(),
-            .. field.Kind == FieldKind.Decimal ? [("TooLarge", $"1e{field.Precision - field.Scale}m")] : Array.Empty<(string, string)>(),
+            .. field.Kind == FieldKind.Decimal ? [("TooLarge", $"1e{IntegerDigits(field)}m")] : Array.Empty<(string, string)>(),
             .. field is { Kind: FieldKind.String, Nullable: false } ? [("Missing", "null!")] : Array.Empty<(string, string)>(),
             .. field.Bounds.Select(bound => BoundCase(field, holder, bound)),
         ];

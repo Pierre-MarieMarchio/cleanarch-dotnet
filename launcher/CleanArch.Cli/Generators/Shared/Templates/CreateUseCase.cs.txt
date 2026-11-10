@@ -12,7 +12,9 @@ namespace AppTemplate.Application.Features.Placeholders.UseCases.Commands.Create
 
 #if fields
 public sealed record CreatePlaceholderCommand(
-%FParamList%) : ICommand<Result<Versioned<PlaceholderDto>>>;
+//#each field separator ",\n"
+    %field.Type% %field.Name%
+//#end ") : ICommand<Result<Versioned<PlaceholderDto>>>;"
 #else
 public sealed record CreatePlaceholderCommand(string Name, string Description) : ICommand<Result<Versioned<PlaceholderDto>>>;
 #endif
@@ -36,7 +38,7 @@ public sealed class CreatePlaceholderCommandHandler(
         }
 
 #if fields
-        var created = DomainGuard.Try(() => Placeholder.Create(%SvcOwner%%FCommandArgs%));
+        var created = DomainGuard.Try(() => Placeholder.Create(%SvcOwner%/*#each field separator ", "*/command.%field.Name%/*#end*/));
 #else
         var created = DomainGuard.Try(() => Placeholder.Create(%SvcOwner%command.Name, command.Description));
 #endif

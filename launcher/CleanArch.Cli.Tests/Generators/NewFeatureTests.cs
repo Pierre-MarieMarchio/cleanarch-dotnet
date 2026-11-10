@@ -2124,6 +2124,21 @@ public sealed partial class NewFeatureTests
             !Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(FeatureTemplates.Errors).GetDiagnostics().Any(),
             "The Errors template is no longer valid C#, which its compilable form promises.");
 
+        var fields = FieldBlocks.For(FieldGrammar.Parse("Title:string(120), Size:int, Notes:text?", FieldProfile.Feature, [])!, []);
+        const string arguments = "namespace N;\n    M(\n//#each field separator \",\\n\"\n        %field.Type% %field.Parameter%\n//#end \");\"\n";
+
+        expect(
+            Template.Render(arguments, [], names, fields) == "namespace N;\n    M(\n        string title,\n        int size,\n        string? notes);\n",
+            "A line block did not write one item per field, joined by its separator, with its tail after the last.");
+        expect(
+            Template.Render("namespace N;\n//#each field where anonymised\n%field.Name%\n//#end\n", [], names, fields) == "namespace N;\nTitle\nNotes\n",
+            "A block with a where wrote a field without its trait, or left out one with it.");
+        expect(
+            Template.Render("namespace N;\nM(/*#each field separator \", \"*/%field.Name%/*#end*/);\n", [], names, fields) == "namespace N;\nM(Title, Size, Notes);\n",
+            "An inline block did not join its items on the line it stands in.");
+        expect(Refuses(() => Template.Render("namespace N;\n//#each field\n%field.Colour%\n//#end\n", [], names, fields)), "A block naming a token a field does not have was rendered, so a typo would write the token itself.");
+        expect(Refuses(() => Template.Render("namespace N;\n//#each field\n%field.Name%\n", [], names, fields)), "A block that never closes was rendered, its marker and tokens written as code.");
+
         static bool Refuses(Action render)
         {
             try

@@ -8,7 +8,9 @@ namespace AppTemplate.Api.Features.Placeholders.Contracts.Responses;
 public sealed record PlaceholderResponse(
     Guid Id,
 #if fields
-%FDtoParams%
+//#each field
+    %field.Type% %field.Name%,
+//#end
 #else
     string Name,
     string Description,
