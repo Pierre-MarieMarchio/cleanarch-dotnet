@@ -584,16 +584,16 @@ public sealed partial class NewFeatureTests
 
     private static readonly (string Group, string Digest)[] _withFieldsDigests =
     [
-        ("record, owner, delete", "fd379a6ed235d23f0c838c11f8a5a62a739b30c5c4c734a92fa97b0b869529ca"),
-        ("record, owner, anonymise", "8bff0e69a374d6f084c9f98e465991d0174341ba1fbef0bd96e70db466b2269a"),
-        ("record, shared", "7b100af8330a513eea76624fd6e6f519401d719248de0c3b8640a62e5062a1f3"),
-        ("aggregate, owner, delete", "5abb5f64b12264b7ee102f05b82807cbde0eae6b8b2a38fb415118ccfe3e52d7"),
-        ("aggregate, owner, anonymise", "916a3672b815eaf832790bb2142b005a6fc48e233791d6244ccdd8dd5b6c8d06"),
-        ("aggregate, shared", "548f5e717eaf2b09e898b77e80ec9200d3f27e81dfe088b67d0afcabf5d783ad"),
-        ("record, owner, delete, the project's first owner feature", "4fefd065da454fa0d48fea77ed0182e4f3512096044252babd0c02201b2fdbba"),
-        ("record, owner, delete, without the API", "8849d605bac961129de5e83c952c2475bcd6286bacc1e7a1bdccb65c5dcab0e2"),
-        ("record, owner, delete, on SQL Server", "fd379a6ed235d23f0c838c11f8a5a62a739b30c5c4c734a92fa97b0b869529ca"),
-        ("record, owner, delete, on SQLite", "1e93b3c121bed89a3026e5bcba1b291765a95a78e78d79f5c84e315ba239e038"),
+        ("record, owner, delete", "c17f8aa093c8008893bc452957cefa0b5be65f4b75066de885a4d587c6419b9c"),
+        ("record, owner, anonymise", "f488a7c09fe1078e6f07afc520e6d235140acf1c59746989c8d83031b7ec3548"),
+        ("record, shared", "ea7accf31c16811f8e5283b5ed8a2ba81a32de1c022731048e86f7dc9cfb66d0"),
+        ("aggregate, owner, delete", "8faecf53f71a67574385b5c2591393ced54bbab1d87ab52ab264a50b353e6e44"),
+        ("aggregate, owner, anonymise", "00a7ff5c05e1ea863941a1cb95d0e0429136fa87bf2773166f09f919cde9dfa8"),
+        ("aggregate, shared", "1dd16ab3c97fa245ed4d086dc2d3f2141fd8dc14230ca025c5e343716ccc7402"),
+        ("record, owner, delete, the project's first owner feature", "283dcf066b47520ea89d411687f1700a33aab415b44a66dcc76e7209ba5a7b33"),
+        ("record, owner, delete, without the API", "c8a1497d62de0200e6383c32697847804cfbf73fc12fd80dd6fba58f4a64cce6"),
+        ("record, owner, delete, on SQL Server", "c17f8aa093c8008893bc452957cefa0b5be65f4b75066de885a4d587c6419b9c"),
+        ("record, owner, delete, on SQLite", "09e5b903b541fa20b17f81170eedc89864e388156d7222954dec9a36e1ebe705"),
     ];
 
     private static void WithFieldsCases(string scratch, Action<bool, string> expect)

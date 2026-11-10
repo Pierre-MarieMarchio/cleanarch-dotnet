@@ -30,6 +30,7 @@ internal static class FieldBlocks
                 ["Configuration"] = FieldCode.Configuration,
                 ["CursorKey"] = FieldCode.CursorKey,
                 ["KeysetMethod"] = FieldCode.KeysetMethod,
+                ["Sorting"] = field => FieldCode.IsKeyset(field) ? "Keyset" : "OffsetOnly",
             },
             new Dictionary<string, Func<Field, bool>>(StringComparer.Ordinal)
             {
