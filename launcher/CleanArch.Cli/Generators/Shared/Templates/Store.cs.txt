@@ -30,14 +30,9 @@ internal sealed class PlaceholderStore(AppDbContext context) : IPlaceholderStore
 #if owner
             OwnerId = ownerId.Value,
 #endif
-#if fields
 //#each field
             %field.Name% = %field.Stored%,
 //#end
-#else
-            Name = content.Name,
-            Description = content.Description,
-#endif
             CreatedAt = createdAt,
         });
     }
@@ -73,14 +68,9 @@ internal sealed class PlaceholderStore(AppDbContext context) : IPlaceholderStore
 
         if (record is not null)
         {
-#if fields
 //#each field
             record.%field.Name% = %field.Stored%;
 //#end
-#else
-            record.Name = content.Name;
-            record.Description = content.Description;
-#endif
             record.LastModifiedAt = modifiedAt;
         }
 
@@ -181,14 +171,9 @@ internal sealed class PlaceholderStore(AppDbContext context) : IPlaceholderStore
 
         foreach (var record in records)
         {
-#if fields
 //#each field where anonymised
             record.%field.Name% = %field.Anonymised%;
 //#end
-#else
-            record.Name = AnonymisedText;
-            record.Description = string.Empty;
-#endif
         }
 
         return records.Count;

@@ -76,7 +76,7 @@ internal sealed class FeatureManifest
 
     internal static string Sha256(byte[] bytes) => Convert.ToHexStringLower(SHA256.HashData(bytes));
 
-    internal static FeatureManifest Create(string generator, string generatorVersion, string features, string type, JsonObject options, JsonArray? fields, string? page)
+    internal static FeatureManifest Create(string generator, string generatorVersion, string features, string type, JsonObject options, JsonArray fields, string? page)
     {
         var top = new JsonObject
         {
@@ -86,14 +86,9 @@ internal sealed class FeatureManifest
             ["feature"] = features,
             ["type"] = type,
             ["options"] = options,
+            ["fields"] = fields,
+            ["files"] = new JsonArray(),
         };
-
-        if (fields is not null)
-        {
-            top["fields"] = fields;
-        }
-
-        top["files"] = new JsonArray();
 
         if (page is not null)
         {

@@ -7,7 +7,6 @@ namespace AppTemplate.Api.Features.Placeholders.Contracts.Requests;
 #else
 /// <summary>The placeholder to create.</summary>
 #endif
-#if fields
 //#each field
 %field.WireDocumentation%
 //#end
@@ -15,8 +14,3 @@ public sealed record CreatePlaceholderRequest(
 //#each field separator ",\n"
     %field.WireParameter%
 //#end ");"
-#else
-/// <param name="Name">Required, at most 200 characters once trimmed.</param>
-/// <param name="Description">Required but may be empty, at most 2000 characters.</param>
-public sealed record CreatePlaceholderRequest(string Name, string Description);
-#endif

@@ -105,9 +105,8 @@ internal sealed class FeatureGeneration(FeatureSpec spec, IReadOnlyList<string> 
             && Text(options["concurrency"]) == spec.Concurrency
             && (Text(options["deletion"]) ?? string.Empty) == spec.Deletion
             && options["operations"] is JsonArray operations && operations.Select(Text).SequenceEqual(spec.Operations)
-            && (manifest.Fields is { } fields
-                ? spec.Fields is not null && fields.Select(field => Text(field?["declaration"])).SequenceEqual(spec.Fields.Select(field => field.Declaration))
-                : spec.Fields is null);
+            && manifest.Fields is { } fields
+            && fields.Select(field => Text(field?["declaration"])).SequenceEqual(spec.Fields.Select(field => field.Declaration));
     }
 
     private static int Finish(string root, FeatureSpec spec, TextWriter output, TextWriter error, IExecutor executor, bool resumed)
@@ -147,7 +146,7 @@ internal sealed class FeatureGeneration(FeatureSpec spec, IReadOnlyList<string> 
             options["deletion"] = spec.Deletion;
         }
 
-        var manifest = FeatureManifest.Create(Generator, version, spec.Features, spec.Type, options, spec.Fields is { } fields ? FieldsOf(fields) : null, page?.Path);
+        var manifest = FeatureManifest.Create(Generator, version, spec.Features, spec.Type, options, FieldsOf(spec.Fields), page?.Path);
 
         foreach (var emission in plan)
         {

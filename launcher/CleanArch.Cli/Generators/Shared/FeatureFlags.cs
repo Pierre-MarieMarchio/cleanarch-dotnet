@@ -18,7 +18,6 @@ internal static class FeatureFlags
             ["etag"] = "`--concurrency etag`: a persisted version, an `ETag` and `If-Match`.",
             ["erase"] = "`--deletion delete`: the rows of a deleted account are removed.",
             ["anonymise"] = "`--deletion anonymise`: what identifies the owner of a deleted account is rewritten.",
-            ["fields"] = "`--fields` is given: the fields it declares replace `Name` and `Description`.",
             ["prefixedTables"] = "The database is SQLite, which has no schemas, so a table's name starts with its feature's schema.",
             ["writes"] = "Create, update or delete is among the operations, so the feature writes through a store or a repository.",
             ["changesOne"] = "Update or delete is among the operations: each changes one that can be missing, or stale under `etag`.",
@@ -29,8 +28,8 @@ internal static class FeatureFlags
             ["store"] = "A `record` that writes or is `owner` stages its changes through a store.",
             ["notFound"] = "An operation can answer that one is not found: get, update, delete, or a `record`'s create.",
             ["stampsTime"] = "A `record` creates or updates, so its service reads the time it stamps.",
-            ["anonymisedText"] = "Under `anonymise`, a required text is rewritten to a fixed text: always without `--fields`, else when a field is a non-nullable string.",
-            ["trimsText"] = "Create or update takes a text the service trims: always without `--fields`, else when a field is a string.",
-            ["constants"] = "A limit of the content is declared as a constant: always without `--fields`, else when a field is a string, a text or a decimal, or has a bound.",
+            ["anonymisedText"] = "Under `anonymise`, a required text is rewritten to a fixed text: a field is a non-nullable string.",
+            ["trimsText"] = "Create or update takes a text the service trims: a field is a string.",
+            ["constants"] = "A limit of the content is declared as a constant: a field is a string, a text or a decimal, or has a bound.",
         });
 }

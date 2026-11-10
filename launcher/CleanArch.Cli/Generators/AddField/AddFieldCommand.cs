@@ -16,8 +16,8 @@ internal static class AddFieldCommand
 
     internal static Command Build(LocatedProject? project, Func<ParseResult, IExecutor> executor)
     {
-        var field = new Command("field", "Add fields to a feature add feature wrote with --fields, then build and add their migration with each default.");
-        Argument<string> features = new("Features") { Description = "A feature add feature wrote with --fields, which its manifest records." };
+        var field = new Command("field", "Add fields to a feature add feature wrote, then build and add their migration with each default.");
+        Argument<string> features = new("Features") { Description = "A feature add feature wrote, which its manifest records with its fields." };
         Argument<string> declarations = new("fields") { Description = "The fields, in the grammar of --fields; one that cannot be null takes the default the rows stored receive after '=', e.g. \"Code:string(20)='none', Notes:text?\"." };
         Option<bool> dryRun = GeneratorCommand.DryRun("Print what changes, and write and run nothing.");
         field.Arguments.Add(features);

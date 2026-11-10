@@ -16,14 +16,9 @@ internal sealed class PlaceholderMapper : IPlaceholderMapper
 #if owner
             UserId.Create(record.OwnerId),
 #endif
-#if fields
 //#each field separator ",\n"
             record.%field.Name%
 //#end ");"
-#else
-            record.Name,
-            record.Description);
-#endif
 
         StoredStamps.ApplyTo(aggregate, record, record.Version, record.Id, "Placeholder");
 
@@ -40,14 +35,9 @@ internal sealed class PlaceholderMapper : IPlaceholderMapper
 #if owner
             OwnerId = aggregate.OwnerId.Value,
 #endif
-#if fields
 //#each field
             %field.Name% = aggregate.%field.Name%,
 //#end
-#else
-            Name = aggregate.Name,
-            Description = aggregate.Description,
-#endif
 
             Version = aggregate.Version,
 
@@ -63,13 +53,8 @@ internal sealed class PlaceholderMapper : IPlaceholderMapper
         ArgumentNullException.ThrowIfNull(aggregate);
         ArgumentNullException.ThrowIfNull(record);
 
-#if fields
 //#each field
         record.%field.Name% = aggregate.%field.Name%;
 //#end
-#else
-        record.Name = aggregate.Name;
-        record.Description = aggregate.Description;
-#endif
     }
 }

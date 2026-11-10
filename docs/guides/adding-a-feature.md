@@ -42,7 +42,7 @@ describe what a feature written by hand holds.
 | `--operations` | all five | any subset of `get`, `list`, `create`, `update`, `delete`; `create` needs `get` |
 | `--model` | `record` | `record`: a service over a store, no domain model. `aggregate`: a domain aggregate and one use case per operation |
 | `--concurrency` | `none` | `none`: last write wins. `etag`: a persisted version, `ETag` on reads, `If-Match` on writes. `aggregate` needs `etag` |
-| `--fields` | `Name`, `Description` | the feature's fields, as the grammar below reads them |
+| `--fields` | `Name:string(200), Description:text(2000)` | the feature's fields, as the grammar below reads them |
 | `--dry-run` | off | print the files, the edits and the commands, and write and run nothing |
 
 Every refused combination is refused before anything is written, with the change that fixes it.
@@ -98,8 +98,8 @@ writes `[deleted account]` in each required `string(n)`, an empty text in each r
 
 The command writes:
 
-- the feature's folders in each layer, and tests that hold for any feature of its shape, or, with
-  `--fields`, tests of each field's rules in the validator, the aggregate and the mapper;
+- the feature's folders in each layer, and tests of each field's rules in the validator, the
+  aggregate and the mapper;
 - `.feature-manifest/<Features>.json`: the options, the SHA-256 of every file written, and each edit
   made, with the line it is placed beside, so the edit can be undone exactly;
 - the feature page `docs/features/<features>.md`, from `docs/_page-templates/feature.md`.
@@ -114,10 +114,9 @@ Then it makes the edits that compose the feature: the schema, set and configurat
 call in `Program.cs`, and the two test compositions, with the usings each needs. It then runs
 `docs-index`, which lists the feature's page in the index of `docs/features/` by its frontmatter.
 <!--#if (api)-->
-Its section of the route table and the row of its refusal go to `docs/reference/api.md`. With
-`--fields`, it also writes an integration test that creates a resource with every field and sees an
-invalid one answered `400`, and adds the feature's schema to those `TestDatabase` truncates between
-tests.
+Its section of the route table and the row of its refusal go to `docs/reference/api.md`. It also
+writes an integration test that creates a resource with every field and sees an invalid one answered
+`400`, and adds the feature's schema to those `TestDatabase` truncates between tests.
 <!--#endif-->
 An owner feature that is the project's first makes five more, for the account-deletion sweep it brings
 with it. Each edit is placed beside a line the command finds, and every one is checked before anything
@@ -230,7 +229,7 @@ dotnet cleanarch migrations add <Name>
 A migration a database has applied is never rewritten, as [migrations](migrations.md#add-a-migration)
 says.
 <!--#if (!publicApi)-->
-A field of a feature `add feature --fields` generated is [`add field`'s](#add-a-field), which adds
+A field of a feature `add feature` generated is [`add field`'s](#add-a-field), which adds
 its migration itself.
 <!--#endif-->
 
@@ -242,7 +241,7 @@ dotnet cleanarch add field <Features> "<Name:type>=<default>, ..." [--dry-run]
 dotnet cleanarch add field Projects "Budget:decimal(12,2)>=0=0, Code:string(20)='none', Notes:text?"
 ```
 
-`add field` adds one or more fields to a feature `add feature --fields` generated, in every member
+`add field` adds one or more fields to a feature `add feature` generated, in every member
 `--fields` writes a field in, and leaves the feature as `add feature --fields` would have written it
 with the new fields last. The fields read as [`--fields`](#fields) reads them, with one addition: a
 field that cannot be null takes a default after `=`, the value the rows the table already holds
@@ -253,10 +252,11 @@ a `DateOnly` (`'2026-01-31'`), a `DateTimeOffset` with its offset (`'2026-01-31T
 
 It finds each member through the file's syntax tree, whatever its formatting, and leaves the members
 a person added where they are. It refuses, and writes nothing, when the feature has no manifest,
-being written by hand as the example features are, or was generated without `--fields`, whose `Name`
-and `Description` are placeholders; when a member the field changes was changed by hand or is gone,
-naming the file and the member with the lines to add and to remove; and when a field is there already
-or breaks a rule `--fields` checks. Every change is made or none is.
+being written by hand as the example features are, or when its manifest records no fields, being
+written without `--fields` by an earlier version of `add feature`; when a member the field changes
+was changed by hand or is gone, naming the file and the member with the lines to add and to remove;
+and when a field is there already or breaks a rule `--fields` checks. Every change is made or none
+is.
 
 <!--#if (api)-->
 A field that cannot be null is a breaking change of the HTTP contract: once the API ships, a create

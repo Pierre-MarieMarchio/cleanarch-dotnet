@@ -101,9 +101,9 @@ public sealed class PlaceholdersController(
 #endif
 #if update
 #if etag
-    /// <summary>Replaces %a% placeholder's %Replaced%, on the version an <c>If-Match</c> names.</summary>
+    /// <summary>Replaces %a% placeholder's fields, on the version an <c>If-Match</c> names.</summary>
 #else
-    /// <summary>Replaces %a% placeholder's %Replaced%; of two concurrent writers the later one wins.</summary>
+    /// <summary>Replaces %a% placeholder's fields; of two concurrent writers the later one wins.</summary>
 #endif
     [HttpPut("{placeholderId:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PlaceholderResponse))]

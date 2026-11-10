@@ -2,12 +2,8 @@ namespace AppTemplate.Application.Features.Placeholders.Model.Dtos;
 
 public sealed record PlaceholderSummaryDto(
     Guid Id,
-#if fields
 //#each field where summary
     %field.Type% %field.Name%,
 //#end
-#else
-    string Name,
-#endif
     DateTimeOffset CreatedAt,
     DateTimeOffset? LastModifiedAt);

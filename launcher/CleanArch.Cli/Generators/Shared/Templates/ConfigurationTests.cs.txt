@@ -29,15 +29,7 @@ public sealed class PlaceholderRecordConfigurationTests
         Entity().GetProperties().ShouldAllBe(property => !property.IsConcurrencyToken);
 #endif
 
-#if fields
 %FConfigurationTests%
-#else
-    [Theory]
-    [InlineData(nameof(PlaceholderRecord.Name), %Limits%.NameMaxLength)]
-    [InlineData(nameof(PlaceholderRecord.Description), %Limits%.DescriptionMaxLength)]
-    public void EveryTextColumn_IsAsLongAsTheValidatorAllows(string property, int expected) =>
-        Entity().FindProperty(property)!.GetMaxLength().ShouldBe(expected);
-#endif
 
 #if list
     [Fact]

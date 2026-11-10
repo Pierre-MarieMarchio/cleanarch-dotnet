@@ -10,7 +10,7 @@ internal static class NewField
 {
     internal const string Usage =
         "Usage: dotnet cleanarch add field <Features> \"<Name:type>=<default>, ...\" [--dry-run]\n"
-        + "  <Features>     a feature add feature generated with --fields, which its manifest records\n"
+        + "  <Features>     a feature add feature generated, which its manifest records with its fields\n"
         + "  <fields>       the fields to add, in the grammar of --fields. A field that cannot be null takes a\n"
         + "                 default after '=', the value the rows the table already holds receive, which its rules\n"
         + "                 must accept: a number, true or false, or a value between quotes for a string, a text, a\n"
@@ -53,7 +53,7 @@ internal static class NewField
 
         string migration = MigrationName(features, added);
 
-        return added.Any(field => IsPresent(before.Fields!, field))
+        return added.Any(field => IsPresent(before.Fields, field))
             ? Repeated(root, features, manifest, before, added, migration, problems)
             : Widened(root, features, manifest, before, added, migration, problems);
     }
@@ -69,7 +69,7 @@ internal static class NewField
                     + "Notes and the others) are, so add field cannot know which members a field reaches. Add the field by hand: "
                     + "docs/guides/adding-a-feature.md, under Adding a field, lists every place it goes."
                 : $"No feature called {features}: {manifestPath} does not exist. add field adds a field to a feature that "
-                    + "add feature --fields generated.");
+                    + "add feature generated.");
 
             return null;
         }
@@ -101,7 +101,7 @@ internal static class NewField
 
     private static Addition? Repeated(string root, string features, FeatureManifest manifest, FeatureSpec before, List<Field> added, string migration, List<string> problems)
     {
-        var existing = before.Fields!;
+        var existing = before.Fields;
         string declared = string.Join(", ", added.Select(field => field.Declared));
         bool recorded = manifest.AddedFields.Any(entry => entry.Declaration == declared && entry.Migration == migration);
         var after = before with { Fields = existing };
@@ -125,7 +125,7 @@ internal static class NewField
 
     private static Addition? Widened(string root, string features, FeatureManifest manifest, FeatureSpec before, List<Field> added, string migration, List<string> problems)
     {
-        var existing = before.Fields!;
+        var existing = before.Fields;
         IReadOnlyList<Field> combined = [.. existing, .. added];
         var known = FieldGrammar.NameProblems(existing, FieldProfile.Feature).ToHashSet(StringComparer.Ordinal);
 
@@ -186,9 +186,9 @@ internal static class NewField
             if (manifest.Fields is not { } recorded)
             {
                 problems.Add(
-                    $"{features} was generated without --fields: its Name and Description are placeholders a person replaces by hand, so "
-                    + "what its files hold is not a shape add field can read. Add the field by hand: docs/guides/adding-a-feature.md, "
-                    + "under Adding a field, lists every place it goes.");
+                    $"{path} records no fields: an earlier version of add feature wrote {features} without --fields and did not "
+                    + "record its Name and Description, so add field cannot read the shape its files hold. Add the field by hand: "
+                    + "docs/guides/adding-a-feature.md, under Adding a field, lists every place it goes.");
 
                 return null;
             }

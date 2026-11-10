@@ -3,12 +3,8 @@ namespace AppTemplate.Api.Features.Placeholders.Contracts.Responses;
 /// <summary>The wire shape of one placeholder inside a page%SummaryDoc%.</summary>
 public sealed record PlaceholderSummaryResponse(
     Guid Id,
-#if fields
 //#each field where summary
     %field.Type% %field.Name%,
 //#end
-#else
-    string Name,
-#endif
     DateTimeOffset CreatedAt,
     DateTimeOffset? LastModifiedAt);

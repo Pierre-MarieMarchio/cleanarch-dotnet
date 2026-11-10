@@ -12,14 +12,9 @@ internal static class PlaceholderDtoMapping
 
         var detail = new PlaceholderDto(
             placeholder.Id,
-#if fields
 //#each field
             placeholder.%field.Name%,
 //#end
-#else
-            placeholder.Name,
-            placeholder.Description,
-#endif
             placeholder.CreatedAt,
             placeholder.LastModifiedAt);
 

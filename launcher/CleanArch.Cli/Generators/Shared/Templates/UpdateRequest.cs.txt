@@ -2,8 +2,7 @@ using System.Text.Json.Serialization; //?JsonRequired
 
 namespace AppTemplate.Api.Features.Placeholders.Contracts.Requests;
 
-/// <summary>The new %Revised% of %a% placeholder, whose id travels in the route.</summary>
-#if fields
+/// <summary>The new fields of %a% placeholder, whose id travels in the route.</summary>
 //#each field
 %field.WireDocumentation%
 //#end
@@ -11,8 +10,3 @@ public sealed record UpdatePlaceholderRequest(
 //#each field separator ",\n"
     %field.WireParameter%
 //#end ");"
-#else
-/// <param name="Name">Required, at most 200 characters once trimmed.</param>
-/// <param name="Description">Required but may be empty, at most 2000 characters.</param>
-public sealed record UpdatePlaceholderRequest(string Name, string Description);
-#endif
