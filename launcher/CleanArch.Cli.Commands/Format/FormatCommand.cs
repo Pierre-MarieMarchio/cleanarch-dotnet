@@ -11,7 +11,7 @@ internal static class FormatCommand
 
     public static readonly CommandRegistration Registration = new(ProjectCommand.Refusal, Create);
 
-    private static readonly string[] _skippedDirectories = ["bin", "obj", "node_modules", "plans"];
+    private static readonly string[] _skippedDirectories = ["bin", "obj", "node_modules", "plans", "code-templates"];
 
     private static readonly string[] _keptDotDirectories = [".github", ".gitlab", ".template.config"];
 

@@ -6,7 +6,7 @@ namespace AppTemplate.Architecture.Tests.Rules;
 
 public sealed class MarkdownEncodingTests
 {
-    private static readonly string[] _skippedDirectories = ["bin", "obj", "node_modules", "plans"];
+    private static readonly string[] _skippedDirectories = ["bin", "obj", "node_modules", "plans", "code-templates"];
 
     /*#if (gitlabHost)*/
     private static readonly string[] _keptDotDirectories = [".github", ".gitlab", ".template.config"];
