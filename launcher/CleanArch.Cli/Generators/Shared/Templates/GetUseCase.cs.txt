@@ -1,21 +1,21 @@
-using %P%.Application.Core.Common.Concurrency;
-using %P%.Application.Core.Common.Ports;
-using %P%.Application.Core.Common.Results;
-using %P%.Application.Features.%F%.Model.Dtos;
-using %P%.Application.Features.%F%.Model.Errors;
-using %P%.Application.Features.%F%.Ports.%A%Queries;
+using AppTemplate.Application.Core.Common.Concurrency;
+using AppTemplate.Application.Core.Common.Ports;
+using AppTemplate.Application.Core.Common.Results;
+using AppTemplate.Application.Features.Placeholders.Model.Dtos;
+using AppTemplate.Application.Features.Placeholders.Model.Errors;
+using AppTemplate.Application.Features.Placeholders.Ports.PlaceholderQueries;
 using Mediator;
 
-namespace %P%.Application.Features.%F%.UseCases.Queries.Get%A%;
+namespace AppTemplate.Application.Features.Placeholders.UseCases.Queries.GetPlaceholder;
 
-public sealed record Get%A%Query(Guid %A%Id) : IQuery<Result<Versioned<%A%Dto>>>;
+public sealed record GetPlaceholderQuery(Guid PlaceholderId) : IQuery<Result<Versioned<PlaceholderDto>>>;
 
-public sealed class Get%A%QueryHandler(
-    I%A%Queries queries,
-    ICurrentUser currentUser) : IQueryHandler<Get%A%Query, Result<Versioned<%A%Dto>>>
+public sealed class GetPlaceholderQueryHandler(
+    IPlaceholderQueries queries,
+    ICurrentUser currentUser) : IQueryHandler<GetPlaceholderQuery, Result<Versioned<PlaceholderDto>>>
 {
-    public async ValueTask<Result<Versioned<%A%Dto>>> Handle(
-        Get%A%Query query,
+    public async ValueTask<Result<Versioned<PlaceholderDto>>> Handle(
+        GetPlaceholderQuery query,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -24,13 +24,13 @@ public sealed class Get%A%QueryHandler(
 
         if (userId.IsFailure)
         {
-            return userId.To<Versioned<%A%Dto>>();
+            return userId.To<Versioned<PlaceholderDto>>();
         }
 
-        var found = await queries.GetAsync(%SvcOwner%query.%A%Id, cancellationToken);
+        var found = await queries.GetAsync(%SvcOwner%query.PlaceholderId, cancellationToken);
 
         return found is null
-            ? Result.Failure<Versioned<%A%Dto>>(%A%Errors.%A%NotFound(query.%A%Id))
+            ? Result.Failure<Versioned<PlaceholderDto>>(PlaceholderErrors.PlaceholderNotFound(query.PlaceholderId))
             : found;
     }
 }

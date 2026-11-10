@@ -1,86 +1,86 @@
 using System.Linq.Expressions; //?Expression
-using %P%.Application.Core.Common.Collections; //?FeaturePageRequest
-using %P%.Application.Core.Common.Concurrency; //?Versioned
-using %P%.Application.Core.Common.Results; //?PagedResult
-using %P%.Application.Features.%F%.Model.Dtos; //?%A%SummaryDto|%A%Dto
-using %P%.Application.Features.%F%.Ports.%A%Queries;
-using %P%.Domain.Core.Common.Primitives; //?UserId
-using %P%.Infrastructure.Persistence.Common.Contexts;
-using %P%.Infrastructure.Persistence.Features.%F%.Rows.Models; //?%A%Record
+using AppTemplate.Application.Core.Common.Collections; //?FeaturePageRequest
+using AppTemplate.Application.Core.Common.Concurrency; //?Versioned
+using AppTemplate.Application.Core.Common.Results; //?PagedResult
+using AppTemplate.Application.Features.Placeholders.Model.Dtos; //?PlaceholderSummaryDto|PlaceholderDto
+using AppTemplate.Application.Features.Placeholders.Ports.PlaceholderQueries;
+using AppTemplate.Domain.Core.Common.Primitives; //?UserId
+using AppTemplate.Infrastructure.Persistence.Common.Contexts;
+using AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Models; //?PlaceholderRecord
 using Microsoft.EntityFrameworkCore;
 
-namespace %P%.Infrastructure.Persistence.Features.%F%.Access.Queries;
+namespace AppTemplate.Infrastructure.Persistence.Features.Placeholders.Access.Queries;
 
-internal sealed class %A%Queries(AppDbContext context) : I%A%Queries
+internal sealed class PlaceholderQueries(AppDbContext context) : IPlaceholderQueries
 {
-%if list%
-    public async Task<PagedResult<%A%SummaryDto>> %ListQuery%(
-%if owner%
+#if list
+    public async Task<PagedResult<PlaceholderSummaryDto>> %ListQuery%(
+#if owner
         UserId ownerId,
-%end%
-        FeaturePageRequest<%A%Filter> request,
+#endif
+        FeaturePageRequest<PlaceholderFilter> request,
         CancellationToken cancellationToken = default)
     {
-%if owner%
+#if owner
         ArgumentNullException.ThrowIfNull(ownerId);
-%end%
+#endif
         ArgumentNullException.ThrowIfNull(request);
 
-        IQueryable<%A%Record> scoped = context.%F%.AsNoTracking();
-%if owner%
+        IQueryable<PlaceholderRecord> scoped = context.Placeholders.AsNoTracking();
+#if owner
         scoped = scoped.Where(record => record.OwnerId == ownerId.Value);
-%end%
+#endif
 
         return request.Paging.Mode == PagingMode.Offset
             ? await GetOffsetPageAsync(scoped, request, cancellationToken)
             : await GetKeysetPageAsync(scoped, request, cancellationToken);
     }
 
-%end%
-%if single%
+#endif
+#if single
     public Task<%ReadDto%?> GetAsync(
-%if owner%
+#if owner
         UserId ownerId,
-%end%
-        Guid %L%Id,
+#endif
+        Guid placeholderId,
         CancellationToken cancellationToken = default)
     {
-%if owner%
+#if owner
         ArgumentNullException.ThrowIfNull(ownerId);
 
-%end%
-        return context.%F%
+#endif
+        return context.Placeholders
             .AsNoTracking()
-            .Where(record => record.Id == %L%Id%OwnerClause%)
-%if etag%
-            .Select(record => new Versioned<%A%Dto>(
-%if fields%
-                new %A%Dto(record.Id, %FRecordArgs%, record.CreatedAt, record.LastModifiedAt),
-%else%
-                new %A%Dto(record.Id, record.Name, record.Description, record.CreatedAt, record.LastModifiedAt),
-%end%
+            .Where(record => record.Id == placeholderId%OwnerClause%)
+#if etag
+            .Select(record => new Versioned<PlaceholderDto>(
+#if fields
+                new PlaceholderDto(record.Id, %FRecordArgs%, record.CreatedAt, record.LastModifiedAt),
+#else
+                new PlaceholderDto(record.Id, record.Name, record.Description, record.CreatedAt, record.LastModifiedAt),
+#endif
                 record.Version))
-%else%
-            .Select(record => new %A%Dto(
+#else
+            .Select(record => new PlaceholderDto(
                 record.Id,
-%if fields%
+#if fields
 %FRecordArgLines%
-%else%
+#else
                 record.Name,
                 record.Description,
-%end%
+#endif
                 record.CreatedAt,
                 record.LastModifiedAt))
-%end%
+#endif
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-%end%
-%if owner%
+#endif
+#if owner
     public async Task<IReadOnlyList<UserId>> ListDataOwnerIdsAsync(
         CancellationToken cancellationToken = default)
     {
-        var ids = await context.%F%
+        var ids = await context.Placeholders
             .AsNoTracking()
             .Select(record => record.OwnerId)
             .Distinct()
@@ -89,11 +89,11 @@ internal sealed class %A%Queries(AppDbContext context) : I%A%Queries
         return [.. ids.Select(UserId.Create)];
     }
 
-%end%
-%if list%
-    private static async Task<PagedResult<%A%SummaryDto>> GetOffsetPageAsync(
-        IQueryable<%A%Record> scoped,
-        FeaturePageRequest<%A%Filter> request,
+#endif
+#if list
+    private static async Task<PagedResult<PlaceholderSummaryDto>> GetOffsetPageAsync(
+        IQueryable<PlaceholderRecord> scoped,
+        FeaturePageRequest<PlaceholderFilter> request,
         CancellationToken cancellationToken)
     {
         int totalCount = await scoped.CountAsync(cancellationToken);
@@ -101,7 +101,7 @@ internal sealed class %A%Queries(AppDbContext context) : I%A%Queries
         int page = request.Paging.Page!.Value;
         int pageSize = request.Paging.PageSize;
 
-        var items = await %A%SortMap.ApplyOrder(scoped, request.Sort)
+        var items = await PlaceholderSortMap.ApplyOrder(scoped, request.Sort)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(_toSummary)
@@ -110,19 +110,19 @@ internal sealed class %A%Queries(AppDbContext context) : I%A%Queries
         return PagedResult.Offset(items, page, pageSize, totalCount);
     }
 
-    private static async Task<PagedResult<%A%SummaryDto>> GetKeysetPageAsync(
-        IQueryable<%A%Record> scoped,
-        FeaturePageRequest<%A%Filter> request,
+    private static async Task<PagedResult<PlaceholderSummaryDto>> GetKeysetPageAsync(
+        IQueryable<PlaceholderRecord> scoped,
+        FeaturePageRequest<PlaceholderFilter> request,
         CancellationToken cancellationToken)
     {
         var term = request.Sort.Terms[0];
         int pageSize = request.Paging.PageSize;
 
         var keysetSource = request.Paging.Cursor is { } cursor
-            ? %A%SortMap.ApplyKeyset(scoped, term, cursor)
+            ? PlaceholderSortMap.ApplyKeyset(scoped, term, cursor)
             : scoped;
 
-        var items = await %A%SortMap.ApplyOrder(keysetSource, request.Sort)
+        var items = await PlaceholderSortMap.ApplyOrder(keysetSource, request.Sort)
             .Take(pageSize + 1)
             .Select(_toSummary)
             .ToListAsync(cancellationToken);
@@ -136,17 +136,17 @@ internal sealed class %A%Queries(AppDbContext context) : I%A%Queries
         {
             var last = page[^1];
 
-            nextCursor = Cursor.After(term, %A%SortMap.KeyOf(last, term.Field), last.Id).Encode();
+            nextCursor = Cursor.After(term, PlaceholderSortMap.KeyOf(last, term.Field), last.Id).Encode();
         }
 
         return PagedResult.Keyset(page, pageSize, nextCursor);
     }
 
-    private static readonly Expression<Func<%A%Record, %A%SummaryDto>> _toSummary =
-%if fields%
-        record => new %A%SummaryDto(record.Id, %FSummaryArgs%record.CreatedAt, record.LastModifiedAt);
-%else%
-        record => new %A%SummaryDto(record.Id, record.Name, record.CreatedAt, record.LastModifiedAt);
-%end%
-%end%
+    private static readonly Expression<Func<PlaceholderRecord, PlaceholderSummaryDto>> _toSummary =
+#if fields
+        record => new PlaceholderSummaryDto(record.Id, %FSummaryArgs%record.CreatedAt, record.LastModifiedAt);
+#else
+        record => new PlaceholderSummaryDto(record.Id, record.Name, record.CreatedAt, record.LastModifiedAt);
+#endif
+#endif
 }

@@ -1,18 +1,18 @@
 using System.Text.Json.Serialization; //?JsonRequired
 
-namespace %P%.Api.Features.%F%.Contracts.Requests;
+namespace AppTemplate.Api.Features.Placeholders.Contracts.Requests;
 
-%if owner%
-/// <summary>The %L% to create, whose owner is the authenticated caller.</summary>
-%else%
-/// <summary>The %L% to create.</summary>
-%end%
-%if fields%
+#if owner
+/// <summary>The placeholder to create, whose owner is the authenticated caller.</summary>
+#else
+/// <summary>The placeholder to create.</summary>
+#endif
+#if fields
 %FRequestDocs%
-public sealed record Create%A%Request(
+public sealed record CreatePlaceholderRequest(
 %FRequestParams%);
-%else%
+#else
 /// <param name="Name">Required, at most 200 characters once trimmed.</param>
 /// <param name="Description">Required but may be empty, at most 2000 characters.</param>
-public sealed record Create%A%Request(string Name, string Description);
-%end%
+public sealed record CreatePlaceholderRequest(string Name, string Description);
+#endif

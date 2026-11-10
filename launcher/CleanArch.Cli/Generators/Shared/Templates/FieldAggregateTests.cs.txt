@@ -1,16 +1,16 @@
-using %P%.Domain.Core.Common.Exceptions;
-using %P%.Domain.Core.Common.Primitives; //?UserId
-using %P%.Domain.Features.%F%.Model.Entities;
+using AppTemplate.Domain.Core.Common.Exceptions;
+using AppTemplate.Domain.Core.Common.Primitives; //?UserId
+using AppTemplate.Domain.Features.Placeholders.Model.Entities;
 using Shouldly;
 using Xunit;
 
-namespace %P%.Domain.UnitTests.Features.%F%.Model.Entities;
+namespace AppTemplate.Domain.UnitTests.Features.Placeholders.Model.Entities;
 
-public sealed class %A%Tests
+public sealed class PlaceholderTests
 {
-%if owner%
+#if owner
     private static readonly UserId _ownerId = UserId.Create(Guid.CreateVersion7());
 
-%end%
+#endif
 %FAggregateTests%
 }

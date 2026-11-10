@@ -1,29 +1,29 @@
-using %P%.Domain.Core.Common.Primitives; //?UserId
-using %P%.Domain.Features.%F%.Model.Entities;
+using AppTemplate.Domain.Core.Common.Primitives; //?UserId
+using AppTemplate.Domain.Features.Placeholders.Model.Entities;
 
-namespace %P%.Domain.Features.%F%.Repositories;
+namespace AppTemplate.Domain.Features.Placeholders.Repositories;
 
-public interface I%A%Repository
+public interface IPlaceholderRepository
 {
-%if change%
-%if owner%
-    Task<%A%?> GetAsync(UserId ownerId, Guid id, CancellationToken cancellationToken);
-%else%
-    Task<%A%?> GetAsync(Guid id, CancellationToken cancellationToken);
-%end%
+#if change
+#if owner
+    Task<Placeholder?> GetAsync(UserId ownerId, Guid id, CancellationToken cancellationToken);
+#else
+    Task<Placeholder?> GetAsync(Guid id, CancellationToken cancellationToken);
+#endif
 
-%end%
-%if owner%
-    Task<IReadOnlyList<%A%>> GetForOwnerAsync(
+#endif
+#if owner
+    Task<IReadOnlyList<Placeholder>> GetForOwnerAsync(
         UserId ownerId,
         CancellationToken cancellationToken);
 
-%end%
-%if create%
-    void Add(%A% aggregate);
+#endif
+#if create
+    void Add(Placeholder aggregate);
 
-%end%
-%if delete|owner%
-    void Remove(%A% aggregate);
-%end%
+#endif
+#if (delete || owner)
+    void Remove(Placeholder aggregate);
+#endif
 }

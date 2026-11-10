@@ -1,26 +1,26 @@
-using %P%.Domain.Features.%F%.Model.Entities; //?%A%
+using AppTemplate.Domain.Features.Placeholders.Model.Entities; //?Placeholder
 using FluentValidation;
 
-namespace %P%.Application.Features.%F%.UseCases.Commands.Create%A%;
+namespace AppTemplate.Application.Features.Placeholders.UseCases.Commands.CreatePlaceholder;
 
-public sealed class Create%A%CommandValidator : AbstractValidator<Create%A%Command>
+public sealed class CreatePlaceholderCommandValidator : AbstractValidator<CreatePlaceholderCommand>
 {
-    public Create%A%CommandValidator()
+    public CreatePlaceholderCommandValidator()
     {
-%if fields%
+#if fields
 %FRulesCommand%
-%else%
+#else
         RuleFor(command => command.Name)
             .Cascade(CascadeMode.Stop)
-            .NotEmpty().WithMessage("%An% %L% name is required.")
-            .Must(name => name.Trim().Length <= %A%.NameMaxLength)
-            .WithMessage($"%An% %L% name cannot exceed {%A%.NameMaxLength} characters.");
+            .NotEmpty().WithMessage("%An% placeholder name is required.")
+            .Must(name => name.Trim().Length <= Placeholder.NameMaxLength)
+            .WithMessage($"%An% placeholder name cannot exceed {Placeholder.NameMaxLength} characters.");
 
         RuleFor(command => command.Description)
             .Cascade(CascadeMode.Stop)
-            .NotNull().WithMessage("%An% %L% description is required; it may be empty.")
-            .MaximumLength(%A%.DescriptionMaxLength)
-            .WithMessage($"%An% %L% description cannot exceed {%A%.DescriptionMaxLength} characters.");
-%end%
+            .NotNull().WithMessage("%An% placeholder description is required; it may be empty.")
+            .MaximumLength(Placeholder.DescriptionMaxLength)
+            .WithMessage($"%An% placeholder description cannot exceed {Placeholder.DescriptionMaxLength} characters.");
+#endif
     }
 }

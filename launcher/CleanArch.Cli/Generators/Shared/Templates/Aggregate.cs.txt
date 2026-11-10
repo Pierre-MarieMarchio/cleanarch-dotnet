@@ -1,127 +1,127 @@
-using %P%.Domain.Core.Common.Abstractions; //?IOwnedAggregate
-using %P%.Domain.Core.Common.Exceptions; //?DomainException
-using %P%.Domain.Core.Common.Primitives;
+using AppTemplate.Domain.Core.Common.Abstractions; //?IOwnedAggregate
+using AppTemplate.Domain.Core.Common.Exceptions; //?DomainException
+using AppTemplate.Domain.Core.Common.Primitives;
 
-namespace %P%.Domain.Features.%F%.Model.Entities;
+namespace AppTemplate.Domain.Features.Placeholders.Model.Entities;
 
-public sealed class %A% : AuditableAggregateRoot<Guid>%Implements%
+public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
 {
-%if fields%
+#if fields
 %FConstants%
-%else%
+#else
     public const int NameMaxLength = 200;
 
     public const int DescriptionMaxLength = 2_000;
-%end%
-%if anontext%
+#endif
+#if anontext
 
     public const string AnonymisedText = "[deleted account]";
-%end%
+#endif
 
-    private %A%(
+    private Placeholder(
         Guid id,
-%if owner%
+#if owner
         UserId ownerId,
-%end%
-%if fields%
+#endif
+#if fields
 %FCtorParams%
-%else%
+#else
         string name,
         string description) : base(id)
-%end%
+#endif
     {
-%if owner%
+#if owner
         ArgumentNullException.ThrowIfNull(ownerId);
 
         OwnerId = ownerId;
-%end%
-%if fields%
+#endif
+#if fields
 %FAssign%
-%else%
+#else
         Name = name;
         Description = description;
-%end%
+#endif
     }
 
-%if owner%
+#if owner
     public UserId OwnerId { get; }
 
-%end%
-%if fields%
+#endif
+#if fields
 %FProperties%
-%else%
-%if update|anon%
+#else
+#if (update || anon)
     public string Name { get; private set; }
 
     public string Description { get; private set; }
-%else%
+#else
     public string Name { get; }
 
     public string Description { get; }
-%end%
-%end%
+#endif
+#endif
 
-%if create%
-    public static %A% Create(
-%if owner%
+#if create
+    public static Placeholder Create(
+#if owner
         UserId ownerId,
-%end%
-%if fields%
+#endif
+#if fields
 %FCreateParams%
-%else%
+#else
         string name,
         string description) =>
-%end%
+#endif
         new(
             Guid.CreateVersion7(),
-%if owner%
+#if owner
             ownerId,
-%end%
-%if fields%
+#endif
+#if fields
 %FCreateArgs%
-%else%
+#else
             RequireName(name),
             RequireDescription(description));
-%end%
+#endif
 
-%end%
-    public static %A% Rehydrate(
+#endif
+    public static Placeholder Rehydrate(
         Guid id,
-%if owner%
+#if owner
         UserId ownerId,
-%end%
-%if fields%
+#endif
+#if fields
 %FRehydrateParams%
-%else%
+#else
         string name,
         string description)
-%end%
+#endif
     {
         if (id == Guid.Empty)
         {
-            throw new DomainException("A stored %L% must have an id.");
+            throw new DomainException("A stored placeholder must have an id.");
         }
 
         return new(
             id,
-%if owner%
+#if owner
             ownerId,
-%end%
-%if fields%
+#endif
+#if fields
 %FRehydrateArgs%
-%else%
+#else
             name,
             description);
-%end%
+#endif
     }
 
-%if update%
-%if fields%
+#if update
+#if fields
     public void Update(%FUpdateParams%)
     {
 %FUpdateBody%
     }
-%else%
+#else
     public void Update(string name, string description)
     {
         string validName = RequireName(name);
@@ -130,49 +130,49 @@ public sealed class %A% : AuditableAggregateRoot<Guid>%Implements%
         Name = validName;
         Description = validDescription;
     }
-%end%
+#endif
 
-%end%
-%if anon%
+#endif
+#if anon
     public void Anonymise()
     {
-%if fields%
+#if fields
 %FAnonymise%
-%else%
+#else
         Name = AnonymisedText;
         Description = string.Empty;
-%end%
+#endif
     }
 
-%end%
-%if content&fields%
+#endif
+#if (content && fields)
 %FRequire%
-%end%
-%if content&!fields%
+#endif
+#if (content && !fields)
     private static string RequireName(string name)
     {
         string trimmed = name?.Trim() ?? string.Empty;
 
         if (trimmed.Length == 0)
         {
-            throw new DomainException("%An% %L% name is required.");
+            throw new DomainException("%An% placeholder name is required.");
         }
 
         return trimmed.Length <= NameMaxLength
             ? trimmed
-            : throw new DomainException($"%An% %L% name cannot exceed {NameMaxLength} characters.");
+            : throw new DomainException($"%An% placeholder name cannot exceed {NameMaxLength} characters.");
     }
 
     private static string RequireDescription(string description)
     {
         if (description is null)
         {
-            throw new DomainException("%An% %L% description is required; it may be empty.");
+            throw new DomainException("%An% placeholder description is required; it may be empty.");
         }
 
         return description.Length <= DescriptionMaxLength
             ? description
-            : throw new DomainException($"%An% %L% description cannot exceed {DescriptionMaxLength} characters.");
+            : throw new DomainException($"%An% placeholder description cannot exceed {DescriptionMaxLength} characters.");
     }
-%end%
+#endif
 }

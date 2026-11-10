@@ -1,13 +1,13 @@
-using %P%.Domain.Core.Common.Abstractions;
-using %P%.Domain.Core.Common.Primitives; //?UserId
-using %P%.Domain.Features.%F%.Model.Entities;
-using %P%.Infrastructure.Persistence.Features.%F%.Rows.Mapping;
+using AppTemplate.Domain.Core.Common.Abstractions;
+using AppTemplate.Domain.Core.Common.Primitives; //?UserId
+using AppTemplate.Domain.Features.Placeholders.Model.Entities;
+using AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Mapping;
 using Shouldly;
 using Xunit;
 
-namespace %P%.Infrastructure.Persistence.UnitTests.Features.%F%;
+namespace AppTemplate.Infrastructure.Persistence.UnitTests.Features.Placeholders;
 
-public sealed class %A%MapperFidelityTests
+public sealed class PlaceholderMapperFidelityTests
 {
     [Fact]
     public void EveryPieceOfState_SurvivesTheRoundTrip()
@@ -16,29 +16,29 @@ public sealed class %A%MapperFidelityTests
         var modifiedAt = new DateTimeOffset(2026, 3, 5, 8, 9, 10, TimeSpan.Zero);
         var createdBy = new Guid("11111111-2222-3333-4444-555555555555");
         var modifiedBy = new Guid("66666666-7777-8888-9999-aaaaaaaaaaaa");
-%if owner%
+#if owner
         var ownerId = UserId.Create(new Guid("4b7f1d92-4c8a-4f4b-9a1e-0d2f3c4b5a60"));
-%end%
+#endif
 
-        var original = %A%.Rehydrate(
+        var original = Placeholder.Rehydrate(
             new Guid("0199a3c4-1111-7000-8000-000000000001"),
-%if owner%
+#if owner
             ownerId,
-%end%
+#endif
 %FFidelityArgs%
 
         ((IVersioned)original).SetVersion(987_654u);
         ((IAuditable)original).SetCreated(createdAt, createdBy);
         ((IAuditable)original).SetLastModified(modifiedAt, modifiedBy);
 
-        var mapper = new %A%Mapper();
+        var mapper = new PlaceholderMapper();
 
         var roundTripped = mapper.ToAggregate(mapper.ToNewRecord(original));
 
         roundTripped.Id.ShouldBe(original.Id);
-%if owner%
+#if owner
         roundTripped.OwnerId.ShouldBe(ownerId);
-%end%
+#endif
 %FFidelityAsserts%
         roundTripped.Version.ShouldBe(987_654u);
         roundTripped.CreatedAt.ShouldBe(createdAt);

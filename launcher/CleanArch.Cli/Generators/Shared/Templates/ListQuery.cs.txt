@@ -1,4 +1,4 @@
-using %P%.Application.Core.Common.Collections;
+using AppTemplate.Application.Core.Common.Collections;
 
 namespace %ListInputNamespace%;
 

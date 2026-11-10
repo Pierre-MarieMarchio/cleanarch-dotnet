@@ -1,16 +1,16 @@
-using %P%.Application.Core.Common.Concurrency;
-using %P%.Application.Core.Common.Ports;
-using %P%.Application.Core.Common.Results;
-using %P%.Application.Features.%F%.Model.Errors;
-using %P%.Domain.Features.%F%.Model.Entities;
-using %P%.Domain.Features.%F%.Repositories;
+using AppTemplate.Application.Core.Common.Concurrency;
+using AppTemplate.Application.Core.Common.Ports;
+using AppTemplate.Application.Core.Common.Results;
+using AppTemplate.Application.Features.Placeholders.Model.Errors;
+using AppTemplate.Domain.Features.Placeholders.Model.Entities;
+using AppTemplate.Domain.Features.Placeholders.Repositories;
 
-namespace %P%.Application.Features.%F%.Services;
+namespace AppTemplate.Application.Features.Placeholders.Services;
 
-internal sealed class %A%Service(I%A%Repository repository, ICurrentUser currentUser) : I%A%Service
+internal sealed class PlaceholderService(IPlaceholderRepository repository, ICurrentUser currentUser) : IPlaceholderService
 {
-    public async Task<Result<%A%>> %Load%(
-        Guid %L%Id,
+    public async Task<Result<Placeholder>> %Load%(
+        Guid placeholderId,
         VersionPrecondition? precondition,
         CancellationToken cancellationToken = default)
     {
@@ -18,18 +18,18 @@ internal sealed class %A%Service(I%A%Repository repository, ICurrentUser current
 
         if (userId.IsFailure)
         {
-            return userId.To<%A%>();
+            return userId.To<Placeholder>();
         }
 
-        var aggregate = await repository.GetAsync(%SvcOwner%%L%Id, cancellationToken);
+        var aggregate = await repository.GetAsync(%SvcOwner%placeholderId, cancellationToken);
 
         if (aggregate is null)
         {
-            return Result.Failure<%A%>(%A%Errors.%A%NotFound(%L%Id));
+            return Result.Failure<Placeholder>(PlaceholderErrors.PlaceholderNotFound(placeholderId));
         }
 
         return precondition is not null && !precondition.IsSatisfiedBy(aggregate.Version)
-            ? Result.Failure<%A%>(ConcurrencyErrors.PreconditionFailed)
+            ? Result.Failure<Placeholder>(ConcurrencyErrors.PreconditionFailed)
             : Result.Success(aggregate);
     }
 }

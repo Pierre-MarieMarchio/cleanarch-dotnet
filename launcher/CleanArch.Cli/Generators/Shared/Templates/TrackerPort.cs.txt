@@ -1,17 +1,17 @@
-using %P%.Domain.Features.%F%.Model.Entities;
-using %P%.Infrastructure.Core.Common.Saving.DomainEvents;
-using %P%.Infrastructure.Core.Common.Saving.Tracking;
-using %P%.Infrastructure.Persistence.Features.%F%.Rows.Models;
+using AppTemplate.Domain.Features.Placeholders.Model.Entities;
+using AppTemplate.Infrastructure.Core.Common.Saving.DomainEvents;
+using AppTemplate.Infrastructure.Core.Common.Saving.Tracking;
+using AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Models;
 
-namespace %P%.Infrastructure.Persistence.Features.%F%.Rows.Tracking;
+namespace AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Tracking;
 
-internal interface I%A%Tracker : IAggregateFlusher, IDomainEventSource
+internal interface IPlaceholderTracker : IAggregateFlusher, IDomainEventSource
 {
-    %A%? Find(Guid id);
+    Placeholder? Find(Guid id);
 
-    void Track(%A% aggregate, %A%Record record);
+    void Track(Placeholder aggregate, PlaceholderRecord record);
 
-    %A%Record? FindRecord(Guid id);
+    PlaceholderRecord? FindRecord(Guid id);
 
-    void MarkRemoved(%A% aggregate, %A%Record record);
+    void MarkRemoved(Placeholder aggregate, PlaceholderRecord record);
 }
