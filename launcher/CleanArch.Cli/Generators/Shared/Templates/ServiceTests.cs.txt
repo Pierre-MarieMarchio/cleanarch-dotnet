@@ -31,7 +31,10 @@ public sealed class PlaceholderServiceTests
     private static CancellationToken TestToken => TestContext.Current.CancellationToken;
 
 #if (content && fields)
-    private static PlaceholderContentDto AValidContent => %FValidContent%;
+    private static PlaceholderContentDto AValidContent => new(
+//#each field separator ",\n"
+        %field.Sample%
+//#end ");"
 
 #endif
 #if (content && !fields)

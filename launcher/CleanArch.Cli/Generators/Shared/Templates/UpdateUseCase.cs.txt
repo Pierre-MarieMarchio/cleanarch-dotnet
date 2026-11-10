@@ -12,7 +12,9 @@ namespace AppTemplate.Application.Features.Placeholders.UseCases.Commands.Update
 public sealed record UpdatePlaceholderCommand(
     Guid PlaceholderId,
 #if fields
-%FParamList%,
+//#each field separator ",\n"
+    %field.Type% %field.Name%
+//#end ","
 #else
     string Name,
     string Description,
@@ -39,7 +41,7 @@ public sealed class UpdatePlaceholderCommandHandler(
         var placeholder = loaded.Value;
 
 #if fields
-        var update = DomainGuard.Try(() => placeholder.Update(%FCommandArgs%));
+        var update = DomainGuard.Try(() => placeholder.Update(/*#each field separator ", "*/command.%field.Name%/*#end*/));
 #else
         var update = DomainGuard.Try(() => placeholder.Update(command.Name, command.Description));
 #endif

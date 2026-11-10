@@ -3,7 +3,9 @@ namespace AppTemplate.Application.Features.Placeholders.Model.Dtos;
 public sealed record PlaceholderDto(
     Guid Id,
 #if fields
-%FDtoParams%
+//#each field
+    %field.Type% %field.Name%,
+//#end
 #else
     string Name,
     string Description,

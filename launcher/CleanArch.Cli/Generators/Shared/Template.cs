@@ -87,13 +87,13 @@ internal static class Template
         return text;
     }
 
-    internal static string Render(string template, HashSet<string> flags, Dictionary<string, string> tokens)
+    internal static string Render(string template, HashSet<string> flags, Dictionary<string, string> tokens, TemplateList? list = null)
     {
         var kept = new List<string>();
         var frames = new Stack<(bool Parent, bool Condition)>();
         bool emitting = true;
 
-        foreach (string line in RenderCompilableForm(template.ReplaceLineEndings("\n"), flags, tokens).Split('\n'))
+        foreach (string line in TemplateBlocks.Expand(RenderCompilableForm(template.ReplaceLineEndings("\n"), flags, tokens), list).Split('\n'))
         {
             var directive = _directivePattern.Match(line);
 

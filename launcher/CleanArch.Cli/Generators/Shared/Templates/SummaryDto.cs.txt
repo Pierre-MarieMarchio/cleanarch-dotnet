@@ -3,7 +3,9 @@ namespace AppTemplate.Application.Features.Placeholders.Model.Dtos;
 public sealed record PlaceholderSummaryDto(
     Guid Id,
 #if fields
-%FSummaryParams%
+//#each field where summary
+    %field.Type% %field.Name%,
+//#end
 #else
     string Name,
 #endif

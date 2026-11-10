@@ -17,7 +17,9 @@ internal sealed class PlaceholderMapper : IPlaceholderMapper
             UserId.Create(record.OwnerId),
 #endif
 #if fields
-%FMapperRehydrate%
+//#each field separator ",\n"
+            record.%field.Name%
+//#end ");"
 #else
             record.Name,
             record.Description);
@@ -39,7 +41,9 @@ internal sealed class PlaceholderMapper : IPlaceholderMapper
             OwnerId = aggregate.OwnerId.Value,
 #endif
 #if fields
-%FMapperNew%
+//#each field
+            %field.Name% = aggregate.%field.Name%,
+//#end
 #else
             Name = aggregate.Name,
             Description = aggregate.Description,
@@ -60,7 +64,9 @@ internal sealed class PlaceholderMapper : IPlaceholderMapper
         ArgumentNullException.ThrowIfNull(record);
 
 #if fields
-%FMapperWrite%
+//#each field
+        record.%field.Name% = aggregate.%field.Name%;
+//#end
 #else
         record.Name = aggregate.Name;
         record.Description = aggregate.Description;

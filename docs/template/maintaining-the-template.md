@@ -942,9 +942,27 @@ Liquid, whose syntax no compiler or editor understands. Its version is pinned in
   one template moves to the new form at a time, its output held by the digests of
   `NewFeatureTests.WithoutFields`.
 
+Between the two passes, `TemplateBlocks` repeats a block once per field of the feature, so the
+loops, separators and indentation of the code written per field stay in the template, where a
+project can change them. A block on lines of its own opens with `//#each field`, closes with
+`//#end`, and writes its lines once per field; the same block inside a line is written
+`/*#each field*/` and `/*#end*/`. `where <trait>` keeps the fields that have a trait,
+`separator "<text>"` joins the fields with the text, `\n` standing for a line break, where a line
+block otherwise joins them with a line break and an inline one with nothing, and a quoted text after
+`#end` follows the last field. Inside a block, `%field.<Token>%` is a value of the field. The tokens
+and the traits are those of `FieldBlocks`; a block naming another, or one left open, is
+refused. A token may write a `%Token%` of the feature, such as `%Limits%`, which the second pass
+replaces.
+
+```text
+//#each field separator ",\n"
+        %field.Type% %field.Parameter%
+//#end ") : base(id)"
+```
+
 | Guarantee | Test |
 |---|---|
-| An `#if` naming an unknown flag, or joining flags without parentheses around the whole condition, is refused; each of `#if`, `#elif` and `#else` keeps only its own lines and the reference names are replaced | `NewFeatureTests.TemplateGuard` |
+| An `#if` naming an unknown flag, or joining flags without parentheses around the whole condition, is refused; each of `#if`, `#elif` and `#else` keeps only its own lines and the reference names are replaced; a block writes its lines once per field it keeps, joined by its separator and followed by its tail, and one naming an unknown token, or left open, is refused | `NewFeatureTests.TemplateGuard` |
 | The output of `add feature` does not change when a template changes its form | `NewFeatureTests.WithoutFields` |
 | Every C# file `add feature` and `add field` write, over the configurations the digests cover, parses without a syntax error | `NewFeatureTests.GeneratedCodeParses` |
 

@@ -26,7 +26,9 @@ public sealed class PlaceholderFieldTests(ApiFixture fixture) : IntegrationTestB
 
         var created = await ApiJson.ReadAsync<PlaceholderResponse>(response, TestToken);
 
-%FResponseAsserts%
+//#each field
+        created.%field.Name%.ShouldBe(%field.Sample%);
+//#end
     }
 
 %FApiInstants%
@@ -68,5 +70,8 @@ public sealed class PlaceholderFieldTests(ApiFixture fixture) : IntegrationTestB
 
 #endif
 
-    private static CreatePlaceholderRequest AValidRequest() => %FRequestSample%;
+    private static CreatePlaceholderRequest AValidRequest() => new(
+//#each field separator ",\n"
+        %field.Sample%
+//#end ");"
 }

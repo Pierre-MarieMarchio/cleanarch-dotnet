@@ -30,7 +30,9 @@ internal sealed class PlaceholderRecordConfiguration : IEntityTypeConfiguration<
 #if list
 #if owner
 #if fields
-%FIndexes%
+//#each field where sortable separator "\n\n"
+%field.SortIndex%
+//#end
 #else
         builder.HasIndex(record => new { record.OwnerId, record.Name, record.Id })
             .HasDatabaseName("IX_Placeholders_OwnerId_Name_Id");
@@ -40,7 +42,9 @@ internal sealed class PlaceholderRecordConfiguration : IEntityTypeConfiguration<
             .HasDatabaseName("IX_Placeholders_OwnerId_CreatedAt_Id");
 #else
 #if fields
-%FIndexes%
+//#each field where sortable separator "\n\n"
+%field.SortIndex%
+//#end
 #else
         builder.HasIndex(record => new { record.Name, record.Id })
             .HasDatabaseName("IX_Placeholders_Name_Id");
@@ -58,7 +62,9 @@ internal sealed class PlaceholderRecordConfiguration : IEntityTypeConfiguration<
 #endif
 #endif
 #if fields
-%FConfiguration%
+//#each field separator "\n\n"
+%field.Configuration%
+//#end
 #else
         builder.Property(record => record.Name)
             .HasMaxLength(%Limits%.NameMaxLength)

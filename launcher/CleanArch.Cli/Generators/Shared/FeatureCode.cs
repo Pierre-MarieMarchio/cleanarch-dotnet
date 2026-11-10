@@ -195,20 +195,9 @@ internal static class FeatureCode
     {
         var writer = new FieldTokenWriter(tokens, spec, fields, Flags(spec));
 
-        writer.Aggregate();
         writer.Contracts();
-        writer.Persistence();
-        writer.Sorting();
         writer.Tests();
     }
-
-    internal static string SortCases(IEnumerable<Field> sortable, string source, string verb) =>
-        FieldCode.Joined(sortable.Select(field => FieldCode.Joined(
-        [
-            $"            %A%CollectionPolicy.{field.Name}Field => term.Direction == SortDirection.Ascending",
-            $"                ? {source}.{verb}(record => record.{field.Name})",
-            $"                : {source}.{verb}Descending(record => record.{field.Name}),",
-        ])));
 
     private static bool IsRecord(FeatureSpec spec) => spec.Model == "record";
 
@@ -396,49 +385,6 @@ internal static class FeatureCode
         return fields.Any(field => !FieldCode.InSummary(field)) ? texts : string.Empty;
     }
 
-    internal static string KeysetMethod(Field field) =>
-        field.Kind == FieldKind.String
-            ? $$"""
-                    private static IQueryable<%A%Record> Apply{{field.Name}}Keyset(
-                        IQueryable<%A%Record> source,
-                        SortDirection direction,
-                        Cursor cursor) =>
-                        direction == SortDirection.Ascending
-                            ? source.Where(record =>
-                                record.{{field.Name}}.CompareTo(cursor.Key) > 0
-                                || (record.{{field.Name}} == cursor.Key && record.Id.CompareTo(cursor.Id) > 0))
-                            : source.Where(record =>
-                                record.{{field.Name}}.CompareTo(cursor.Key) < 0
-                                || (record.{{field.Name}} == cursor.Key && record.Id.CompareTo(cursor.Id) < 0));
-                """
-            : $$"""
-                    private static IQueryable<%A%Record> Apply{{field.Name}}Keyset(
-                        IQueryable<%A%Record> source,
-                        SortDirection direction,
-                        Cursor cursor)
-                    {
-                        if (!DateTimeOffset.TryParse(
-                            cursor.Key,
-                            CultureInfo.InvariantCulture,
-                            DateTimeStyles.RoundtripKind,
-                            out DateTimeOffset parsed))
-                        {
-                            throw new InvalidOperationException(
-                                "The cursor's key is not a valid date/time: CursorKeys should have rejected it first.");
-                        }
-
-                        var key = parsed.ToUniversalTime();
-
-                        return direction == SortDirection.Ascending
-                            ? source.Where(record =>
-                                record.{{field.Name}}.CompareTo(key) > 0
-                                || (record.{{field.Name}} == key && record.Id.CompareTo(cursor.Id) > 0))
-                            : source.Where(record =>
-                                record.{{field.Name}}.CompareTo(key) < 0
-                                || (record.{{field.Name}} == key && record.Id.CompareTo(cursor.Id) < 0));
-                    }
-                """;
-
     internal static string ManifestPath(FeatureSpec spec) => FeatureManifest.PathOf(spec.Features);
 
     internal static JsonArray FieldsOf(IReadOnlyList<Field> fields)
@@ -490,6 +436,8 @@ internal static class FeatureCode
         private readonly HashSet<string> _flags = Flags(spec);
 
         private readonly Dictionary<string, string> _tokens = Tokens(spec);
+
+        private readonly TemplateList? _fields = spec.Fields is { } fields ? FieldBlocks.For(fields, Flags(spec)) : null;
 
         internal List<Emission> Emissions { get; } = [];
 
@@ -672,7 +620,7 @@ internal static class FeatureCode
 
             Emissions.Add(new Emission(
                 $"{project}/{Template.Substitute(relative, tokens)}",
-                Template.Render(template, _flags, tokens)));
+                Template.Render(template, _flags, tokens, _fields)));
         }
 
         private void AddTest(string project, string relative, string template, string when = "", Dictionary<string, string>? extra = null)
@@ -700,12 +648,6 @@ internal static class FeatureCode
 
         private readonly string _limits;
 
-        private readonly List<Field> _summary;
-
-        private readonly List<Field> _sortable;
-
-        private readonly List<Field> _anonymised;
-
         internal FieldTokenWriter(Dictionary<string, string> tokens, FeatureSpec spec, IReadOnlyList<Field> fields, HashSet<string> flags)
         {
             _tokens = tokens;
@@ -713,112 +655,26 @@ internal static class FeatureCode
             _fields = fields;
             _flags = flags;
             _limits = Limits(spec);
-            _summary = [.. fields.Where(FieldCode.InSummary)];
-            _sortable = [.. fields.Where(FieldCode.IsSortable)];
-            _anonymised = [.. fields.Where(field => FieldCode.Anonymised(field) is not null)];
-        }
-
-        internal void Aggregate()
-        {
-            _tokens["FConstants"] = FieldCode.Constants(_fields, ceilings: !IsRecord(_spec) && _flags.Contains("content"));
-            _tokens["FPolicyConstants"] = FieldCode.Constants(_fields, ceilings: false);
-            _tokens["FCtorParams"] = FieldCode.List(_fields.Select(Declared), "        ", ") : base(id)");
-            _tokens["FAssign"] = FieldCode.Joined(_fields.Select(field => $"        {field.Name} = {FieldCode.Parameter(field)};"));
-            _tokens["FProperties"] = FieldCode.Joined(_fields.Select(field => $"    public {FieldCode.Type(field)} {field.Name} {Setter(field)}"), "\n\n");
-            _tokens["FCreateParams"] = FieldCode.List(_fields.Select(Declared), "        ", ") =>");
-            _tokens["FCreateArgs"] = FieldCode.List(_fields.Select(Required), "            ", ");");
-            _tokens["FRehydrateParams"] = FieldCode.List(_fields.Select(Declared), "        ", ")");
-            _tokens["FRehydrateArgs"] = FieldCode.List(_fields.Select(FieldCode.Parameter), "            ", ");");
-            _tokens["FUpdateParams"] = string.Join(", ", _fields.Select(Declared));
-            _tokens["FUpdateBody"] = FieldCode.Joined(
-            [
-                .. _fields.Where(FieldCode.HasRequire).Select(field => $"        {FieldCode.Type(field)} valid{field.Name} = {Required(field)};"),
-                string.Empty,
-                .. _fields.Select(field => $"        {field.Name} = {Validated(field)};"),
-            ]);
-            _tokens["FAnonymise"] = FieldCode.Joined(_anonymised.Select(field => $"        {field.Name} = {FieldCode.Anonymised(field)};"));
-            _tokens["FRequire"] = FieldCode.Joined(_fields.Where(FieldCode.HasRequire).Select(FieldCode.Require), "\n\n");
         }
 
         internal void Contracts()
         {
+            _tokens["FPolicyConstants"] = FieldCode.Constants(_fields);
             _tokens["FRulesCommand"] = FieldCode.Rules(_fields, "command", _spec.Type);
             _tokens["FRulesContent"] = FieldCode.Rules(_fields, "content", _limits);
-            _tokens["FParamList"] = FieldCode.List(_fields.Select(field => $"{FieldCode.Type(field)} {field.Name}"), "    ");
-            _tokens["FDtoParams"] = FieldCode.Joined(_fields.Select(field => $"    {FieldCode.Type(field)} {field.Name},"));
-            _tokens["FSummaryParams"] = FieldCode.Joined(_summary.Select(field => $"    {FieldCode.Type(field)} {field.Name},"));
-            _tokens["FCommandArgs"] = string.Join(", ", _fields.Select(field => $"command.{field.Name}"));
-            _tokens["FDetailArgs"] = FieldCode.Joined(_fields.Select(field => $"            %L%.{field.Name},"));
-            _tokens["FSummaryArgs"] = string.Concat(_summary.Select(field => $"record.{field.Name}, "));
-            _tokens["FResponseArgs"] = string.Concat(_fields.Select(field => $"%L%.{field.Name}, "));
-            _tokens["FSummaryResponseArgs"] = string.Concat(_summary.Select(field => $"summary.{field.Name}, "));
-            _tokens["FRequestDocs"] = FieldCode.Joined(_fields.Select(FieldCode.WireDocumentation));
-            _tokens["FRequestParams"] = FieldCode.List(_fields.Select(FieldCode.WireParameter), "    ");
-            _tokens["FTrimmed"] = string.Join(
-                ", ",
-                _fields.Where(field => field.Kind == FieldKind.String)
-                    .Select(field => $"{field.Name} = content.{field.Name}{(field.Nullable ? "?" : string.Empty)}.Trim()"));
-        }
-
-        internal void Persistence()
-        {
-            _tokens["FRecordProperties"] = FieldCode.Joined(_fields.Select(FieldCode.RecordProperty), "\n\n");
-            _tokens["FConfiguration"] = FieldCode.Joined(_fields.Select(field => FieldCode.Configuration(field, _limits)), "\n\n");
-            _tokens["FIndexes"] = FieldCode.Joined(_sortable.Select(field => FieldCode.SortIndex(_spec.Features, field, IsOwner(_spec))), "\n\n");
-            _tokens["FStoreAssign"] = FieldCode.Joined(_fields.Select(field => $"            {field.Name} = {FieldCode.Store(field, "content")},"));
-            _tokens["FStoreUpdate"] = FieldCode.Joined(_fields.Select(field => $"            record.{field.Name} = {FieldCode.Store(field, "content")};"));
-            _tokens["FStoreAnonymise"] = FieldCode.Joined(_anonymised.Select(field => $"            record.{field.Name} = {FieldCode.Anonymised(field)};"));
-            _tokens["FMapperRehydrate"] = FieldCode.List(_fields.Select(field => $"record.{field.Name}"), "            ", ");");
-            _tokens["FMapperNew"] = FieldCode.Joined(_fields.Select(field => $"            {field.Name} = aggregate.{field.Name},"));
-            _tokens["FMapperWrite"] = FieldCode.Joined(_fields.Select(field => $"        record.{field.Name} = aggregate.{field.Name};"));
-            _tokens["FRecordArgs"] = string.Join(", ", _fields.Select(field => $"record.{field.Name}"));
-            _tokens["FRecordArgLines"] = FieldCode.Joined(_fields.Select(field => $"                record.{field.Name},"));
-        }
-
-        internal void Sorting()
-        {
-            var keyset = _sortable.Where(FieldCode.IsKeyset).ToList();
-
-            _tokens["FPolicyFields"] = FieldCode.Joined(_sortable.Select(field => $"    public const string {field.Name}Field = \"{CSharpNames.Lower(field.Name)}\";"), "\n\n");
-            _tokens["FSortables"] = FieldCode.Joined(_sortable.Select(field =>
+            _tokens["FSortables"] = FieldCode.Joined(_fields.Where(FieldCode.IsSortable).Select(field =>
                 $"        SortableField.{(FieldCode.IsKeyset(field) ? "Keyset" : "OffsetOnly")}({field.Name}Field),"));
-            _tokens["FKeysetCases"] = FieldCode.Joined(keyset.Select(field =>
-                $"            %A%CollectionPolicy.{field.Name}Field => Apply{field.Name}Keyset(source, term.Direction, cursor),"));
-            _tokens["FKeyCases"] = FieldCode.Joined(keyset.Select(KeyCase));
-            _tokens["FOrderCases"] = SortCases(_sortable, "source", "OrderBy");
-            _tokens["FThenCases"] = SortCases(_sortable, "source", "ThenBy");
-            _tokens["FKeysetMethods"] = FieldCode.Joined(keyset.Select(KeysetMethod), "\n\n");
         }
 
         internal void Tests()
         {
-            _tokens["FValidContent"] = FieldCode.Construction(_fields.Select(field => FieldCode.Sample(field, 1)));
             _tokens["FServiceInvalid"] = ServiceRefusal();
             _tokens["FContentValidatorTests"] = FieldCode.ValidatorTests(_fields, $"{_spec.Type}ContentDto", "AValidContentDto", _limits);
             _tokens["FAggregateTests"] = FieldCode.AggregateTests(_fields, _flags.Contains("create"), _flags.Contains("update"), "%OwnerIdArg%");
             _tokens["FConfigurationTests"] = FieldCode.ConfigurationTests(_fields, _limits);
-            _tokens["FFidelityArgs"] = FieldCode.List(_fields.Select(field => FieldCode.Sample(field, 1)), "            ", ");");
-            _tokens["FFidelityAsserts"] = FieldCode.Joined(_fields.Select(field => FieldCode.Assertion("roundTripped", field, FieldCode.Sample(field, 1))));
-            _tokens["FRequestSample"] = FieldCode.Construction(_fields.Select(field => FieldCode.Sample(field, 1)));
             _tokens["FApiInstants"] = ApiInstants();
-            _tokens["FResponseAsserts"] = FieldCode.Joined(_fields.Select(field => FieldCode.Assertion("created", field, FieldCode.Sample(field, 1))));
             _tokens["FApiRefusal"] = ApiRefusal();
         }
-
-        private static string Declared(Field field) => $"{FieldCode.Type(field)} {FieldCode.Parameter(field)}";
-
-        private static string Required(Field field) =>
-            FieldCode.HasRequire(field) ? $"Require{field.Name}({FieldCode.Parameter(field)})" : FieldCode.Parameter(field);
-
-        private static string Validated(Field field) => FieldCode.HasRequire(field) ? "valid" + field.Name : FieldCode.Parameter(field);
-
-        private static string KeyCase(Field field) =>
-            field.Kind == FieldKind.String
-                ? $"            %A%CollectionPolicy.{field.Name}Field => summary.{field.Name},"
-                : $"            %A%CollectionPolicy.{field.Name}Field => summary.{field.Name}.ToString(\"O\", CultureInfo.InvariantCulture),";
-
-        private string Setter(Field field) =>
-            _flags.Contains("update") || (_flags.Contains("anon") && FieldCode.Anonymised(field) is not null) ? "{ get; private set; }" : "{ get; }";
 
         private string ServiceRefusal()
         {
