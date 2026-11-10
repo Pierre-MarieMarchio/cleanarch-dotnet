@@ -40,7 +40,7 @@ public static class GeneratedProject
             File.Exists(Path.Combine(root, "src", "Presentation", ProjectFacts.FolderOf(name, "Presentation.Client"), name + ".Presentation.Client.csproj")),
             DatabaseProvider(root, name),
             codeHost,
-            File.Exists(Path.Combine(root, codeHost == "gitlab" ? ".gitlab-ci.yml" : Path.Combine(".github", "workflows", "ci.yml"))),
+            File.Exists(Path.Combine(root, PipelineOf(codeHost))),
             File.Exists(Path.Combine(root, "AGENTS.md")),
             Directory.Exists(Path.Combine(root, "src", "Presentation", ProjectFacts.FolderOf(name, "Api"))));
     }
@@ -54,6 +54,9 @@ public static class GeneratedProject
 
         return File.Exists(Path.Combine(root, ".gitlab-ci.yml")) || Directory.Exists(Path.Combine(root, ".gitlab")) ? "gitlab" : "none";
     }
+
+    private static string PipelineOf(string codeHost) =>
+        codeHost == "gitlab" ? ".gitlab-ci.yml" : Path.Combine(".github", "workflows", "ci.yml");
 
     public static string? WorkspaceScope(string packageJson)
     {
