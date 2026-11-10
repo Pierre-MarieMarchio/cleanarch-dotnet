@@ -2108,19 +2108,32 @@ public sealed partial class NewFeatureTests
 
     private static void TemplateGuardCases(Action<bool, string> expect)
     {
-        bool unknownFlagRefused;
+        var get = new HashSet<string>(StringComparer.Ordinal) { "get" };
+        var names = new Dictionary<string, string>(StringComparer.Ordinal) { ["P"] = "Acme", ["F"] = "Notes", ["A"] = "Note", ["L"] = "note" };
+        const string compilable = "namespace AppTemplate.Placeholders;\n\n#if get && !list\n    class Placeholder;\n#elif list\nclass placeholderList;\n#else\nclass None;\n#endif\n";
 
-        try
-        {
-            Template.Evaluate("get&nonsense", new HashSet<string>(StringComparer.Ordinal) { "get" });
-            unknownFlagRefused = false;
-        }
-        catch (InvalidOperationException)
-        {
-            unknownFlagRefused = true;
-        }
+        expect(Refuses(() => Template.Evaluate("get&nonsense", get)), "A condition naming a flag that does not exist evaluated instead of failing, so a typo would silently drop a block.");
+        expect(Refuses(() => Template.Render("namespace N;\n#if get && nonsense\n#endif", get, names)), "An #if naming a flag that does not exist evaluated instead of failing, so a typo would silently drop a block.");
+        expect(Template.Render(compilable, get, names) == "namespace Acme.Notes;\n\n    class Note;\n", "An #if holding kept a line other than its own, or a reference name was not replaced.");
+        expect(Template.Render(compilable, ["list"], names) == "namespace Acme.Notes;\n\nclass noteList;\n", "An #elif holding kept a line other than its own.");
+        expect(Template.Render(compilable, [], names) == "namespace Acme.Notes;\n\nclass None;\n", "An #else did not take over when no condition held.");
+        expect(
+            !Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(FeatureTemplates.Errors).GetDiagnostics().Any(),
+            "The Errors template is no longer valid C#, which its compilable form promises.");
 
-        expect(unknownFlagRefused, "A condition naming a flag that does not exist evaluated instead of failing, so a typo would silently drop a block.");
+        static bool Refuses(Action render)
+        {
+            try
+            {
+                render();
+
+                return false;
+            }
+            catch (InvalidOperationException)
+            {
+                return true;
+            }
+        }
     }
 
     private static IEnumerable<string> FileProblems(string root, string relative)
