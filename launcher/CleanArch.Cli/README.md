@@ -65,7 +65,8 @@ dotnet cleanarch eject verify --dry-run # say what it would write, and write not
 with a BOM, LF endings, the usings' order) and leaves the code it marks as generated, the
 migrations and the generated .NET client among it. It then saves each Markdown file as UTF-8
 without a BOM, with LF endings, walking the project root but `bin`, `obj`, `node_modules`, `plans`
-and the dot folders other than `.github` and `.template.config`, and prints each file it saves.
+and the dot folders other than `.github`, `.gitlab` and `.template.config`, and prints each file it
+saves.
 Last, it runs `dotnet format --diagnostics IDE1006 --verify-no-changes`: `dotnet format` cannot
 rename a symbol, so `format` names each file, line and name that breaks a naming rule and fails
 while one is left. It stops at the first step that fails.

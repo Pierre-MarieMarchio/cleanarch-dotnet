@@ -27,8 +27,9 @@
   },
   {
     "name": "worker, mcp and blazor wasm, external auth, all examples",
-    "tags": ["presentation-mcp", "presentation-worker", "starter-blazor-wasm", "web"],
-    "options": "--presentation api --presentation mcp --presentation worker --auth external --examples all --files true --web blazor-wasm",
+    "tags": ["code-host-gitlab", "presentation-mcp", "presentation-worker", "starter-blazor-wasm", "web"],
+    "options": "--presentation api --presentation mcp --presentation worker --auth external --examples all --files true --web blazor-wasm --code-host gitlab",
+    "gitlab": "true",
     "auth_context": "false",
     "integration": "true",
     "coverage": "true",

@@ -80,7 +80,11 @@ public sealed class ProjectFileTests
 
     [Theory]
     [InlineData("files", "src/Infrastructure/{0}.Infrastructure.Storage")]
+    /*#if (gitlabHost)
+    [InlineData("ci", ".gitlab-ci.yml")]
+    #else*/
     [InlineData("ci", ".github/workflows/ci.yml")]
+    //#endif
     [InlineData("sonar", "tools/sonar-scanner.Dockerfile")]
     [InlineData("agentFiles", "AGENTS.md")]
     [InlineData("aspire", "src/AppHost/{0}.AppHost")]
@@ -99,6 +103,11 @@ public sealed class ProjectFileTests
         Holds(".github").ShouldBe(
             codeHost == "github",
             $"cleanarch.json records --code-host {codeHost}, and the .github folder comes with github alone.");
+        /*#if (gitlabHost)
+        Holds(".gitlab").ShouldBe(
+            codeHost == "gitlab",
+            $"cleanarch.json records --code-host {codeHost}, and the .gitlab folder comes with gitlab alone.");
+        #endif*/
     }
 
     [Fact]

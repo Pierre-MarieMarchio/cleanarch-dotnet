@@ -715,8 +715,8 @@ its `pnpm-lock.yaml`.
   `src/Web/packages/api-client/src/generated/schema.ts` with what `openapi-typescript` writes from the
   OpenAPI reference, so a contract change without `pnpm api` fails and the message names that command,
   then `pnpm audit`, and, once `cleanarch.json` records the workspace, `pnpm lint`, `pnpm test` and
-  `pnpm build` as the web workflow does. Those steps need Node.js and pnpm: without pnpm, `verify`
-  stops before them and says how to install it, and no option skips them.
+  `pnpm build`. Those steps need Node.js and pnpm: without pnpm, `verify` stops before them and says
+  how to install it, and no option skips them.
   ```
 
 <!--#if (githubCi)-->
@@ -885,8 +885,19 @@ its `pnpm-lock.yaml`.
 
   ```markdown
 
+  <!--#if (githubCi)-->
   `pnpm audit` holds the web packages to the same rule: `verify` and the web workflow run it, and any
-  advisory fails, whatever its severity. The answer is the same too: raise the dependency, or pin a
+  advisory fails, whatever its severity.
+  <!--#endif-->
+  <!--#if (gitlabCi)-->
+  `pnpm audit` holds the web packages to the same rule: `verify` and the pipeline's `web` job run it,
+  and any advisory fails, whatever its severity.
+  <!--#endif-->
+  <!--#if (!githubCi && !gitlabCi)-->
+  `pnpm audit` holds the web packages to the same rule: `verify` runs it, and any advisory fails,
+  whatever its severity.
+  <!--#endif-->
+  The answer is the same too: raise the dependency, or pin a
   patched release under `overrides` in `src/Web/pnpm-workspace.yaml` with a comment saying when it can go;
   a package that cannot take the pinned release as it is gets a pnpm patch in `src/Web/patches/`.
   ```
@@ -1017,6 +1028,10 @@ its `pnpm-lock.yaml`.
   <!--#if (githubCi)-->
   CI installs Chromium in the `end-to-end` job and caches it by the Playwright release the lockfile
   resolves.
+  <!--#endif-->
+  <!--#if (gitlabCi)-->
+  CI installs Chromium in the `end-to-end` job and caches it by the browser smoke's `package.json`,
+  which pins the Playwright release.
   <!--#endif-->
 
   ```
