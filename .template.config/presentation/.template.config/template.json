@@ -363,6 +363,14 @@
       "type": "computed",
       "value": "(ci && githubHost)"
     },
+    "gitlabHost": {
+      "type": "computed",
+      "value": "(codeHost == \"gitlab\")"
+    },
+    "gitlabCi": {
+      "type": "computed",
+      "value": "(ci && gitlabHost)"
+    },
     "hasClient": {
       "type": "parameter",
       "displayName": "Project holds the .NET client",

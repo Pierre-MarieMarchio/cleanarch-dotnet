@@ -31,6 +31,10 @@ public sealed class GitLabPipelinePinningTests
 
     private static readonly Regex _from = new(@"^\s*FROM\s+(?:--platform=\S+\s+)?(?<ref>\S+)", RegexOptions.IgnoreCase, _budget);
 
+    private static readonly Regex _optionImage = new(@"(?:^|[\s,=])(?:image|generator)=(?<ref>[^\s,'""]+)", RegexOptions.None, _budget);
+
+    private static readonly Regex _dockerRun = new(@"(?:^|[\s;&|(])docker\s+run\s+(?<rest>.*)$", RegexOptions.None, _budget);
+
     private static readonly Regex _existsKey = new(@"^(?<indent>\s*)(?:-\s+)?exists:\s*$", RegexOptions.None, _budget);
 
     /*#if (templateMaintenance)*/
@@ -50,7 +54,7 @@ public sealed class GitLabPipelinePinningTests
         images
             .Where(image => !_pinnedImage.IsMatch(image.Reference))
             .Select(image => $"{image.Where}: {image.Reference}")
-            .ShouldBeEmpty("Write each image a job runs, its image: and every services: entry, as name:tag@sha256:<digest>; resolve it with `docker buildx imagetools inspect name:tag`.");
+            .ShouldBeEmpty("Write each image a job runs, its image:, every services: entry, and an image its script runs with docker run or names in an image= or generator= option, as name:tag@sha256:<digest>; resolve it with `docker buildx imagetools inspect name:tag`.");
     }
 
     [Fact]
@@ -125,6 +129,14 @@ public sealed class GitLabPipelinePinningTests
         Images(["job:", "  services:", "    - name: docker:29-dind", "      alias: docker", "    - postgres:18", "  script:", "    - name: not-an-image"])
             .Select(image => image.Reference).ShouldBe(["docker:29-dind", "postgres:18"]);
         Images(["job:", "  services: []"]).ShouldBeEmpty("an empty list runs no image");
+        Images(["job:", "  script:", "    - docker buildx create --driver docker-container --driver-opt image=moby/buildkit:v0.33.1 --use ctx"])
+            .Single().Reference.ShouldBe("moby/buildkit:v0.33.1", "the BuildKit image a builder runs is an image the pipeline runs");
+        Images(["job:", "  script:", "    - |", "      docker buildx build \\", "        --sbom=generator=docker/buildkit-syft-scanner:1.12.0 \\"])
+            .Single().Reference.ShouldBe("docker/buildkit-syft-scanner:1.12.0", "the SBOM scanner runs as an image");
+        Images(["job:", "  script:", "    - docker run --privileged --rm tonistiigi/binfmt:qemu-v10.2.3 --install all"])
+            .Single().Reference.ShouldBe("tonistiigi/binfmt:qemu-v10.2.3");
+        Images(["job:", "  script:", "    - image=\"$CI_REGISTRY_IMAGE/$COMPONENT\"", "    - docker compose run --rm api"])
+            .ShouldBeEmpty("a variable named image and a Compose service are no image reference");
         _pinnedImage.IsMatch($"docker:29.9.3-dind@{digest}").ShouldBeTrue();
         _pinnedImage.IsMatch("docker:29.9.3-dind").ShouldBeFalse();
         _pinnedImage.IsMatch($"docker@{digest}").ShouldBeFalse("the tag is kept for the reader");
@@ -222,6 +234,17 @@ public sealed class GitLabPipelinePinningTests
             int indent = line.Length - line.TrimStart().Length;
             services = indent > services ? services : null;
             image = indent > image ? image : null;
+
+            foreach (Match option in _optionImage.Matches(line))
+            {
+                yield return ($"line {number}", Unquoted(option.Groups["ref"].Value));
+            }
+
+            if (_dockerRun.Match(line) is { Success: true } run
+                && run.Groups["rest"].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(word => !word.StartsWith('-')) is { } started)
+            {
+                yield return ($"line {number}", Unquoted(started));
+            }
 
             if (_imageKey.Match(line) is { Success: true } key)
             {

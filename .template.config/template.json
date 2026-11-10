@@ -2198,6 +2198,12 @@
           "exclude": [
             ".gitlab/ci/web.yml"
           ]
+        },
+        {
+          "condition": "(!serverDatabase)",
+          "exclude": [
+            ".gitlab/ci/release.yml"
+          ]
         }
       ]
     },

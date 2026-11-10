@@ -240,6 +240,10 @@ runs, as a `container:`, a service, a `docker://` step or the BuildKit driver, w
 
 `.gitlab-ci.yml` runs on a merge request to `main`, `develop` or the default branch, on a push to one
 of them, and on a manual run. A newer pipeline cancels the older one, except on those three branches.
+<!--#if (serverDatabase)-->
+A `v*.*.*` tag, or a manual run on a tag, runs the [release](#release) instead, and none of the jobs
+below.
+<!--#endif-->
 
 | Job | Does |
 |---|---|
@@ -304,10 +308,10 @@ Node.js is pinned the same way, and pnpm comes from corepack, at the version and
 <!--#endif-->
 GitLab's SAST and Secret Detection templates are the only includes not in this repository: they follow
 the instance's version, and nothing pins them on every instance. `GitLabPipelinePinningTests` reads
-`.gitlab-ci.yml` and the files it includes, and fails on an image or a service without its digest, on
-an include that is neither a local file nor one of those two templates, on a local include of a
-missing file that no `rules: exists` guards, on a pipeline file nothing includes, and on an SDK image
-other than the Dockerfiles'.
+`.gitlab-ci.yml` and the files it includes, and fails on an image or a service without its digest,
+an image a script runs among them, on an include that is neither a local file nor one of those two
+templates, on a local include of a missing file that no `rules: exists` guards, on a pipeline file
+nothing includes, and on an SDK image other than the Dockerfiles'.
 <!--#endif-->
 <!--#if (sonar)-->
 
@@ -349,7 +353,7 @@ It builds into `artifacts/sonar`, leaving your `bin/` and `obj/` alone. It runs 
 only, so it reports less coverage than CI, and, the scanner running on Linux, names and leaves out
 [the ones that run on Windows alone](#tests-that-run-on-windows-alone).
 <!--#endif-->
-<!--#if (githubCi && serverDatabase)-->
+<!--#if ((githubCi || gitlabCi) && serverDatabase)-->
 
 ## Release
 
@@ -368,6 +372,31 @@ Push a tag such as `v1.2.3`. The release re-runs the gate, then publishes the wo
 a signed provenance attestation, and uploads the migration bundles built from the same commit. It
 needs no secret beyond `GITHUB_TOKEN`. Applying the bundles is yours:
 [deployment](deployment.md#migrations-at-release).
+<!--#endif-->
+<!--#if (gitlabCi && serverDatabase && api)-->
+Push a tag such as `v1.2.3`, or run the pipeline on an existing tag. `.gitlab/ci/release.yml`, which
+`.gitlab-ci.yml` includes, re-runs the gate in `verify`, then `container-image` publishes the API's
+image to the project's container registry, and the worker's when the project holds one, each as
+`1.2.3`, `1.2`, `1` and `latest` (a prerelease tag never moves `latest`), multi-arch, with BuildKit's
+SBOM and provenance, signed by cosign with the pipeline's identity, keyless, through Sigstore; and
+`migration-bundle` keeps the bundles built from the same commit as its artifacts for 90 days. It needs
+no variable beyond those GitLab gives every job. Applying the bundles is yours:
+[deployment](deployment.md#migrations-at-release), which also says how to verify an image.
+<!--#endif-->
+<!--#if (gitlabCi && serverDatabase && !api)-->
+Push a tag such as `v1.2.3`, or run the pipeline on an existing tag. `.gitlab/ci/release.yml`, which
+`.gitlab-ci.yml` includes, re-runs the gate in `verify`, then `container-image` publishes the worker's
+image to the project's container registry as `1.2.3`, `1.2`, `1` and `latest` (a prerelease tag never
+moves `latest`), multi-arch, with BuildKit's SBOM and provenance, signed by cosign with the pipeline's
+identity, keyless, through Sigstore; and `migration-bundle` keeps the bundles built from the same
+commit as its artifacts for 90 days. It needs no variable beyond those GitLab gives every job. Applying
+the bundles is yours: [deployment](deployment.md#migrations-at-release), which also says how to verify
+an image.
+<!--#endif-->
+<!--#if (gitlabCi && serverDatabase)-->
+
+The release's binfmt, BuildKit and SBOM scanner images are pinned by digest, and cosign to a version
+and its checksum.
 <!--#endif-->
 
 ## Supply chain
