@@ -117,7 +117,7 @@ internal static class CheckComments
         new(["summary", "param", "response", "c", "see", "paramref", "typeparamref"], StringComparer.Ordinal);
 
     private static readonly HashSet<string> _skippedDirectoryNames =
-        new(["bin", "obj", ".git", ".vs", "node_modules", "TestResults"], StringComparer.Ordinal);
+        new(["bin", "obj", ".git", ".vs", "node_modules", "TestResults", "code-templates"], StringComparer.Ordinal);
 
     private enum Kind
     {

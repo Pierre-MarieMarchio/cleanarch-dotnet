@@ -32,7 +32,7 @@ internal static class CheckDocPaths
         SearchValues.Create("*$<>|(){}\"'");
 
     private static readonly HashSet<string> _skippedDirectoryNames =
-        new(["bin", "obj", ".git", ".vs"], StringComparer.Ordinal);
+        new(["bin", "obj", ".git", ".vs", "code-templates"], StringComparer.Ordinal);
 
     private sealed record Scan(
         IReadOnlyList<string> Problems,

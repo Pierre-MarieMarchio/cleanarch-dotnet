@@ -23,7 +23,7 @@ public sealed class DocumentationCitationTests
 
     private const string _toolPage = "docs/reference/cli.md";
 
-    private static readonly string[] _skippedDirectories = ["bin", "obj", "node_modules", "plans"];
+    private static readonly string[] _skippedDirectories = ["bin", "obj", "node_modules", "plans", "code-templates"];
 
     private static readonly string[] _keptDotDirectories = [".github", ".template.config"];
 
