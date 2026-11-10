@@ -1089,6 +1089,14 @@ SHA-256 of its normalised text, and the report lists it under `Written from this
 templates:`; a feature written from the tool's text alone has neither, so its manifest and report
 are those of a project without overrides.
 
+`add field` reads the overrides once and renders from that one reading both the feature its manifest
+records and the feature with the fields added, so the two renders it compares never come from
+different texts. An override whose digest is not the one the manifest records under `templates`,
+changed, added or removed since, is a warning on the error output, starting with `warning: `, and
+not a refusal: the files are compared with what `add field` writes today, so a member the difference
+reaches reads as changed by hand. Once written, the manifest records the overrides that run used.
+`remove feature` reads nothing under `templates` and leaves `code-templates` as it is.
+
 `Template.Render`, in `launcher/CleanArch.Cli/Generators/Shared/Template.cs`, renders the templates
 of `add feature` and `add field` in five passes, in this order:
 
@@ -1230,6 +1238,9 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | An override with an unknown flag, an unknown field token, an unknown token or an `#if` never closed is refused, the message starting with its path and naming the line where the engine names one, and nothing is written | `NewFeatureTests.ABrokenOverrideIsRefusedNamingIt` |
 | The manifest records each override used, by path and digest, in path order, and a feature written without one records no `templates` | `NewFeatureTests.TheManifestRecordsEachOverride` |
 | A dot file under `code-templates/add-feature` is not read as a template | `NewFeatureTests.DotFilesAreIgnored` |
+| `add field` renders the feature before and after its fields from the same override, an override's block writing the added field as `add feature` writes it | `NewFeatureTests.AddFieldUsesTheOverrideForBothRenders` |
+| `add field` warns, and still writes, when an override is not the text the manifest records, then records the text it wrote from | `NewFeatureTests.AddFieldWarnsWhenTheOverrideChangedSinceAddFeature` |
+| `remove feature` removes a feature written from an override as its manifest records it, and leaves `code-templates` as it was | `RemoveFeatureTests.AFeatureWrittenFromAnOverride_IsRemovedAsRecorded_AndTheOverrideStays` |
 | Every template the tool embeds for `add feature` is written by one of the configurations the digests with `--fields` cover, or by an owner feature in a tree whose callers sign in with an external provider | `NewFeatureTests.EveryTemplateIsWritten` |
 | Over the configurations the digests cover, every C# file `add feature` writes or edits, and every one `add field` writes or changes, parses without a syntax error; an edited file is parsed as the edit leaves it in the tests' tree, whose shared files are cut down to the code around the anchors, and the message names each group and path that wrote the same broken text | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
 

@@ -26,6 +26,9 @@ public sealed class RemoveFeatureTests
     public void Generator() => Expectations.Hold(GeneratorCases);
 
     [Fact]
+    public void AFeatureWrittenFromAnOverride_IsRemovedAsRecorded_AndTheOverrideStays() => Expectations.Hold(OverriddenCases);
+
+    [Fact]
     public void Migration() => Expectations.Hold(MigrationCases);
 
     [Fact]
@@ -548,6 +551,29 @@ public sealed class RemoveFeatureTests
                 expect(false, $"After removing {features}, its last feature, '{Path.GetRelativePath(root, empty)}' was left empty.");
             }
         }
+    }
+
+    private static void OverriddenCases(string scratch, Action<bool, string> expect)
+    {
+        const string Controller = "src/Presentation/AT.Api/Features/Placeholders/Controllers/PlaceholdersController.cs";
+        string root = Tree(scratch);
+        string template = ToolTemplates.PathOf(FeatureCode.TemplateFolder, Controller);
+
+        Put(root, template, ToolTemplates.Of(FeatureCode.TemplateFolder)[Controller] + "\n#if list\n#endif\n");
+        Commit(root);
+
+        var original = Snapshot(root);
+
+        expect(Generate(root, "Widgets", "Widget", "--access", "shared") == 0, "The generator refused Widgets over an override of its controller.");
+        expect(
+            File.ReadAllText(Path.Combine(root, FeatureManifest.PathOf("Widgets"))).Contains(template, StringComparison.Ordinal),
+            "The manifest of a feature written from an override does not record it.");
+        Commit(root);
+
+        var applied = Invoke(root, "Widgets", "--apply");
+
+        expect(applied.Code == 0, $"A feature written from an override was refused: {applied.Output}{applied.Error}");
+        expect(Same(original, Snapshot(root)), $"Removing a feature written from an override did not leave the tree as it was, its code-templates folder included: {Differences(original, Snapshot(root))}");
     }
 
     private static void MigrationCases(string scratch, Action<bool, string> expect)
