@@ -1925,16 +1925,16 @@ public sealed partial class NewFeatureTests
 
     private static readonly (string Group, string Digest)[] _withoutFieldsDigests =
     [
-        ("record, owner, delete", "22857f541373bad15f3d8498ef9cef66d6e4143503e0af0040c0b6ebb72a3fb6"),
-        ("record, owner, anonymise", "a7a97c48d0f9cd4349c9e01202c81533c097b96e5e6cdf4b088ee3ccd21e9284"),
-        ("record, shared", "c0f4e4de47f2afbdcda5e695927133f407baa6d7f85a65623e9e72dec3a014a7"),
-        ("aggregate, owner, delete", "145b4f5e2854e4bf1d04b5cc334881c7a6760a7f9673e2af2a251eab7016a451"),
-        ("aggregate, owner, anonymise", "6ba9a1ae218f1aac58c83d6a958ce17078f26df3e7514434341665ca30f75ecb"),
-        ("aggregate, shared", "90a3a95f8d87d0333cc73367a18b85daf6ac1e1ae359a1b73dcbb3bd582545e9"),
-        ("record, owner, delete, the project's first owner feature", "e9c2866124029ef477f5a6691d2a946a1e679da62bd5114b521dedee2b4a2179"),
-        ("record, owner, delete, on SQL Server", "22857f541373bad15f3d8498ef9cef66d6e4143503e0af0040c0b6ebb72a3fb6"),
-        ("record, owner, delete, on SQLite", "97dded3a6166fe6884d8aad6ebef206117b75f3a8037f423e44962d00e55ff96"),
-        ("record, owner, delete, without the API", "2a1573318a2edd06e5aa484bd5afc9f06c152dcc963ae04276966f600f9b10c4"),
+        ("record, owner, delete", "b860dc741ae8f667d2040d0686142da8c28ea71dc8b6fa5ed3dd63bfc1b987db"),
+        ("record, owner, anonymise", "8dbd64277e79397cc5c084c354bc5d4568367b0b9951986c96c9a70f3a45258b"),
+        ("record, shared", "3a26619389868cebe08e151b72675d7f45f5b7c5c9851d43a808fe2e7ef1b06f"),
+        ("aggregate, owner, delete", "150a5d77fd92d09a89ae41cbd13d4df2af073370fcbfac295ac328dbe3dcd811"),
+        ("aggregate, owner, anonymise", "9992e4a0010c695fe8588f41fd79a44cf7e8484821fb6d09aab0955b950b5a28"),
+        ("aggregate, shared", "9343f27f9e22ac7579782649be81df902eee11e54975d9e58c11b5d898569ba3"),
+        ("record, owner, delete, the project's first owner feature", "4095d814b7d646e7c05f7e47247299571bb465ff42fcca2739784172cc02a376"),
+        ("record, owner, delete, on SQL Server", "b860dc741ae8f667d2040d0686142da8c28ea71dc8b6fa5ed3dd63bfc1b987db"),
+        ("record, owner, delete, on SQLite", "1d75957a68e4f69951cf2ded9b270e4c0a99618925d6c7bfe8c8d78bdf1e063c"),
+        ("record, owner, delete, without the API", "b70a62dddf7894ba656f379ec52db25138a2c9141d81f07146e345bdc28ed5ba"),
     ];
 
     private static void InstantCases(string scratch, Action<bool, string> expect)
@@ -2012,7 +2012,7 @@ public sealed partial class NewFeatureTests
             expect(
                 digest == recorded,
                 $"[{group}] without --fields, the files, the edits, the manifest and the report are no longer those this "
-                + $"generator wrote before --fields existed: digest {digest}, recorded {recorded}. A change to that output "
+                + $"generator wrote when this digest was recorded: digest {digest}, recorded {recorded}. A change to that output "
                 + "is a change for every project that runs add feature: make it on purpose, then record the new digest.");
         }
 

@@ -24,7 +24,7 @@ internal static class AddFeatureCommand
         Option<string?> operations = GeneratorCommand.Text("--operations", "Of get, list, create, update and delete, comma separated; all five by default. create needs get.");
         Option<string?> model = GeneratorCommand.Text("--model", "record (default): a service over a store. aggregate: one use case per operation over a domain aggregate.");
         Option<string?> concurrency = GeneratorCommand.Text("--concurrency", "none (default): last write wins. etag: a persisted version, ETag and If-Match; aggregate needs it.");
-        Option<string?> fields = GeneratorCommand.Text("--fields", "The fields, Name:type, comma separated, e.g. \"Title:string(120), Notes:text?, Budget:decimal>=0\"; Name and Description by default.");
+        Option<string?> fields = GeneratorCommand.Text("--fields", $"The fields, Name:type, comma separated, e.g. \"Title:string(120), Notes:text?, Budget:decimal>=0\"; \"{NewFeature.DefaultFields}\" by default.");
         Option<bool> dryRun = GeneratorCommand.DryRun("Print the files and the edits, and write and run nothing.");
         feature.Arguments.Add(features);
         feature.Arguments.Add(type);

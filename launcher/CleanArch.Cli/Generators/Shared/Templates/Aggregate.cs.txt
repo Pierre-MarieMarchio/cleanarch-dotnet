@@ -6,7 +6,6 @@ namespace AppTemplate.Domain.Features.Placeholders.Model.Entities;
 
 public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
 {
-#if fields
 //#each field where constants separator "\n\n"
 %field.Constants%
 //#end
@@ -15,11 +14,6 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
 //#each field where decimal separator "\n\n"
     private const decimal %field.Ceiling% = 1e%field.IntegerDigits%m;
 //#end
-#endif
-#else
-    public const int NameMaxLength = 200;
-
-    public const int DescriptionMaxLength = 2_000;
 #endif
 #if anonymisedText
 
@@ -31,35 +25,24 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
 #if owner
         UserId ownerId,
 #endif
-#if fields
 //#each field separator ",\n"
         %field.Type% %field.Parameter%
 //#end ") : base(id)"
-#else
-        string name,
-        string description) : base(id)
-#endif
     {
 #if owner
         ArgumentNullException.ThrowIfNull(ownerId);
 
         OwnerId = ownerId;
 #endif
-#if fields
 //#each field
         %field.Name% = %field.Parameter%;
 //#end
-#else
-        Name = name;
-        Description = description;
-#endif
     }
 
 #if owner
     public UserId OwnerId { get; }
 
 #endif
-#if fields
 #if update
 //#each field separator "\n\n"
     public %field.Type% %field.Name% { get; private set; }
@@ -73,44 +56,23 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
     public %field.Type% %field.Name% { get; }
 //#end
 #endif
-#else
-#if (update || anonymise)
-    public string Name { get; private set; }
-
-    public string Description { get; private set; }
-#else
-    public string Name { get; }
-
-    public string Description { get; }
-#endif
-#endif
 
 #if create
     public static Placeholder Create(
 #if owner
         UserId ownerId,
 #endif
-#if fields
 //#each field separator ",\n"
         %field.Type% %field.Parameter%
 //#end ") =>"
-#else
-        string name,
-        string description) =>
-#endif
         new(
             Guid.CreateVersion7(),
 #if owner
             ownerId,
 #endif
-#if fields
 //#each field separator ",\n"
             %field.Required%
 //#end ");"
-#else
-            RequireName(name),
-            RequireDescription(description));
-#endif
 
 #endif
     public static Placeholder Rehydrate(
@@ -118,14 +80,9 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
 #if owner
         UserId ownerId,
 #endif
-#if fields
 //#each field separator ",\n"
         %field.Type% %field.Parameter%
 //#end ")"
-#else
-        string name,
-        string description)
-#endif
     {
         if (id == Guid.Empty)
         {
@@ -137,18 +94,12 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
 #if owner
             ownerId,
 #endif
-#if fields
 //#each field separator ",\n"
             %field.Parameter%
 //#end ");"
-#else
-            name,
-            description);
-#endif
     }
 
 #if update
-#if fields
     public void Update(/*#each field separator ", "*/%field.Type% %field.Parameter%/*#end*/)
     {
 //#each field where require
@@ -159,62 +110,20 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
         %field.Name% = %field.Validated%;
 //#end
     }
-#else
-    public void Update(string name, string description)
-    {
-        string validName = RequireName(name);
-        string validDescription = RequireDescription(description);
-
-        Name = validName;
-        Description = validDescription;
-    }
-#endif
 
 #endif
 #if anonymise
     public void Anonymise()
     {
-#if fields
 //#each field where anonymised
         %field.Name% = %field.Anonymised%;
 //#end
-#else
-        Name = AnonymisedText;
-        Description = string.Empty;
-#endif
     }
 
 #endif
-#if (takesContent && fields)
+#if takesContent
 //#each field where require separator "\n\n"
 %field.Require%
 //#end
-#endif
-#if (takesContent && !fields)
-    private static string RequireName(string name)
-    {
-        string trimmed = name?.Trim() ?? string.Empty;
-
-        if (trimmed.Length == 0)
-        {
-            throw new DomainException("%An% placeholder name is required.");
-        }
-
-        return trimmed.Length <= NameMaxLength
-            ? trimmed
-            : throw new DomainException($"%An% placeholder name cannot exceed {NameMaxLength} characters.");
-    }
-
-    private static string RequireDescription(string description)
-    {
-        if (description is null)
-        {
-            throw new DomainException("%An% placeholder description is required; it may be empty.");
-        }
-
-        return description.Length <= DescriptionMaxLength
-            ? description
-            : throw new DomainException($"%An% placeholder description cannot exceed {DescriptionMaxLength} characters.");
-    }
 #endif
 }

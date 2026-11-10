@@ -8,6 +8,7 @@ namespace CleanArch.Cli.Generators.AddFeature;
 
 internal static class NewFeature
 {
+    internal const string DefaultFields = "Name:string(200), Description:text(2000)";
 
     internal const string Usage =
         "Usage: dotnet cleanarch add feature <Features> <Feature> --access owner|shared\n"
@@ -30,11 +31,12 @@ internal static class NewFeature
         + "                 aggregate: one use case per operation over a domain aggregate.\n"
         + "  --concurrency  default: none, last write wins. etag: a persisted version, ETag and If-Match.\n"
         + "                 aggregate needs etag.\n"
-        + "  --fields       default: Name and Description. The fields, Name:type, comma separated; a type is\n"
-        + "                 string(n) (n up to 400), text or text(n) (2000 by default, up to 65536), int, long,\n"
-        + "                 decimal or decimal(p,s) (18,2 by default), bool, DateOnly, DateTimeOffset or Guid;\n"
-        + "                 ? after it makes the field nullable, and >=, <=, > or < with a number bounds an int,\n"
-        + "                 a long or a decimal: --fields \"Title:string(120), Notes:text?, Budget:decimal>=0\".\n"
+        + $"  --fields       default: \"{DefaultFields}\". The fields, Name:type,\n"
+        + "                 comma separated; a type is string(n) (n up to 400), text or text(n) (2000 by default,\n"
+        + "                 up to 65536), int, long, decimal or decimal(p,s) (18,2 by default), bool, DateOnly,\n"
+        + "                 DateTimeOffset or Guid; ? after it makes the field nullable, and >=, <=, > or < with\n"
+        + "                 a number bounds an int, a long or a decimal:\n"
+        + "                 --fields \"Title:string(120), Notes:text?, Budget:decimal>=0\".\n"
         + "                 Each field is checked by the validator and by the aggregate, stored in a column of\n"
         + "                 its length or precision, and carried by the contracts and the tests.\n"
         + "  --dry-run      print the files and the edits, and write and run nothing.\n"
@@ -74,9 +76,9 @@ internal static class NewFeature
         CheckChoices(model, concurrency, problems);
 
         string[]? operations = ParseOperations(request.Operations, problems);
-        var fields = request.Fields is null ? null : FieldGrammar.Parse(request.Fields, FieldProfile.Feature, problems);
+        var fields = FieldGrammar.Parse(request.Fields ?? DefaultFields, FieldProfile.Feature, problems);
 
-        if (problems.Count > 0 || operations is null)
+        if (problems.Count > 0 || operations is null || fields is null)
         {
             return null;
         }
@@ -369,17 +371,14 @@ internal static class NewFeature
             problems.Add($"'{folder}' already exists. A feature is scaffolded once; after that it is edited.");
         }
 
-        if (spec.Fields is { } fields)
-        {
-            problems.AddRange(FieldCode.Conflicts(
-                fields,
-                spec.Features,
-                spec.Type,
-                plan.Select(emission => System.IO.Path.GetFileNameWithoutExtension(emission.Path)),
-                spec.Deletion,
-                spec.Access == "owner",
-                spec.Has("list")));
-        }
+        problems.AddRange(FieldCode.Conflicts(
+            spec.Fields,
+            spec.Features,
+            spec.Type,
+            plan.Select(emission => System.IO.Path.GetFileNameWithoutExtension(emission.Path)),
+            spec.Deletion,
+            spec.Access == "owner",
+            spec.Has("list")));
 
         string manifest = ManifestPath(spec);
 

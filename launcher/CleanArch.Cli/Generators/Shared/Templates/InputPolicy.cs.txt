@@ -2,13 +2,7 @@ namespace AppTemplate.Application.Features.Placeholders.Model.Policies;
 
 public static class PlaceholderInputPolicy
 {
-#if fields
 //#each field where constants separator "\n\n"
 %field.Constants%
 //#end
-#else
-    public const int NameMaxLength = 200;
-
-    public const int DescriptionMaxLength = 2_000;
-#endif
 }

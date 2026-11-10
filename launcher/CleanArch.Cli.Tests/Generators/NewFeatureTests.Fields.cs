@@ -237,13 +237,14 @@ public sealed partial class NewFeatureTests
 
         Invoke(root, "Things", "Thing", "--access", "owner", "--deletion", "anonymise", "--model", "aggregate", "--concurrency", "etag", "--fields", _existingFields);
         Invoke(root, "Plains", "Plain", "--access", "shared");
+        WithoutRecordedFields(root, "Plains");
         Directory.CreateDirectory(System.IO.Path.Combine(root, "src/Application/A.Application/Features/Notes"));
 
         (string[] Args, string Fragment)[] refusals =
         [
             (["Notes", "Budget:decimal=0"], "it was written by hand, as the project's example features (TodoLists, Notes and the others) are"),
             (["Gizmos", "Budget:decimal=0"], "No feature called Gizmos"),
-            (["Plains", "Budget:decimal=0"], "Plains was generated without --fields"),
+            (["Plains", "Budget:decimal=0"], "Plains.json records no fields: an earlier version of add feature wrote Plains without --fields"),
             (["things", "Budget:decimal=0"], "is not a feature's folder"),
             (["Things", "Budget:decimal"], "Budget cannot be null, and the rows the table already holds need a value for it: give one its rules accept after '=', as Budget:decimal(18,2)=0"),
             (["Things", "Due:DateOnly"], "as Due:DateOnly='2026-01-01'"),
@@ -291,6 +292,23 @@ public sealed partial class NewFeatureTests
         expect(
             onFeature.Code == 1 && onFeature.Error.Contains("is what add field gives the rows a table already holds", StringComparison.Ordinal),
             $"new-feature --fields took a default, which only new-field gives: {onFeature.Error.Split('\n')[0]}");
+
+        string drafts = FieldTree(scratch);
+        var created = Invoke(drafts, "Drafts", "Draft", "--access", "shared");
+        var onDrafts = InvokeField(drafts, Recording([]), "Drafts", "Budget:decimal=0", "--dry-run");
+
+        expect(
+            created.Code == 0 && onDrafts.Code == 0,
+            $"add field refused a feature add feature wrote without --fields: {created.Error}{onDrafts.Error.Split('\n')[0]}");
+    }
+
+    private static void WithoutRecordedFields(string root, string features)
+    {
+        string path = System.IO.Path.Combine(root, FeatureManifest.PathOf(features));
+        var manifest = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+
+        manifest.Remove("fields");
+        File.WriteAllText(path, manifest.ToJsonString());
     }
 
     private static void ManifestIdentityCases(string scratch, Action<bool, string> expect)

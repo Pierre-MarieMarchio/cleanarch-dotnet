@@ -10,14 +10,10 @@ using Mediator;
 
 namespace AppTemplate.Application.Features.Placeholders.UseCases.Commands.CreatePlaceholder;
 
-#if fields
 public sealed record CreatePlaceholderCommand(
 //#each field separator ",\n"
     %field.Type% %field.Name%
 //#end ") : ICommand<Result<Versioned<PlaceholderDto>>>;"
-#else
-public sealed record CreatePlaceholderCommand(string Name, string Description) : ICommand<Result<Versioned<PlaceholderDto>>>;
-#endif
 
 public sealed class CreatePlaceholderCommandHandler(
     IPlaceholderRepository repository,
@@ -37,11 +33,7 @@ public sealed class CreatePlaceholderCommandHandler(
             return userId.To<Versioned<PlaceholderDto>>();
         }
 
-#if fields
         var created = DomainGuard.Try(() => Placeholder.Create(%SvcOwner%/*#each field separator ", "*/command.%field.Name%/*#end*/));
-#else
-        var created = DomainGuard.Try(() => Placeholder.Create(%SvcOwner%command.Name, command.Description));
-#endif
 
         if (created.IsFailure)
         {

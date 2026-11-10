@@ -100,8 +100,6 @@ internal static class FeatureTemplates
 
     internal static string Queries => Read(nameof(Queries));
 
-    internal static string SortMap => Read(nameof(SortMap));
-
     internal static string CreateRequest => Read(nameof(CreateRequest));
 
     internal static string UpdateRequest => Read(nameof(UpdateRequest));
@@ -116,17 +114,9 @@ internal static class FeatureTemplates
 
     internal static string Controller => Read(nameof(Controller));
 
-    internal static string ContentValidatorTests => Read(nameof(ContentValidatorTests));
-
-    internal static string CommandValidatorTests => Read(nameof(CommandValidatorTests));
-
     internal static string ServiceTests => Read(nameof(ServiceTests));
 
-    internal static string AggregateTests => Read(nameof(AggregateTests));
-
     internal static string ConfigurationTests => Read(nameof(ConfigurationTests));
-
-    internal static string MapperFidelityTests => Read(nameof(MapperFidelityTests));
 
     internal static string FieldContentValidatorTests => Read(nameof(FieldContentValidatorTests));
 

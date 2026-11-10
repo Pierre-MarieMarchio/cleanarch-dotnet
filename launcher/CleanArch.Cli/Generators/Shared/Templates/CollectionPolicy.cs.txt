@@ -5,13 +5,9 @@ namespace AppTemplate.Application.Features.Placeholders.Model.Policies;
 
 public sealed class PlaceholderCollectionPolicy : ICollectionPolicy
 {
-#if fields
 //#each field where sortable separator "\n\n"
     public const string %field.Name%Field = "%field.Parameter%";
 //#end
-#else
-    public const string NameField = "name";
-#endif
 
     public const string CreatedAtField = "createdAt";
 
@@ -19,13 +15,9 @@ public sealed class PlaceholderCollectionPolicy : ICollectionPolicy
 
     public IReadOnlyList<SortableField> SortableFields { get; } =
     [
-#if fields
 //#each field where sortable
         SortableField.%field.Sorting%(%field.Name%Field),
 //#end
-#else
-        SortableField.Keyset(NameField),
-#endif
         SortableField.Keyset(CreatedAtField),
     ];
 

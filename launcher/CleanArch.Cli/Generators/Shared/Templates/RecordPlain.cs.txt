@@ -8,15 +8,9 @@ internal sealed class PlaceholderRecord
     public Guid OwnerId { get; set; }
 
 #endif
-#if fields
 //#each field separator "\n\n"
 %field.RecordProperty%
 //#end
-#else
-    public string Name { get; set; } = string.Empty;
-
-    public string Description { get; set; } = string.Empty;
-#endif
 
     public DateTimeOffset CreatedAt { get; set; }
 
