@@ -297,6 +297,10 @@ skip the smoke.
 CI installs Chromium in the `end-to-end` job and caches it by the Playwright release the lockfile
 resolves.
 <!--#endif-->
+<!--#if (gitlabCi)-->
+CI installs Chromium in the `end-to-end` job and caches it by the browser smoke's `package.json`,
+which pins the Playwright release.
+<!--#endif-->
 <!--#endif-->
 
 ## Coverage

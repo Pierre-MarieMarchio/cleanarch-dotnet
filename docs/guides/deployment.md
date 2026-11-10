@@ -30,8 +30,8 @@ A file has one writer at a time, its locks live in the process that opened it, a
 fewer than a server's: a project that started anywhere would meet these limits in production, under
 load, rather than on its first start. The host throws at composition when its environment is not
 `Development`, with a message that names the way out, and no setting lifts the refusal: every
-deployment would set it, and the refusal would stop saying anything. No release workflow and no
-migration bundle are generated, since there is nothing to deploy.
+deployment would set it, and the refusal would stop saying anything. Nothing is released and no
+migration bundle is generated, since there is nothing to deploy.
 
 To deploy, generate the project again with `--database postgresql` or `sqlserver`, move the
 features' code across, and let `bootstrap` create the migrations for the new provider. The domain and

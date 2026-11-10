@@ -17,7 +17,13 @@ once, right after generation and bootstrap.
 | <!--#if (githubHost)--> |
 | In a subdirectory, such as `services/api/` | copy the tree there; the host keeps its own root files | the host's `global.json` learns the test runner; the workflows move to the git root |
 | <!--#endif--> |
-| <!--#if (!githubHost)--> |
+| <!--#if (gitlabCi)--> |
+| In a subdirectory, such as `services/api/` | copy the tree there; the host keeps its own root files | the host's `global.json` learns the test runner; the pipeline and the `.gitlab` folder move to the git root |
+| <!--#endif--> |
+| <!--#if (gitlabHost && !ci)--> |
+| In a subdirectory, such as `services/api/` | copy the tree there; the host keeps its own root files | the host's `global.json` learns the test runner; the `.gitlab` folder moves to the git root |
+| <!--#endif--> |
+| <!--#if (!anyCodeHost)--> |
 | In a subdirectory, such as `services/api/` | copy the tree there; the host keeps its own root files | the host's `global.json` learns the test runner |
 | <!--#endif--> |
 
@@ -25,10 +31,10 @@ Take the root unless the repository must hold more than this service. At the roo
 are the ones a host is likely to have already: `README.md`, `.gitignore`, `global.json`,
 `Directory.Build.props`, `Directory.Packages.props` and `.editorconfig`.
 
-<!--#if (githubCi)-->
+<!--#if (githubCi || gitlabCi)-->
 Three facts decide the subdirectory shape:
 <!--#endif-->
-<!--#if (!githubCi)-->
+<!--#if (!githubCi && !gitlabCi)-->
 Two facts decide the subdirectory shape:
 <!--#endif-->
 
@@ -39,6 +45,9 @@ Two facts decide the subdirectory shape:
   do not reach the host's.
 <!--#if (githubCi)-->
 - GitHub reads workflows from `.github/workflows` at the git root only.
+<!--#endif-->
+<!--#if (gitlabCi)-->
+- GitLab reads the pipeline from `.gitlab-ci.yml` at the git root only, and a job runs there.
 <!--#endif-->
 
 ## In a subdirectory, step by step
@@ -88,7 +97,48 @@ Two facts decide the subdirectory shape:
 5. Keep Compose in the subdirectory. Its build contexts are relative to the compose file, so nothing
    needs re-pointing; copy `.env.example` to `.env` beside it.
 <!--#endif-->
-<!--#if (!githubHost)-->
+<!--#if (gitlabCi)-->
+3. Move the pipeline to the git root, under a folder of its own if the host has its own pipeline:
+
+   ```bash
+   mkdir -p .gitlab/ci/api
+   mv services/api/.gitlab-ci.yml        .gitlab/ci/api.yml
+   <!--#if (serverDatabase)-->
+   mv services/api/.gitlab/ci/release.yml .gitlab/ci/api/release.yml
+   <!--#endif-->
+   ```
+
+<!--#endif-->
+<!--#if (gitlabCi && anyWeb)-->
+   Move `.gitlab/ci/web.yml` the same way.
+
+<!--#endif-->
+<!--#if (gitlabCi)-->
+   Without a pipeline of the host's own, the root file moves to `.gitlab-ci.yml` instead. With one,
+   the host's includes it:
+
+   ```yaml
+   include:
+     - local: .gitlab/ci/api.yml
+   ```
+
+   A project runs one pipeline, so merge its `stages:`, its `workflow:` rules and GitLab's SAST and
+   Secret Detection templates into the host's rather than keep two of each. Each `local:` include and
+   its `exists:` rule names its file's new place, and a job runs from the git root, so prefix every
+   other path the pipeline names (the solution, the cache keys' files, `.config/dotnet-tools.json`,
+   `coverage.minimum`, `global.json`) with the subdirectory.
+
+<!--#endif-->
+<!--#if (gitlabHost)-->
+4. Move `.gitlab/merge_request_templates` and `.gitlab/issue_templates` to the git root, beside the
+   host's own, which GitLab reads from there only. Merge `.gitlab/renovate.jsonc` into the host's
+   Renovate configuration, at the git root, each `matchFileNames` entry prefixed with the
+   subdirectory. Renovate reads that one file only.
+
+5. Keep Compose in the subdirectory. Its build contexts are relative to the compose file, so nothing
+   needs re-pointing; copy `.env.example` to `.env` beside it.
+<!--#endif-->
+<!--#if (!anyCodeHost)-->
 3. Keep Compose in the subdirectory. Its build contexts are relative to the compose file, so nothing
    needs re-pointing; copy `.env.example` to `.env` beside it.
 <!--#endif-->
