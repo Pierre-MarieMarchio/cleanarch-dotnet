@@ -20,7 +20,8 @@ internal static class NewField
         + "  formatting; a member changed by hand since add feature wrote it, or missing, writes nothing and prints the\n"
         + "  change to make by hand. It refuses while a context has no initial migration or the business model has a\n"
         + "  change no migration holds, then builds, adds the Add<Field>To<Features> migration with each default, and\n"
-        + "  rewrites the OpenAPI reference and the clients written from it.";
+        + "  rewrites the OpenAPI reference and the clients written from it. It renders from the same code templates as\n"
+        + "  add feature, the project's copies under code-templates/add-feature included.";
 
     internal static int Run(AddFieldRequest request, GenerationContext context)
     {
