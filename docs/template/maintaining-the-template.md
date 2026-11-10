@@ -919,11 +919,20 @@ model with the subset of each field profile. A change to a shared unit is made t
 `Template.Render`, in `launcher/CleanArch.Cli/Generators/Shared/Template.cs`, renders a generator's
 template in two passes. The first is `Microsoft.TemplateEngine.Core`, the engine behind `dotnet new`,
 run in the tool's process: it keeps the lines of the `#if`, `#elif` and `#else` branches the
-generation's flags select, and replaces the reference names `AppTemplate`, `Placeholders`,
-`Placeholder` and `placeholder` by the project, feature, aggregate and lowered aggregate names. The
-second is the tool's own: its `%if%` directives, its `%Token%` substitution, the pruning of unused
-usings, and the tidying of blank lines. The BOM and the line endings are fixed afterwards, by
+generation's flags select. `Template.ReplaceReferenceNames` then replaces the reference names
+`AppTemplate`, `Placeholders`, `Placeholder` and `placeholder` by the project, feature, aggregate and
+lowered aggregate names, in the text as in the path a template is kept at. The second is the tool's
+own: its `%if%` directives, its `%Token%` substitution, the pruning of unused usings, and the
+tidying of blank lines. The BOM and the line endings are fixed afterwards, by
 `TextEdits`, so a generated file is the same bytes as before.
+
+The templates of `add feature`, which `add field` writes from too, are under
+`launcher/CleanArch.Cli/code-templates/add-feature`, each at the path `add feature` writes its file
+at in this checkout, for the feature `Placeholders` of the type `Placeholder`, with `.txt` added:
+`launcher/CleanArch.Cli/code-templates/add-feature/src/Domain/AT.Domain/Features/Placeholders/Model/Entities/Placeholder.cs.txt`
+is the aggregate's, and a file written into each host is kept at the API's path. The tool embeds
+each under that path and derives from it the path it writes: the generation's project folder in
+place of `AT.<Part>`, then the reference names replaced as in the text.
 
 A template written with `#if` and the reference names is C# that a compiler reads, where one written
 with `%if%` and `%Token%` is not. This is why the engine is this one and not a subprocess of
@@ -964,6 +973,7 @@ replaces.
 |---|---|
 | An `#if` naming an unknown flag, or joining flags without parentheses around the whole condition, is refused; each of `#if`, `#elif` and `#else` keeps only its own lines and the reference names are replaced; a block writes its lines once per field it keeps, joined by its separator and followed by its tail, and one naming an unknown token, or left open, is refused | `NewFeatureTests.TemplateGuard` |
 | The output of `add feature` does not change when a template changes its form | `NewFeatureTests.WithoutFields` |
+| Every template of `add feature` is written by a configuration the digests cover, or by the reaction of a project signed in through an external provider | `NewFeatureTests.EveryTemplateIsWritten` |
 | Every C# file `add feature` and `add field` write, over the configurations the digests cover, parses without a syntax error | `NewFeatureTests.GeneratedCodeParses` |
 
 ## The package
@@ -1060,7 +1070,7 @@ which holds five more projects. Generation and the template package leave the fo
 | Project | What it is |
 |---|---|
 | `launcher/CleanArch.Tooling` | the library both tools share, never packed on its own: running a process and its verbatim output, the terminal, the templates' manifests with the evaluation of their refusals, and the questions asked from them; its tests are in `launcher/CleanArch.Tooling.Tests` |
-| `launcher/CleanArch.Cli` | the .NET tool `dotnet cleanarch`, packed as `CleanArch.Cli` at the same `templateVersion`, which finds a project by the project file at its root: `BuiltInCommands.cs` lists every command, and the ones that stay the tool's each have a folder, `launcher/CleanArch.Cli/Eject` with the source it ships and `launcher/CleanArch.Cli/UpgradeReport` reading template packages through `CleanArch.Tooling`; `launcher/CleanArch.Cli/Joins` holds the join steps `add` runs, which are not commands. `launcher/CleanArch.Cli/Generators` holds one folder per generator, its command, request, plan, edits, report and templates, over `launcher/CleanArch.Cli/Generators/Shared`, the pipeline every generator runs and the code they share, which references no generator; its tests are in `launcher/CleanArch.Cli.Tests`, whose `launcher/CleanArch.Cli.Tests/Architecture` holds the launcher's boundaries: no command or generator references another, `Kernel` and `Shared` reference none, `CleanArch.Cli.Commands` references System.CommandLine alone, and only the two process launchers call `Process.Start` |
+| `launcher/CleanArch.Cli` | the .NET tool `dotnet cleanarch`, packed as `CleanArch.Cli` at the same `templateVersion`, which finds a project by the project file at its root: `BuiltInCommands.cs` lists every command, and the ones that stay the tool's each have a folder, `launcher/CleanArch.Cli/Eject` with the source it ships and `launcher/CleanArch.Cli/UpgradeReport` reading template packages through `CleanArch.Tooling`; `launcher/CleanArch.Cli/Joins` holds the join steps `add` runs, which are not commands. `launcher/CleanArch.Cli/Generators` holds one folder per generator, its command, request, plan, edits, report and templates, over `launcher/CleanArch.Cli/Generators/Shared`, the pipeline every generator runs and the code they share, which references no generator, and `launcher/CleanArch.Cli/code-templates` the templates of `add feature` ([the template engine](#the-template-engine)); its tests are in `launcher/CleanArch.Cli.Tests`, whose `launcher/CleanArch.Cli.Tests/Architecture` holds the launcher's boundaries: no command or generator references another, `Kernel` and `Shared` reference none, `CleanArch.Cli.Commands` references System.CommandLine alone, and only the two process launchers call `Process.Start` |
 | `launcher/CleanArch.Cli.Commands` | the commands `eject` can copy into a project, never packed on its own: it references System.CommandLine alone, since an ejected command is a file-based app that declares nothing else. Each command has a folder and a namespace of its own and references no other; `launcher/CleanArch.Cli.Commands/Hosting` holds the root command, the registration and the context, and `launcher/CleanArch.Cli.Commands/Kernel` what the commands share, the process launcher the context carries and every external call among it, the documentation index and the scaffold steps `bootstrap` runs, referencing neither the commands nor `Hosting`. `CleanArch.Cli` composes them with the ones that stay the tool's, and ships the source of every folder, which eject merges into one namespace |
 
 [Template decision 0003](decisions/0003-a-project-runs-its-tasks-from-a-pinned-dotnet-tool.md) says

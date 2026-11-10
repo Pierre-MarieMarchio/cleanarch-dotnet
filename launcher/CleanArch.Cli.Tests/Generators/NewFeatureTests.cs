@@ -156,6 +156,16 @@ public sealed partial class NewFeatureTests
         return root;
     }
 
+    private static string ExternallyAuthenticatedTree(string scratch)
+    {
+        string root = NewTree(scratch, reaction: false);
+
+        Directory.Delete(System.IO.Path.Combine(root, "src/Presentation/A.Api/Features/Auth"), recursive: true);
+        Put(root, "src/Presentation/A.Api/Features/ExternalIdentity/Composition/ExternalAuthenticationComposition.cs", "        services.AddExternalIdentityPersistence(configuration);\n");
+
+        return root;
+    }
+
     private static void Put(string root, string relative, string content)
     {
         string full = System.IO.Path.Combine(root, relative);
@@ -1324,11 +1334,7 @@ public sealed partial class NewFeatureTests
         expect(!File.Exists(System.IO.Path.Combine(other, "src/Application/A.Application.Core/Common/Ports/IDeletedAccountDataPolicy.cs")), "A shared feature brought the reaction with it.");
         expect(shared.Output.Contains("Six edits", StringComparison.Ordinal), "A shared feature was told to edit more than six places.");
 
-        string external = NewTree(scratch, reaction: false);
-
-        Directory.Delete(System.IO.Path.Combine(external, "src/Presentation/A.Api/Features/Auth"), recursive: true);
-        Put(external, "src/Presentation/A.Api/Features/ExternalIdentity/Composition/ExternalAuthenticationComposition.cs", "        services.AddExternalIdentityPersistence(configuration);\n");
-
+        string external = ExternallyAuthenticatedTree(scratch);
         var externalTree = Snapshot(external);
         var mapped = Invoke(external, "Widgets", "Widget", "--access", "owner", "--deletion", "delete");
 
@@ -2121,7 +2127,9 @@ public sealed partial class NewFeatureTests
         expect(Refuses(() => Template.Render("namespace N;\n#if get || list\n#endif", get, names)), "An #if joining flags without parentheses around the whole condition was rendered, though the engine then reads only its first flag.");
         expect(Template.Render("namespace N;\n#if (list || get)\nclass Kept;\n#endif\n", get, names) == "namespace N;\nclass Kept;\n", "An #if joining flags with || did not hold when only its second flag did.");
         expect(
-            !Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(FeatureTemplates.Errors).GetDiagnostics().Any(),
+            !Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(ToolTemplates.Of(ToolTemplates.AddFeature)["src/Application/AT.Application/Features/Placeholders/Model/Errors/PlaceholderErrors.cs"])
+                .GetDiagnostics()
+                .Any(),
             "The Errors template is no longer valid C#, which its compilable form promises.");
 
         var fields = FieldBlocks.For(FieldGrammar.Parse("Title:string(120), Size:int, Notes:text?", FieldProfile.Feature, [])!, []);
@@ -2220,17 +2228,15 @@ public sealed partial class NewFeatureTests
         TimeSpan.FromSeconds(2));
 
     private static readonly Lazy<HashSet<string>> _templatePrivateMethods = new(() =>
-        [.. typeof(FeatureTemplates)
-            .GetProperties(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
-            .Where(property => property.PropertyType == typeof(string))
-            .SelectMany(property => _privateMethodDeclaration.Matches((string)property.GetValue(null)!))
+        [.. ToolTemplates.Of(ToolTemplates.AddFeature).Values
+            .SelectMany(template => _privateMethodDeclaration.Matches(template))
             .Select(match => match.Groups[1].Value.Replace("%", string.Empty, StringComparison.Ordinal))]);
 
     private static IEnumerable<string> PrivateMethodProblems(string relative, string text)
     {
         if (_templatePrivateMethods.Value.Count == 0)
         {
-            yield return "No feature template declares a private method, so the dead-code rule compares nothing: read the templates where FeatureTemplates keeps them.";
+            yield return "No feature template declares a private method, so the dead-code rule compares nothing: read the templates where ToolTemplates keeps them.";
         }
 
         var declared = _privateMethodDeclaration.Matches(text)

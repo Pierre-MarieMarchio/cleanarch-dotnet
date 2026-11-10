@@ -24,6 +24,11 @@ internal static class Template
         ("AppTemplate", "P"), ("Placeholders", "F"), ("Placeholder", "A"), ("placeholder", "L"),
     ];
 
+    private static readonly Regex _referenceName = new(
+        string.Join('|', _referenceNames.Select(reference => reference.Name)),
+        RegexOptions.None,
+        TimeSpan.FromSeconds(2));
+
     private static readonly ConditionalTokens _preprocessor = new()
     {
         IfTokens = new[] { "#if" }.TokenConfigs(),
@@ -68,7 +73,7 @@ internal static class Template
             return flags.Contains(name) != negated;
         }));
 
-    internal static string Substitute(string text, Dictionary<string, string> tokens)
+    private static string Substitute(string text, Dictionary<string, string> tokens)
     {
         for (int pass = 0; pass < 3; pass++)
         {
@@ -86,6 +91,11 @@ internal static class Template
 
         return text;
     }
+
+    internal static string ReplaceReferenceNames(string text, Dictionary<string, string> tokens) =>
+        _referenceName.Replace(
+            text,
+            match => tokens.TryGetValue(_referenceNames.First(reference => reference.Name == match.Value).Token, out string? value) ? value : match.Value);
 
     internal static string Render(string template, HashSet<string> flags, Dictionary<string, string> tokens, TemplateList? list = null)
     {
@@ -161,25 +171,17 @@ internal static class Template
             variables[flag] = flags.Contains(flag);
         }
 
-        var operations = new List<IOperationProvider>
-        {
+        IOperationProvider[] operations =
+        [
             new Conditional(_preprocessor, wholeLine: true, trimWhitespace: true, CppStyleEvaluatorDefinition.Evaluate, id: null, initialState: true),
-        };
-
-        foreach (var (name, token) in _referenceNames)
-        {
-            if (tokens.TryGetValue(token, out string? value))
-            {
-                operations.Add(new Replacement(name.TokenConfig(), value, id: null, initialState: true));
-            }
-        }
+        ];
 
         using var source = new MemoryStream(_utf8.GetBytes(template));
         using var target = new MemoryStream();
 
         Processor.Create(new EngineConfig(NullLogger.Instance, variables), operations).Run(source, target);
 
-        return _utf8.GetString(target.ToArray());
+        return ReplaceReferenceNames(_utf8.GetString(target.ToArray()), tokens);
     }
 
     private static string PruneUsings(string text)

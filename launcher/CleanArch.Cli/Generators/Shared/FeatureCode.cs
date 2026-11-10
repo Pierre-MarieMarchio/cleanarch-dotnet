@@ -127,6 +127,16 @@ internal static class FeatureCode
 
     internal static string ProjectInFolder(string prefix, string folder) => prefix + folder[Initials(prefix).Length..];
 
+    internal static string PathOf(FeatureSpec spec, string reference, string? host, Dictionary<string, string> tokens)
+    {
+        string[] segments = reference.Split('/');
+        string part = segments[2][FolderOf(ReferenceProduct, string.Empty).Length..];
+
+        segments[2] = host ?? FolderOf(spec.Prefix, part);
+
+        return Template.ReplaceReferenceNames(string.Join('/', segments), tokens);
+    }
+
     internal static List<Emission> Plan(FeatureSpec spec, string root, out List<string> skippedTestProjects)
     {
         var plan = new PlanWriter(spec, root);
@@ -417,11 +427,31 @@ internal static class FeatureCode
 
     private sealed class PlanWriter(FeatureSpec spec, string root)
     {
-        private const string _feature = "Features/%F%";
+        private const string _core = "src/Application/AT.Application.Core";
 
-        private const string _queries = $"{_feature}/UseCases/Queries";
+        private const string _host = "src/Presentation/AT.Api";
 
-        private const string _commands = $"{_feature}/UseCases/Commands";
+        private const string _domain = "src/Domain/AT.Domain/Features/Placeholders";
+
+        private const string _application = "src/Application/AT.Application/Features/Placeholders";
+
+        private const string _queries = $"{_application}/UseCases/Queries";
+
+        private const string _commands = $"{_application}/UseCases/Commands";
+
+        private const string _persistence = "src/Infrastructure/AT.Infrastructure.Persistence/Features/Placeholders";
+
+        private const string _api = $"{_host}/Features/Placeholders";
+
+        private const string _applicationTests = "tests/Application/AT.Application.UnitTests/Features/Placeholders";
+
+        private const string _domainTests = "tests/Domain/AT.Domain.UnitTests/Features/Placeholders";
+
+        private const string _persistenceTests = "tests/Infrastructure/AT.Infrastructure.Persistence.UnitTests/Features/Placeholders";
+
+        private const string _integrationTests = "tests/Integration/AT.Api.IntegrationTests/Features/Placeholders";
+
+        private readonly IReadOnlyDictionary<string, string> _templates = ToolTemplates.Of(ToolTemplates.AddFeature);
 
         private readonly HashSet<string> _flags = Flags(spec);
 
@@ -435,123 +465,108 @@ internal static class FeatureCode
 
         internal void Reaction(string adapter)
         {
-            string core = ProjectOf(spec, "src/Application", "Application.Core");
             string jobsHost = JobsHost(root, spec.Prefix);
             var jobs = new Dictionary<string, string>(StringComparer.Ordinal) { ["J"] = ProjectInFolder(spec.Prefix, jobsHost) };
 
-            Add(core, "Common/Ports/IDeletedAccountDataPolicy.cs", FeatureTemplates.DeletedAccountDataPolicy);
-            Add(core, "Common/Ports/IUserAccountDirectory.cs", FeatureTemplates.UserAccountDirectory);
-            Add(core, "Features/DeletedAccounts/UseCases/Commands/SweepDeletedAccountData/SweepDeletedAccountData.cs", FeatureTemplates.SweepUseCase);
-            Add($"src/Presentation/{jobsHost}", "Features/BackgroundJobs/Jobs/DeletedAccountSweepJobsExtensions.cs", FeatureTemplates.DeletedAccountSweepJobs, extra: jobs);
-            Add($"src/Presentation/{jobsHost}", "Features/BackgroundJobs/Jobs/DeletedAccountSweepOptions.cs", FeatureTemplates.DeletedAccountSweepOptions, extra: jobs);
+            Add($"{_core}/Common/Ports/IDeletedAccountDataPolicy.cs");
+            Add($"{_core}/Common/Ports/IUserAccountDirectory.cs");
+            Add($"{_core}/Features/DeletedAccounts/UseCases/Commands/SweepDeletedAccountData/SweepDeletedAccountData.cs");
+            Add($"{_host}/Features/BackgroundJobs/Jobs/DeletedAccountSweepJobsExtensions.cs", extra: jobs, host: jobsHost);
+            Add($"{_host}/Features/BackgroundJobs/Jobs/DeletedAccountSweepOptions.cs", extra: jobs, host: jobsHost);
 
-            var (relative, template) = adapter == "Auth"
-                ? ("Features/Auth/Composition/AccountUserAccountDirectory.cs", FeatureTemplates.LocalUserAccountDirectory)
-                : ("Features/ExternalIdentity/Composition/ExternalIdentityUserAccountDirectory.cs", FeatureTemplates.ExternalUserAccountDirectory);
+            string directory = adapter == "Auth"
+                ? $"{_host}/Features/Auth/Composition/AccountUserAccountDirectory.cs"
+                : $"{_host}/Features/ExternalIdentity/Composition/ExternalIdentityUserAccountDirectory.cs";
 
             foreach (string host in ComposingHosts(root, spec))
             {
                 var named = new Dictionary<string, string>(StringComparer.Ordinal) { ["H"] = ProjectInFolder(spec.Prefix, host) };
 
-                Add($"src/Presentation/{host}", relative, template, extra: named);
+                Add(directory, extra: named, host: host);
             }
         }
 
         internal void Domain()
         {
-            string domain = ProjectOf(spec, "src/Domain", "Domain");
-
-            Add(domain, $"{_feature}/Model/Entities/%A%.cs", FeatureTemplates.Aggregate, "agg");
-            Add(domain, $"{_feature}/Repositories/I%A%Repository.cs", FeatureTemplates.RepositoryPort, "agg&wq");
+            Add($"{_domain}/Model/Entities/Placeholder.cs", "agg");
+            Add($"{_domain}/Repositories/IPlaceholderRepository.cs", "agg&wq");
         }
 
         internal void Application()
         {
-            string application = ProjectOf(spec, "src/Application", "Application");
-
-            Add(application, $"{_feature}/Model/Dtos/%A%ContentDto.cs", FeatureTemplates.ContentDto, "rec&content");
-            Add(application, $"{_feature}/Model/Dtos/%A%Dto.cs", FeatureTemplates.Dto, "dto");
-            Add(application, $"{_feature}/Model/Dtos/%A%SummaryDto.cs", FeatureTemplates.SummaryDto, "list");
-            Add(application, $"{_feature}/Model/Dtos/%A%ListQueryDto.cs", FeatureTemplates.ListQuery, "rec&list");
-            Add(application, $"{_feature}/Model/Errors/%A%Errors.cs", FeatureTemplates.Errors, "notfound");
-            Add(application, $"{_feature}/Model/Policies/%A%CollectionPolicy.cs", FeatureTemplates.CollectionPolicy, "list");
-            Add(application, $"{_feature}/Model/Policies/%A%InputPolicy.cs", FeatureTemplates.InputPolicy, "rec&policy");
-            Add(application, $"{_feature}/Ports/%A%Queries/I%A%Queries.cs", FeatureTemplates.QueriesPort, "rq");
-            Add(application, $"{_feature}/Ports/%A%Queries/%A%Filter.cs", FeatureTemplates.Filter, "list");
-            Add(application, $"{_feature}/Ports/%A%Store/I%A%Store.cs", FeatureTemplates.StorePort, "rec&stage");
-            Add(application, $"{_feature}/Ports/%A%Store/%A%ChangeStatus.cs", FeatureTemplates.ChangeStatus, "rec&change");
-            Add(application, $"{_feature}/Model/Mapping/%A%DtoMapping.cs", FeatureTemplates.DtoMapping, "agg&content");
-            Add(application, $"{_feature}/Services/I%A%Service.cs", FeatureTemplates.ServicePort, "rec|agg&change");
-            Add(application, $"{_feature}/Services/%A%Service.cs", FeatureTemplates.Service, "rec|agg&change");
-            Add(application, $"{_feature}/Model/Dtos/%A%ContentDtoValidator.cs", FeatureTemplates.ContentValidator, "rec&content");
+            Add($"{_application}/Model/Dtos/PlaceholderContentDto.cs", "rec&content");
+            Add($"{_application}/Model/Dtos/PlaceholderDto.cs", "dto");
+            Add($"{_application}/Model/Dtos/PlaceholderSummaryDto.cs", "list");
+            Add($"{_application}/Model/Dtos/PlaceholderListQueryDto.cs", "rec&list");
+            Add($"{_application}/Model/Errors/PlaceholderErrors.cs", "notfound");
+            Add($"{_application}/Model/Policies/PlaceholderCollectionPolicy.cs", "list");
+            Add($"{_application}/Model/Policies/PlaceholderInputPolicy.cs", "rec&policy");
+            Add($"{_application}/Ports/PlaceholderQueries/IPlaceholderQueries.cs", "rq");
+            Add($"{_application}/Ports/PlaceholderQueries/PlaceholderFilter.cs", "list");
+            Add($"{_application}/Ports/PlaceholderStore/IPlaceholderStore.cs", "rec&stage");
+            Add($"{_application}/Ports/PlaceholderStore/PlaceholderChangeStatus.cs", "rec&change");
+            Add($"{_application}/Model/Mapping/PlaceholderDtoMapping.cs", "agg&content");
+            Add($"{_application}/Services/IPlaceholderService.cs", "rec|agg&change");
+            Add($"{_application}/Services/PlaceholderService.cs", "rec|agg&change");
+            Add($"{_application}/Model/Dtos/PlaceholderContentDtoValidator.cs", "rec&content");
         }
 
         internal void UseCases()
         {
-            string application = ProjectOf(spec, "src/Application", "Application");
-
-            Add(application, $"{_queries}/Get%A%/Get%A%.cs", FeatureTemplates.GetUseCase, "agg&get");
-            Add(application, $"{_queries}/Get%A%/Get%A%QueryValidator.cs", FeatureTemplates.GetQueryValidator, "agg&get");
-            Add(application, $"{_queries}/Get%F%/Get%F%.cs", FeatureTemplates.ListUseCase, "agg&list");
-            Add(application, $"{_commands}/Create%A%/Create%A%.cs", FeatureTemplates.CreateUseCase, "agg&create");
-            Add(application, $"{_commands}/Create%A%/Create%A%CommandValidator.cs", FeatureTemplates.CreateCommandValidator, "agg&create");
-            Add(application, $"{_commands}/Update%A%/Update%A%.cs", FeatureTemplates.UpdateUseCase, "agg&update");
-            Add(application, $"{_commands}/Update%A%/Update%A%CommandValidator.cs", FeatureTemplates.UpdateCommandValidator, "agg&update");
-            Add(application, $"{_commands}/Delete%A%/Delete%A%.cs", FeatureTemplates.DeleteUseCase, "agg&delete");
-            Add(application, $"{_commands}/Delete%A%/Delete%A%CommandValidator.cs", FeatureTemplates.DeleteCommandValidator, "agg&delete");
-            Add(application, $"{_feature}/Services/Consumers/Delete%A%OnAccountDeletedConsumer.cs", FeatureTemplates.DeleteAccountDeletedConsumer, "purge");
-            Add(application, $"{_feature}/Services/Consumers/Anonymise%A%OnAccountDeletedConsumer.cs", FeatureTemplates.AnonymiseAccountDeletedConsumer, "anon");
+            Add($"{_queries}/GetPlaceholder/GetPlaceholder.cs", "agg&get");
+            Add($"{_queries}/GetPlaceholder/GetPlaceholderQueryValidator.cs", "agg&get");
+            Add($"{_queries}/GetPlaceholders/GetPlaceholders.cs", "agg&list");
+            Add($"{_commands}/CreatePlaceholder/CreatePlaceholder.cs", "agg&create");
+            Add($"{_commands}/CreatePlaceholder/CreatePlaceholderCommandValidator.cs", "agg&create");
+            Add($"{_commands}/UpdatePlaceholder/UpdatePlaceholder.cs", "agg&update");
+            Add($"{_commands}/UpdatePlaceholder/UpdatePlaceholderCommandValidator.cs", "agg&update");
+            Add($"{_commands}/DeletePlaceholder/DeletePlaceholder.cs", "agg&delete");
+            Add($"{_commands}/DeletePlaceholder/DeletePlaceholderCommandValidator.cs", "agg&delete");
+            Add($"{_application}/Services/Consumers/DeletePlaceholderOnAccountDeletedConsumer.cs", "purge");
+            Add($"{_application}/Services/Consumers/AnonymisePlaceholderOnAccountDeletedConsumer.cs", "anon");
         }
 
         internal void Persistence()
         {
-            string persistence = PersistenceProject(spec);
-
-            Add(persistence, $"{_feature}/Rows/Models/%A%Record.cs", FeatureTemplates.Record);
-            Add(persistence, $"{_feature}/Rows/Configurations/%A%RecordConfiguration.cs", FeatureTemplates.Configuration);
-            Add(persistence, $"{_feature}/Access/Stores/%A%Store.cs", FeatureTemplates.Store, "rec&stage");
-            Add(persistence, $"{_feature}/Rows/Mapping/I%A%Mapper.cs", FeatureTemplates.MapperPort, "agg");
-            Add(persistence, $"{_feature}/Rows/Mapping/%A%Mapper.cs", FeatureTemplates.Mapper, "agg");
-            Add(persistence, $"{_feature}/Rows/Tracking/I%A%Tracker.cs", FeatureTemplates.TrackerPort, "agg");
-            Add(persistence, $"{_feature}/Rows/Tracking/%A%Tracker.cs", FeatureTemplates.Tracker, "agg");
-            Add(persistence, $"{_feature}/Access/Repositories/%A%Repository.cs", FeatureTemplates.Repository, "agg&wq");
-            Add(persistence, $"{_feature}/Access/Queries/%A%Queries.cs", FeatureTemplates.Queries, "rq");
-            Add(persistence, $"{_feature}/Access/Queries/%A%SortMap.cs", FeatureTemplates.SortMap, "list");
+            Add($"{_persistence}/Rows/Models/PlaceholderRecord.cs");
+            Add($"{_persistence}/Rows/Configurations/PlaceholderRecordConfiguration.cs");
+            Add($"{_persistence}/Access/Stores/PlaceholderStore.cs", "rec&stage");
+            Add($"{_persistence}/Rows/Mapping/IPlaceholderMapper.cs", "agg");
+            Add($"{_persistence}/Rows/Mapping/PlaceholderMapper.cs", "agg");
+            Add($"{_persistence}/Rows/Tracking/IPlaceholderTracker.cs", "agg");
+            Add($"{_persistence}/Rows/Tracking/PlaceholderTracker.cs", "agg");
+            Add($"{_persistence}/Access/Repositories/PlaceholderRepository.cs", "agg&wq");
+            Add($"{_persistence}/Access/Queries/PlaceholderQueries.cs", "rq");
+            Add($"{_persistence}/Access/Queries/PlaceholderSortMap.cs", "list");
         }
 
         internal void Api()
         {
-            string api = ProjectOf(spec, "src/Presentation", "Api");
-
-            Add(api, $"{_feature}/Contracts/Requests/Create%A%Request.cs", FeatureTemplates.CreateRequest, "create");
-            Add(api, $"{_feature}/Contracts/Requests/Update%A%Request.cs", FeatureTemplates.UpdateRequest, "update");
-            Add(api, $"{_feature}/Contracts/Requests/Get%F%Request.cs", FeatureTemplates.ListRequest, "list");
-            Add(api, $"{_feature}/Contracts/Responses/%A%Response.cs", FeatureTemplates.Response, "dto");
-            Add(api, $"{_feature}/Contracts/Responses/%A%SummaryResponse.cs", FeatureTemplates.SummaryResponse, "list");
-            Add(api, $"{_feature}/Controllers/%F%Controller.cs", FeatureTemplates.Controller);
-            Add(api, $"{_feature}/Contracts/Mapping/%A%ResponseMapping.cs", FeatureTemplates.ResponseMapping, "dto|list");
+            Add($"{_api}/Contracts/Requests/CreatePlaceholderRequest.cs", "create");
+            Add($"{_api}/Contracts/Requests/UpdatePlaceholderRequest.cs", "update");
+            Add($"{_api}/Contracts/Requests/GetPlaceholdersRequest.cs", "list");
+            Add($"{_api}/Contracts/Responses/PlaceholderResponse.cs", "dto");
+            Add($"{_api}/Contracts/Responses/PlaceholderSummaryResponse.cs", "list");
+            Add($"{_api}/Controllers/PlaceholdersController.cs");
+            Add($"{_api}/Contracts/Mapping/PlaceholderResponseMapping.cs", "dto|list");
         }
 
         internal void UnitTests()
         {
-            string applicationTests = ProjectOf(spec, "tests/Application", "Application.UnitTests");
-            string domainTests = ProjectOf(spec, "tests/Domain", "Domain.UnitTests");
-            string persistenceTests = ProjectOf(spec, "tests/Infrastructure", "Infrastructure.Persistence.UnitTests");
-
-            AddTest(applicationTests, $"{_feature}/Model/Dtos/%A%ContentDtoValidatorTests.cs", FeatureTemplates.ContentValidatorTests, "rec&content");
-            AddTest(applicationTests, $"{_feature}/Services/%A%ServiceTests.cs", FeatureTemplates.ServiceTests, "rec");
-            AddTest(applicationTests, $"{_commands}/Create%A%/Create%A%CommandValidatorTests.cs", FeatureTemplates.CreateCommandValidatorTests, "agg&create", CommandValidatorTokens("Create"));
-            AddTest(applicationTests, $"{_commands}/Update%A%/Update%A%CommandValidatorTests.cs", FeatureTemplates.UpdateCommandValidatorTests, "agg&update", CommandValidatorTokens("Update"));
-            AddTest(domainTests, $"{_feature}/Model/Entities/%A%Tests.cs", FeatureTemplates.AggregateTests, "agg");
-            AddTest(persistenceTests, $"{_feature}/Rows/Configurations/%A%RecordConfigurationTests.cs", FeatureTemplates.ConfigurationTests);
-            AddTest(persistenceTests, $"{_feature}/%A%MapperFidelityTests.cs", FeatureTemplates.MapperFidelityTests, "agg");
+            AddTest($"{_applicationTests}/Model/Dtos/PlaceholderContentDtoValidatorTests.cs", "rec&content");
+            AddTest($"{_applicationTests}/Services/PlaceholderServiceTests.cs", "rec");
+            AddTest($"{_applicationTests}/UseCases/Commands/CreatePlaceholder/CreatePlaceholderCommandValidatorTests.cs", "agg&create", CommandValidatorTokens("Create"));
+            AddTest($"{_applicationTests}/UseCases/Commands/UpdatePlaceholder/UpdatePlaceholderCommandValidatorTests.cs", "agg&update", CommandValidatorTokens("Update"));
+            AddTest($"{_domainTests}/Model/Entities/PlaceholderTests.cs", "agg");
+            AddTest($"{_persistenceTests}/Rows/Configurations/PlaceholderRecordConfigurationTests.cs");
+            AddTest($"{_persistenceTests}/PlaceholderMapperFidelityTests.cs", "agg");
         }
 
         internal void FieldTests()
         {
             if (spec.HasApi && spec.Fields is not null && spec.Has("create"))
             {
-                AddTest(IntegrationTests(spec), $"{_feature}/%A%FieldTests.cs", FeatureTemplates.FieldApiTests);
+                AddTest($"{_integrationTests}/PlaceholderFieldTests.cs");
             }
         }
 
@@ -571,7 +586,7 @@ internal static class FeatureCode
             };
         }
 
-        private void Add(string project, string relative, string template, string when = "", Dictionary<string, string>? extra = null)
+        private void Add(string reference, string when = "", Dictionary<string, string>? extra = null, string? host = null)
         {
             if (when.Length > 0 && !Template.Evaluate(when, _flags))
             {
@@ -581,15 +596,17 @@ internal static class FeatureCode
             var tokens = extra is null ? _tokens : _tokens.Concat(extra).ToDictionary(pair => pair.Key, pair => pair.Value);
 
             Emissions.Add(new Emission(
-                $"{project}/{Template.Substitute(relative, tokens)}",
-                Template.Render(template, _flags, tokens, _fields)));
+                PathOf(spec, reference, host, tokens),
+                Template.Render(_templates[reference], _flags, tokens, _fields)));
         }
 
-        private void AddTest(string project, string relative, string template, string when = "", Dictionary<string, string>? extra = null)
+        private void AddTest(string reference, string when = "", Dictionary<string, string>? extra = null)
         {
+            string project = string.Join('/', PathOf(spec, reference, host: null, _tokens).Split('/')[..3]);
+
             if (Directory.Exists(System.IO.Path.Combine(root, project)))
             {
-                Add(project, relative, template, when, extra);
+                Add(reference, when, extra);
             }
             else if (!Skipped.Contains(project, StringComparer.Ordinal))
             {
