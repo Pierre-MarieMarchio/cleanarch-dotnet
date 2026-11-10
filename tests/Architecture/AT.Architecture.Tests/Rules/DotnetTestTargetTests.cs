@@ -11,7 +11,7 @@ public sealed class DotnetTestTargetTests
 
     private static readonly string[] _extensions = [".cs", ".md", ".yml", ".yaml", ".sh", ".ps1"];
 
-    private static readonly string[] _skippedFolders = ["bin", "obj", "node_modules", ".git", ".claude", "tests", "plans", "artifacts"];
+    private static readonly string[] _skippedFolders = ["bin", "obj", "node_modules", ".git", ".claude", "tests", "plans", "artifacts", "code-templates"];
 
     private static readonly Regex _shellCommand = new(
         @"dotnet\s+test(?:[ \t]*\\\r?\n)?[ \t]+(?<target>[^\s`]+)", RegexOptions.None, _budget);
