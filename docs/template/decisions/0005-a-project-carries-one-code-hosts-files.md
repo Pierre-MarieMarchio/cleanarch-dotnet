@@ -33,10 +33,10 @@ live on, and the gate the template proves was no longer the one the project ran.
   ([adding a leg](../maintaining-the-template.md#adding-a-leg)). The contract is in
   [code hosts](../maintaining-the-template.md#code-hosts).
 - **The values.** `github`, the default, whose output is unchanged. `none`, which writes no host file
-  at all: no workflow, no Dependabot, no issue form, no pull request template. `gitlab` is offered
-  once its overlay is complete: a pipeline holding the same gate, merge request and issue templates,
-  Renovate in place of Dependabot, and GitLab's SAST in place of CodeQL. While it is unfinished the
-  value stays out of the choices, so no project is generated without it.
+  at all: no workflow, no Dependabot, no issue form, no pull request template. `gitlab`: a pipeline
+  holding the same gate, merge request and issue templates, Renovate in place of Dependabot, and
+  GitLab's SAST in place of CodeQL. A host whose overlay is unfinished stays out of the choices, so
+  no project is generated without it.
 - **`--ci` keeps its meaning for the chosen host**: that host's pipelines. Under `none` there is
   none to write, so the launcher does not ask it and `cleanarch.json` records `"ci": false`.
 - **The only unpinned includes a GitLab pipeline may carry are GitLab's own SAST and Secret

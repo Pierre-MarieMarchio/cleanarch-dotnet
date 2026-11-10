@@ -509,11 +509,14 @@ reading the overlay in this checkout; `tools/CheckGitLabCi.cs` checks the rest, 
 merged into the root file as GitLab merges them, and that the job that signs keylessly with cosign,
 and it alone, takes a `SIGSTORE_ID_TOKEN` for the `sigstore` audience. This repository's CI never runs the pipeline, so the leg that generates
 `--code-host gitlab` checks the GitLab files it writes instead: `tools/CheckGitLabCi.cs` on the
-project, `check-jsonschema` against the schema GitLab publishes for its pipeline files, and
-`renovate-config-validator` on `.gitlab/renovate.jsonc`. GitLab's `build-test` does
-not run the app host's `LocalStackTests` under `--aspire true`: the app host reaches the containers it
-starts through the Docker host's loopback, which a Docker-in-Docker service keeps to itself, so their
-health checks would time out. A project's `cleanarch.json` records `codeHost` as it was chosen, and
+project, `check-jsonschema` against the schema GitLab publishes for its pipeline files,
+`renovate-config-validator` on `.gitlab/renovate.jsonc`, and `gitlab-ci-local --preview` and `--list`,
+which merge every include and job as GitLab does, on a committed copy of the project. Its rule in
+`rules.json` covers `tools/CheckGitLabCi.cs` too. Under `--aspire true`, GitLab's `build-test`
+removes the app host's integration test project from the solution before `dotnet test`: the app host
+reaches the containers it starts through the Docker host's loopback, which a Docker-in-Docker service
+keeps to itself, and a class filter would leave the project with no test, which the test platform
+fails. A project's `cleanarch.json` records `codeHost` as it was chosen, and
 `adopt` reads `gitlab` back from `.gitlab-ci.yml` or a `.gitlab` folder at the root.
 
 Two limits stay with the project: a GitLab project creates its `bug` and `enhancement` labels itself,
