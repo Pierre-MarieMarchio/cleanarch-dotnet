@@ -134,7 +134,9 @@ internal static class NewField
             .Select(problem => problem.Replace("--fields", "The fields to add", StringComparison.Ordinal)));
 
         var widened = before with { Fields = combined };
-        var names = Plan(widened, root, out _).Select(emission => System.IO.Path.GetFileNameWithoutExtension(emission.Path)).ToList();
+        var templates = Overrides(root);
+        var names = Plan(widened, root, templates, out _).Select(emission => System.IO.Path.GetFileNameWithoutExtension(emission.Path)).ToList();
+        problems.AddRange(templates.Problems);
         var conflicts = FieldCode.Conflicts(existing, features, before.Type, names, before.Deletion, before.Access == "owner", before.Has("list")).ToHashSet(StringComparer.Ordinal);
 
         problems.AddRange(FieldCode.Conflicts(combined, features, before.Type, names, before.Deletion, before.Access == "owner", before.Has("list"))

@@ -59,6 +59,13 @@ internal sealed class FeatureManifest
 
     internal IReadOnlyList<TextEdits.Edit> Edits => _edits;
 
+    internal IReadOnlyDictionary<string, string> Templates =>
+        (_top["templates"] as JsonArray ?? [])
+            .OfType<JsonObject>()
+            .Where(template => Text(template["path"]) is not null && Text(template["sha256"]) is not null)
+            .DistinctBy(template => Text(template["path"]), StringComparer.Ordinal)
+            .ToDictionary(template => Text(template["path"])!, template => Text(template["sha256"])!, StringComparer.Ordinal);
+
     internal IReadOnlyList<(string Declaration, string Migration, string[] Paths)> AddedFields =>
         [
             .. (_top["addedFields"] as JsonArray ?? [])
@@ -164,6 +171,22 @@ internal sealed class FeatureManifest
         }
 
         _edits.AddRange(editor.Applied.Where(edit => !_files.ContainsKey(edit.Path)));
+    }
+
+    internal void RecordTemplates(IReadOnlyList<UsedTemplate> used)
+    {
+        if (used.Count == 0)
+        {
+            _top.Remove("templates");
+
+            return;
+        }
+
+        _top["templates"] = new JsonArray([.. used.OrderBy(template => template.Path, StringComparer.Ordinal).Select(template => (JsonNode)new JsonObject
+        {
+            ["path"] = template.Path,
+            ["sha256"] = template.Sha256,
+        })]);
     }
 
     internal void RecordAddition(string declaration, string migration, IEnumerable<(string Path, byte[]? Before, byte[] After, IReadOnlyList<string> Changes)> files)

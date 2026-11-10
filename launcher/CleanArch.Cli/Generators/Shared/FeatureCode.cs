@@ -144,9 +144,11 @@ internal static class FeatureCode
         return $"{segments[0]}/{segments[1]}/{folder}/{Template.ReplaceReferenceNames(segments[3], tokens)}";
     }
 
-    internal static List<Emission> Plan(FeatureSpec spec, string root, out List<string> skippedTestProjects)
+    internal static TemplateOverrides Overrides(string root) => TemplateOverrides.Read(root, TemplateFolder, FeatureFlags.Vocabulary);
+
+    internal static List<Emission> Plan(FeatureSpec spec, string root, TemplateOverrides templates, out List<string> skippedTestProjects)
     {
-        var plan = new PlanWriter(spec, root);
+        var plan = new PlanWriter(spec, root, templates);
 
         if (spec.Reaction is { } adapter)
         {
@@ -413,7 +415,7 @@ internal static class FeatureCode
         return written;
     }
 
-    private sealed class PlanWriter(FeatureSpec spec, string root)
+    private sealed class PlanWriter(FeatureSpec spec, string root, TemplateOverrides templates)
     {
         private const string _feature = "Features/Placeholders";
 
@@ -566,24 +568,7 @@ internal static class FeatureCode
 
             var tokens = extra is null ? _tokens : _tokens.Concat(extra).ToDictionary(pair => pair.Key, pair => pair.Value);
 
-            Emissions.Add(new Emission(PathOf(spec, reference, tokens, host), Render(reference, tokens)));
-        }
-
-        private string Render(string reference, Dictionary<string, string> tokens)
-        {
-            string path = ToolTemplates.PathOf(TemplateFolder, reference);
-            string template = ToolTemplates.Of(TemplateFolder).TryGetValue(reference, out string? text)
-                ? text
-                : throw new InvalidOperationException($"{path} is not embedded in the tool, so add feature has no text to write {reference} from.");
-
-            try
-            {
-                return Template.Render(template, FeatureFlags.Vocabulary, _flags, tokens, _fields);
-            }
-            catch (InvalidOperationException exception)
-            {
-                throw new InvalidOperationException($"{path}: {exception.Message}", exception);
-            }
+            Emissions.Add(new Emission(PathOf(spec, reference, tokens, host), templates.Render(reference, _flags, tokens, _fields)));
         }
 
         private void AddTest(string reference, string when = "")
