@@ -1,16 +1,24 @@
-using AppTemplate.Application.Features.Placeholders.UseCases.Commands.%Op%Placeholder;
+using AppTemplate.Application.Features.Placeholders.UseCases.Commands.UpdatePlaceholder;
+#if fields
+using AppTemplate.Domain.Features.Placeholders.Model.Entities; //?Placeholder
+#endif
 using Shouldly;
 using Xunit;
 
-namespace AppTemplate.Application.UnitTests.Features.Placeholders.UseCases.Commands.%Op%Placeholder;
+namespace AppTemplate.Application.UnitTests.Features.Placeholders.UseCases.Commands.UpdatePlaceholder;
 
-public sealed class %Op%PlaceholderCommandValidatorTests
+public sealed class UpdatePlaceholderCommandValidatorTests
 {
-    private static readonly %Op%PlaceholderCommandValidator _validator = new();
+    private static readonly UpdatePlaceholderCommandValidator _validator = new();
 
     private static CancellationToken TestToken => TestContext.Current.CancellationToken;
 
-    private static %Op%PlaceholderCommand ACommand(string? name, string? description) => %CommandNew%;
+#if fields
+%FValidatorTests%
+
+    private static UpdatePlaceholderCommand AValidCommand() => %FValidCommand%;
+#else
+    private static UpdatePlaceholderCommand ACommand(string? name, string? description) => new UpdatePlaceholderCommand(Guid.CreateVersion7(), name!, description!);
 
     [Fact]
     public async Task ANameAndADescription_AreAccepted() =>
@@ -30,4 +38,5 @@ public sealed class %Op%PlaceholderCommandValidatorTests
     [Fact]
     public async Task AMissingDescription_IsRejected() =>
         (await _validator.ValidateAsync(ACommand("Groceries", null), TestToken)).IsValid.ShouldBeFalse();
+#endif
 }

@@ -11,7 +11,7 @@ using AppTemplate.Domain.Features.Placeholders.Repositories;
 
 namespace AppTemplate.Application.Features.Placeholders.Services.Consumers;
 
-internal sealed class %Verb%PlaceholderOnAccountDeletedConsumer(
+internal sealed class AnonymisePlaceholderOnAccountDeletedConsumer(
 #if rec
     IPlaceholderStore store,
 #endif
@@ -38,30 +38,6 @@ internal sealed class %Verb%PlaceholderOnAccountDeletedConsumer(
             return false;
         }
 
-#if purge
-#if rec
-        int staged = await store.StageRemovalForOwnerAsync(owner, cancellationToken);
-
-        if (staged == 0)
-        {
-            return false;
-        }
-#endif
-#if agg
-        var owned = await repository.GetForOwnerAsync(owner, cancellationToken);
-
-        if (owned.Count == 0)
-        {
-            return false;
-        }
-
-        foreach (var aggregate in owned)
-        {
-            repository.Remove(aggregate);
-        }
-#endif
-#endif
-#if anon
 #if rec
         int staged = await store.StageAnonymisationForOwnerAsync(owner, cancellationToken);
 
@@ -82,7 +58,6 @@ internal sealed class %Verb%PlaceholderOnAccountDeletedConsumer(
         {
             aggregate.Anonymise();
         }
-#endif
 #endif
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

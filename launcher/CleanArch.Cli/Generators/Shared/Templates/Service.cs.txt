@@ -10,9 +10,14 @@ using AppTemplate.Application.Features.Placeholders.Ports.PlaceholderQueries; //
 using AppTemplate.Application.Features.Placeholders.Ports.PlaceholderStore; //?IPlaceholderStore|PlaceholderChangeStatus
 using AppTemplate.Domain.Core.Common.Primitives; //?UserId
 using FluentValidation; //?IValidator
+#if agg
+using AppTemplate.Domain.Features.Placeholders.Model.Entities;
+using AppTemplate.Domain.Features.Placeholders.Repositories;
+#endif
 
 namespace AppTemplate.Application.Features.Placeholders.Services;
 
+#if rec
 internal sealed class PlaceholderService(
 #if rq
     IPlaceholderQueries queries,
@@ -28,7 +33,11 @@ internal sealed class PlaceholderService(
     IValidator<PlaceholderContentDto> validator,
 #endif
     ICurrentUser currentUser) : IPlaceholderService
+#else
+internal sealed class PlaceholderService(IPlaceholderRepository repository, ICurrentUser currentUser) : IPlaceholderService
+#endif
 {
+#if rec
 #if list
     public async Task<Result<PagedResult<PlaceholderSummaryDto>>> ListAsync(
         PlaceholderListQueryDto query,
@@ -218,5 +227,30 @@ internal sealed class PlaceholderService(
 #endif
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, "A staged change has no failure."),
     };
+#endif
+#else
+    public async Task<Result<Placeholder>> %Load%(
+        Guid placeholderId,
+        VersionPrecondition? precondition,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = currentUser.RequireUserId();
+
+        if (userId.IsFailure)
+        {
+            return userId.To<Placeholder>();
+        }
+
+        var aggregate = await repository.GetAsync(%SvcOwner%placeholderId, cancellationToken);
+
+        if (aggregate is null)
+        {
+            return Result.Failure<Placeholder>(PlaceholderErrors.PlaceholderNotFound(placeholderId));
+        }
+
+        return precondition is not null && !precondition.IsSatisfiedBy(aggregate.Version)
+            ? Result.Failure<Placeholder>(ConcurrencyErrors.PreconditionFailed)
+            : Result.Success(aggregate);
+    }
 #endif
 }

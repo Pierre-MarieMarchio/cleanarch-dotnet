@@ -33,7 +33,13 @@ internal static class PlaceholderSortMap
 
         return term.Field switch
         {
+#if fields
+//#each field where keyset
+            %A%CollectionPolicy.%field.Name%Field => Apply%field.Name%Keyset(source, term.Direction, cursor),
+//#end
+#else
             PlaceholderCollectionPolicy.NameField => ApplyNameKeyset(source, term.Direction, cursor),
+#endif
             PlaceholderCollectionPolicy.CreatedAtField => ApplyCreatedAtKeyset(source, term.Direction, cursor),
             _ => throw new InvalidOperationException(
                 $"'{term.Field}' has no keyset comparison: the policy should have rejected it first."),
@@ -46,7 +52,13 @@ internal static class PlaceholderSortMap
 
         return field switch
         {
+#if fields
+//#each field where keyset
+            %A%CollectionPolicy.%field.Name%Field => %field.CursorKey%,
+//#end
+#else
             PlaceholderCollectionPolicy.NameField => summary.Name,
+#endif
             PlaceholderCollectionPolicy.CreatedAtField => summary.CreatedAt.ToString("O", CultureInfo.InvariantCulture),
             _ => throw new InvalidOperationException(
                 $"'{field}' has no cursor key: the policy should have rejected it first."),
@@ -56,9 +68,17 @@ internal static class PlaceholderSortMap
     private static IOrderedQueryable<PlaceholderRecord> OrderByTerm(IQueryable<PlaceholderRecord> source, SortTerm term) =>
         term.Field switch
         {
+#if fields
+//#each field where sortable
+            %A%CollectionPolicy.%field.Name%Field => term.Direction == SortDirection.Ascending
+                ? source.OrderBy(record => record.%field.Name%)
+                : source.OrderByDescending(record => record.%field.Name%),
+//#end
+#else
             PlaceholderCollectionPolicy.NameField => term.Direction == SortDirection.Ascending
                 ? source.OrderBy(record => record.Name)
                 : source.OrderByDescending(record => record.Name),
+#endif
             PlaceholderCollectionPolicy.CreatedAtField => term.Direction == SortDirection.Ascending
                 ? source.OrderBy(record => record.CreatedAt)
                 : source.OrderByDescending(record => record.CreatedAt),
@@ -69,9 +89,17 @@ internal static class PlaceholderSortMap
     private static IOrderedQueryable<PlaceholderRecord> ThenByTerm(IOrderedQueryable<PlaceholderRecord> source, SortTerm term) =>
         term.Field switch
         {
+#if fields
+//#each field where sortable
+            %A%CollectionPolicy.%field.Name%Field => term.Direction == SortDirection.Ascending
+                ? source.ThenBy(record => record.%field.Name%)
+                : source.ThenByDescending(record => record.%field.Name%),
+//#end
+#else
             PlaceholderCollectionPolicy.NameField => term.Direction == SortDirection.Ascending
                 ? source.ThenBy(record => record.Name)
                 : source.ThenByDescending(record => record.Name),
+#endif
             PlaceholderCollectionPolicy.CreatedAtField => term.Direction == SortDirection.Ascending
                 ? source.ThenBy(record => record.CreatedAt)
                 : source.ThenByDescending(record => record.CreatedAt),
@@ -79,6 +107,11 @@ internal static class PlaceholderSortMap
                 $"'{term.Field}' is not a sortable field: the policy should have rejected it first."),
         };
 
+#if fields
+//#each field where keyset separator "\n\n"
+%field.KeysetMethod%
+//#end
+#else
     private static IQueryable<PlaceholderRecord> ApplyNameKeyset(
         IQueryable<PlaceholderRecord> source,
         SortDirection direction,
@@ -90,6 +123,7 @@ internal static class PlaceholderSortMap
             : source.Where(record =>
                 record.Name.CompareTo(cursor.Key) < 0
                 || (record.Name == cursor.Key && record.Id.CompareTo(cursor.Id) < 0));
+#endif
 
     private static IQueryable<PlaceholderRecord> ApplyCreatedAtKeyset(
         IQueryable<PlaceholderRecord> source,

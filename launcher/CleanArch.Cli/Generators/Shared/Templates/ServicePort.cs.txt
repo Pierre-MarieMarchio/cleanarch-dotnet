@@ -2,11 +2,15 @@ using AppTemplate.Application.Core.Common.Concurrency; //?Versioned|VersionPreco
 using AppTemplate.Application.Core.Common.Results;
 using AppTemplate.Application.Features.Placeholders.Model.Dtos; //?PlaceholderContentDto|PlaceholderDto|PlaceholderSummaryDto|PlaceholderListQueryDto
 using AppTemplate.Application.Features.Placeholders.Model.Errors; //?PlaceholderErrors
+#if agg
+using AppTemplate.Domain.Features.Placeholders.Model.Entities;
+#endif
 
 namespace AppTemplate.Application.Features.Placeholders.Services;
 
 public interface IPlaceholderService
 {
+#if rec
 #if list
     Task<Result<PagedResult<PlaceholderSummaryDto>>> ListAsync(
         PlaceholderListQueryDto query,
@@ -41,6 +45,12 @@ public interface IPlaceholderService
 #if etag
         VersionPrecondition? precondition,
 #endif
+        CancellationToken cancellationToken = default);
+#endif
+#else
+    Task<Result<Placeholder>> %Load%(
+        Guid placeholderId,
+        VersionPrecondition? precondition,
         CancellationToken cancellationToken = default);
 #endif
 }

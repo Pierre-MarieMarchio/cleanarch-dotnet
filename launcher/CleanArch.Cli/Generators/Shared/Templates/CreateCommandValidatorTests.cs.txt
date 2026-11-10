@@ -1,0 +1,42 @@
+using AppTemplate.Application.Features.Placeholders.UseCases.Commands.CreatePlaceholder;
+#if fields
+using AppTemplate.Domain.Features.Placeholders.Model.Entities; //?Placeholder
+#endif
+using Shouldly;
+using Xunit;
+
+namespace AppTemplate.Application.UnitTests.Features.Placeholders.UseCases.Commands.CreatePlaceholder;
+
+public sealed class CreatePlaceholderCommandValidatorTests
+{
+    private static readonly CreatePlaceholderCommandValidator _validator = new();
+
+    private static CancellationToken TestToken => TestContext.Current.CancellationToken;
+
+#if fields
+%FValidatorTests%
+
+    private static CreatePlaceholderCommand AValidCommand() => %FValidCommand%;
+#else
+    private static CreatePlaceholderCommand ACommand(string? name, string? description) => new CreatePlaceholderCommand(name!, description!);
+
+    [Fact]
+    public async Task ANameAndADescription_AreAccepted() =>
+        (await _validator.ValidateAsync(ACommand("Groceries", "Milk"), TestToken)).IsValid.ShouldBeTrue();
+
+    [Fact]
+    public async Task AnEmptyDescription_IsAccepted() =>
+        (await _validator.ValidateAsync(ACommand("Groceries", string.Empty), TestToken)).IsValid.ShouldBeTrue();
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public async Task ABlankOrMissingName_IsRejected(string? name) =>
+        (await _validator.ValidateAsync(ACommand(name, "Milk"), TestToken)).IsValid.ShouldBeFalse();
+
+    [Fact]
+    public async Task AMissingDescription_IsRejected() =>
+        (await _validator.ValidateAsync(ACommand("Groceries", null), TestToken)).IsValid.ShouldBeFalse();
+#endif
+}

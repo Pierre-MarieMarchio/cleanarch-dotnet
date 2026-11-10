@@ -1,8 +1,12 @@
-using AppTemplate.Domain.Core.Common.Abstractions;
+using AppTemplate.Domain.Core.Common.Abstractions; //?IAuditable
 
 namespace AppTemplate.Infrastructure.Persistence.Features.Placeholders.Rows.Models;
 
+#if rec
+internal sealed class PlaceholderRecord
+#else
 internal sealed class PlaceholderRecord : IAuditable
+#endif
 {
     public Guid Id { get; set; }
 
@@ -20,6 +24,15 @@ internal sealed class PlaceholderRecord : IAuditable
     public string Description { get; set; } = string.Empty;
 #endif
 
+#if rec
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public DateTimeOffset? LastModifiedAt { get; set; }
+#if etag
+
+    public uint Version { get; set; }
+#endif
+#else
     public uint Version { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
@@ -41,4 +54,5 @@ internal sealed class PlaceholderRecord : IAuditable
         LastModifiedAt = at;
         LastModifiedBy = by;
     }
+#endif
 }

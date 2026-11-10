@@ -12,6 +12,9 @@ public sealed class PlaceholderTests
     private static readonly UserId _ownerId = UserId.Create(Guid.CreateVersion7());
 
 #endif
+#if fields
+%FAggregateTests%
+#else
 #if create
     [Fact]
     public void Create_KeepsTheTrimmedNameAndTheDescription()
@@ -83,4 +86,5 @@ public sealed class PlaceholderTests
     [Fact]
     public void Rehydrate_RefusesAnEmptyId() =>
         Should.Throw<DomainException>(() => Placeholder.Rehydrate(Guid.Empty, %OwnerIdArg%"Groceries", "Milk"));
+#endif
 }

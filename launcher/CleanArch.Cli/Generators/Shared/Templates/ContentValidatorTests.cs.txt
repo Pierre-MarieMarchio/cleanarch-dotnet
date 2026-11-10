@@ -1,5 +1,5 @@
 using AppTemplate.Application.Features.Placeholders.Model.Dtos;
-using AppTemplate.Application.Features.Placeholders.Model.Policies;
+using AppTemplate.Application.Features.Placeholders.Model.Policies; //?PlaceholderInputPolicy
 using Shouldly;
 using Xunit;
 
@@ -11,6 +11,14 @@ public sealed class PlaceholderContentDtoValidatorTests
 
     private static CancellationToken TestToken => TestContext.Current.CancellationToken;
 
+#if fields
+%FContentValidatorTests%
+
+    private static PlaceholderContentDto AValidContentDto() => new(
+//#each field separator ",\n"
+        %field.Sample%
+//#end ");"
+#else
     [Fact]
     public async Task ANameAndADescription_AreAccepted() =>
         (await _validator.ValidateAsync(new PlaceholderContentDto("Groceries", "Milk"), TestToken)).IsValid.ShouldBeTrue();
@@ -41,4 +49,5 @@ public sealed class PlaceholderContentDtoValidatorTests
         (await _validator.ValidateAsync(new PlaceholderContentDto($"  {name}  ", "Milk"), TestToken)).IsValid.ShouldBeTrue();
         (await _validator.ValidateAsync(new PlaceholderContentDto(name + "a", "Milk"), TestToken)).IsValid.ShouldBeFalse();
     }
+#endif
 }

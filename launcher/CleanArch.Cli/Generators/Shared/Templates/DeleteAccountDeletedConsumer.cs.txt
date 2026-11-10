@@ -1,0 +1,71 @@
+using AppTemplate.Application.Core.Common.Events; //?UserAccountDeleted
+using AppTemplate.Application.Core.Common.Ports; //?IDeletedAccountDataPolicy|IUserAccountDirectory|IUnitOfWork
+using AppTemplate.Domain.Core.Common.Primitives;
+using AppTemplate.Application.Features.Placeholders.Ports.PlaceholderQueries;
+#if rec
+using AppTemplate.Application.Features.Placeholders.Ports.PlaceholderStore;
+#endif
+#if agg
+using AppTemplate.Domain.Features.Placeholders.Repositories;
+#endif
+
+namespace AppTemplate.Application.Features.Placeholders.Services.Consumers;
+
+internal sealed class DeletePlaceholderOnAccountDeletedConsumer(
+#if rec
+    IPlaceholderStore store,
+#endif
+#if agg
+    IPlaceholderRepository repository,
+#endif
+    IPlaceholderQueries queries,
+    IUserAccountDirectory accounts,
+    IUnitOfWork unitOfWork) : IDomainEventConsumer<UserAccountDeleted>, IDeletedAccountDataPolicy
+{
+    public Task ConsumeAsync(UserAccountDeleted domainEvent, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(domainEvent);
+
+        return ApplyAsync(domainEvent.UserId, cancellationToken);
+    }
+
+    public async Task<bool> ApplyAsync(UserId owner, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(owner);
+
+        if (await accounts.ExistsAsync(owner, cancellationToken))
+        {
+            return false;
+        }
+
+#if rec
+        int staged = await store.StageRemovalForOwnerAsync(owner, cancellationToken);
+
+        if (staged == 0)
+        {
+            return false;
+        }
+#endif
+#if agg
+        var owned = await repository.GetForOwnerAsync(owner, cancellationToken);
+
+        if (owned.Count == 0)
+        {
+            return false;
+        }
+
+        foreach (var aggregate in owned)
+        {
+            repository.Remove(aggregate);
+        }
+#endif
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return true;
+    }
+
+    public Task<IReadOnlyList<UserId>> ListDataOwnerIdsAsync(
+        CancellationToken cancellationToken = default) =>
+        queries.ListDataOwnerIdsAsync(cancellationToken);
+}

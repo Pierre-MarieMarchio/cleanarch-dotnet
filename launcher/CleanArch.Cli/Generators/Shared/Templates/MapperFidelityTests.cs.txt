@@ -25,8 +25,14 @@ public sealed class PlaceholderMapperFidelityTests
 #if owner
             ownerId,
 #endif
+#if fields
+//#each field separator ",\n"
+            %field.Sample%
+//#end ");"
+#else
             "Groceries",
             "Milk, eggs");
+#endif
 
         ((IVersioned)original).SetVersion(987_654u);
         ((IAuditable)original).SetCreated(createdAt, createdBy);
@@ -40,8 +46,14 @@ public sealed class PlaceholderMapperFidelityTests
 #if owner
         roundTripped.OwnerId.ShouldBe(ownerId);
 #endif
+#if fields
+//#each field
+        roundTripped.%field.Name%.ShouldBe(%field.Sample%);
+//#end
+#else
         roundTripped.Name.ShouldBe("Groceries");
         roundTripped.Description.ShouldBe("Milk, eggs");
+#endif
         roundTripped.Version.ShouldBe(987_654u);
         roundTripped.CreatedAt.ShouldBe(createdAt);
         roundTripped.CreatedBy.ShouldBe(createdBy);

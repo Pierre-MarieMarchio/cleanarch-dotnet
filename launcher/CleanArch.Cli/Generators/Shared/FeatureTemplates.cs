@@ -42,10 +42,6 @@ internal static class FeatureTemplates
 
     internal static string DtoMapping => Read(nameof(DtoMapping));
 
-    internal static string AccessServicePort => Read(nameof(AccessServicePort));
-
-    internal static string AccessService => Read(nameof(AccessService));
-
     internal static string GetQueryValidator => Read(nameof(GetQueryValidator));
 
     internal static string GetUseCase => Read(nameof(GetUseCase));
@@ -64,9 +60,7 @@ internal static class FeatureTemplates
 
     internal static string DeleteUseCase => Read(nameof(DeleteUseCase));
 
-    internal static string RecordPlain => Read(nameof(RecordPlain));
-
-    internal static string RecordAudited => Read(nameof(RecordAudited));
+    internal static string Record => Read(nameof(Record));
 
     internal static string Configuration => Read(nameof(Configuration));
 
@@ -82,7 +76,9 @@ internal static class FeatureTemplates
 
     internal static string Repository => Read(nameof(Repository));
 
-    internal static string AccountDeletedConsumer => Read(nameof(AccountDeletedConsumer));
+    internal static string DeleteAccountDeletedConsumer => Read(nameof(DeleteAccountDeletedConsumer));
+
+    internal static string AnonymiseAccountDeletedConsumer => Read(nameof(AnonymiseAccountDeletedConsumer));
 
     internal static string DeletedAccountDataPolicy => Read(nameof(DeletedAccountDataPolicy));
 
@@ -118,7 +114,9 @@ internal static class FeatureTemplates
 
     internal static string ContentValidatorTests => Read(nameof(ContentValidatorTests));
 
-    internal static string CommandValidatorTests => Read(nameof(CommandValidatorTests));
+    internal static string CreateCommandValidatorTests => Read(nameof(CreateCommandValidatorTests));
+
+    internal static string UpdateCommandValidatorTests => Read(nameof(UpdateCommandValidatorTests));
 
     internal static string ServiceTests => Read(nameof(ServiceTests));
 
@@ -128,17 +126,7 @@ internal static class FeatureTemplates
 
     internal static string MapperFidelityTests => Read(nameof(MapperFidelityTests));
 
-    internal static string FieldContentValidatorTests => Read(nameof(FieldContentValidatorTests));
-
-    internal static string FieldCommandValidatorTests => Read(nameof(FieldCommandValidatorTests));
-
-    internal static string FieldAggregateTests => Read(nameof(FieldAggregateTests));
-
-    internal static string FieldMapperFidelityTests => Read(nameof(FieldMapperFidelityTests));
-
     internal static string FieldApiTests => Read(nameof(FieldApiTests));
-
-    internal static string FieldSortMap => Read(nameof(FieldSortMap));
 
     private static string Read(string name) =>
         _templates.Value.TryGetValue(name, out string? template)
