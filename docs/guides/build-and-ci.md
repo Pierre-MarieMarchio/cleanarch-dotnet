@@ -251,19 +251,63 @@ of them, and on a manual run. A newer pipeline cancels the older one, except on 
 | <!--#endif--> |
 | `hygiene` | the documentation index check `verify` runs first |
 | `vulnerable-packages` | the vulnerability listing |
+| <!--#if (api)--> |
+| `docker` | the API image, built and never pushed, unprivileged and exposing 8080 only |
+| `load` | the load smoke against the stack started from `.env.example`; it never fails the pipeline |
+| `end-to-end` | once `compose` passes, the end-to-end suite against the stack, then the browser smoke with a web app |
+| <!--#endif--> |
+| `compose` | the Compose manifest against `.env.example`, and its healthchecks on `/health` |
+| <!--#if (anyWeb)--> |
+| `web` | in `src/Web`: frozen install, audit, lint, test, build, and a failure when the API client differs from the API's document |
+| `web-image` | one image per app under `src/Web/apps`, unprivileged and exposing 8080 only |
+| <!--#endif--> |
 | GitLab's SAST and Secret Detection jobs | the scanners of GitLab's own templates; their reports are the jobs' artifacts |
 
 The test summary and the coverage floor run whatever the tests answered, and any of the three
-failing fails `build-test`. Its integration tests start their containers through Testcontainers on a
-Docker-in-Docker service over TLS, which needs a runner that allows a privileged service, as
-GitLab.com's do. GitLab's SAST runs on every tier, but the merge request widget that lists its
-findings is Ultimate's.
+failing fails `build-test`. GitLab's SAST runs on every tier, but the merge request widget that lists
+its findings is Ultimate's.
+
+Every job that runs containers runs them on a Docker-in-Docker service over TLS, which needs a runner
+that allows a privileged service, as GitLab.com's do, and reaches their ports through the service's
+host name, `docker`: `build-test` sets `TESTCONTAINERS_HOST_OVERRIDE` for the integration tests.
+<!--#if (api)-->
+`load` and `end-to-end` set `STACK_PUBLISH_ADDRESS` to `0.0.0.0`, so that the stack publishes its
+ports on every address of the service, and `STACK_HOST` to `docker`, the host the end-to-end suite
+and k6 reach them on, and the browser smoke with a web app.
+<!--#endif-->
+<!--#if (api && files)-->
+`end-to-end` also sets `STORAGE_PUBLIC_ENDPOINT`, since the object store's signed URLs name the host
+they are reached on.
+<!--#endif-->
+<!--#if (anyWeb)-->
+
+`.gitlab/ci/web.yml` holds the `web` and `web-image` jobs, and the browser `end-to-end` drives:
+`.gitlab-ci.yml` includes it while it exists, so the file a web app brings edits nothing else. A
+pipeline cannot fan a job out over the folders it finds, so `web-image` builds the apps one after
+the other on a Docker-in-Docker service, and judges each even when another fails.
+<!--#endif-->
+<!--#if (api)-->
+
+The load smoke never fails the pipeline: its thresholds describe a broken system, and a `429` counts
+as a pass, because a shared runner's timings say nothing about this code. Run it against your own
+stack with `k6 run -e BASE_URL=http://localhost:8080 tests/Load/smoke.js`.
+<!--#endif-->
 
 Every image is pinned to a digest, and the .NET jobs run the SDK image every Dockerfile builds with.
+<!--#if (api)-->
+Docker's command-line client with its Compose and Buildx plugins, and k6, are pinned to a version
+and its checksum.
+<!--#endif-->
+<!--#if (anyWeb)-->
+Node.js is pinned the same way, and pnpm comes from corepack, at the version and checksum
+`packageManager` names in `src/Web/package.json`.
+<!--#endif-->
 GitLab's SAST and Secret Detection templates are the only includes not in this repository: they follow
 the instance's version, and nothing pins them on every instance. `GitLabPipelinePinningTests` reads
-`.gitlab-ci.yml` and fails on an image or a service without its digest, on an include that is neither
-a local file nor one of those two templates, and on an SDK image other than the Dockerfiles'.
+`.gitlab-ci.yml` and the files it includes, and fails on an image or a service without its digest, on
+an include that is neither a local file nor one of those two templates, on a local include of a
+missing file that no `rules: exists` guards, on a pipeline file nothing includes, and on an SDK image
+other than the Dockerfiles'.
 <!--#endif-->
 <!--#if (sonar)-->
 

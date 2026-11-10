@@ -31,12 +31,15 @@ public sealed class GitLabPipelinePinningTests
 
     private static readonly Regex _from = new(@"^\s*FROM\s+(?:--platform=\S+\s+)?(?<ref>\S+)", RegexOptions.IgnoreCase, _budget);
 
+    private static readonly Regex _existsKey = new(@"^(?<indent>\s*)(?:-\s+)?exists:\s*$", RegexOptions.None, _budget);
+
     /*#if (templateMaintenance)*/
-    private static string Pipeline => Path.Combine(
-        ProjectReferenceGraph.RepositoryRoot, ".template.config", "variants", "code-host-gitlab", ".gitlab-ci.yml");
+    private static string PipelineRoot => Path.Combine(ProjectReferenceGraph.RepositoryRoot, ".template.config", "variants", "code-host-gitlab");
     /*#else
-    private static string Pipeline => Path.Combine(ProjectReferenceGraph.RepositoryRoot, ".gitlab-ci.yml");
+    private static string PipelineRoot => ProjectReferenceGraph.RepositoryRoot;
     #endif*/
+
+    private static string Pipeline => Path.Combine(PipelineRoot, ".gitlab-ci.yml");
 
     [Fact]
     public void EveryImageThePipelineRuns_IsPinnedByDigest()
@@ -62,6 +65,32 @@ public sealed class GitLabPipelinePinningTests
             .ShouldBeEmpty(
                 "A pipeline includes its own files with local:, and GitLab's SAST and Secret Detection templates, which follow the instance's version; "
                 + "a remote file, another project's or a component cannot be pinned on every instance.");
+    }
+
+    [Fact]
+    public void EveryLocalInclude_NamesAFile_OrIsGuardedByExists()
+    {
+        var includes = Includes(PipelineLines()).Where(include => include.Kind == "local").ToList();
+
+        includes.ShouldNotBeEmpty("The pipeline includes the web workspace's file; a read of .gitlab-ci.yml that finds no local include is broken.");
+        includes
+            .Where(include => !IsResolved(PipelineRoot, include.Value, include.Guards))
+            .Select(include => $"{include.Where}: local: {include.Value}")
+            .ShouldBeEmpty(
+                "A local include names a file the project holds, or a pattern that matches one, or is guarded by rules: - exists: naming it; "
+                + "GitLab refuses a pipeline whose local include is missing.");
+    }
+
+    [Fact]
+    public void EveryFileUnderGitLabCi_IsIncludedByThePipeline()
+    {
+        string root = PipelineRoot;
+        var included = Includes(PipelineLines()).Where(include => include.Kind == "local").Select(include => include.Value.TrimStart('/')).ToList();
+
+        IncludedFiles()
+            .Select(file => Path.GetRelativePath(root, file).Replace('\\', '/'))
+            .Where(file => !included.Any(path => Glob(path).IsMatch(file)))
+            .ShouldBeEmpty("A file under .gitlab/ci runs only when .gitlab-ci.yml includes it.");
     }
 
     [Fact]
@@ -113,6 +142,65 @@ public sealed class GitLabPipelinePinningTests
         IsAllowed("remote", "https://example.com/ci.yml").ShouldBeFalse();
         IsAllowed("component", "gitlab.com/components/sast/sast@1.0.0").ShouldBeFalse();
         IsAllowed("project", "group/ci").ShouldBeFalse();
+
+        string[] guarded = ["include:", "  - local: .gitlab/ci/web.yml", "    rules:", "      - exists:", "          - .gitlab/ci/web.yml", "  - local: ci/other.yml", "stages:", "  - test"];
+        Includes(guarded).Select(include => $"{include.Kind}={include.Value}|{string.Join(',', include.Guards)}")
+            .ShouldBe(["local=.gitlab/ci/web.yml|.gitlab/ci/web.yml", "local=ci/other.yml|"], "a rules: list under an include is not an include of its own");
+
+        string folder = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(folder, "ci"));
+            File.WriteAllText(Path.Combine(folder, "ci", "present.yml"), "");
+            IsResolved(folder, "ci/present.yml", []).ShouldBeTrue();
+            IsResolved(folder, "/ci/present.yml", []).ShouldBeTrue("GitLab reads a leading slash from the project's root");
+            IsResolved(folder, "ci/*.yml", []).ShouldBeTrue("a pattern that matches a file includes it");
+            IsResolved(folder, "ci/absent.yml", []).ShouldBeFalse();
+            IsResolved(folder, "ci/*.absent.yml", []).ShouldBeFalse("a pattern that matches nothing includes nothing");
+            IsResolved(folder, "ci/absent.yml", ["ci/absent.yml"]).ShouldBeTrue("rules: exists keeps the include out while the file is absent");
+            IsResolved(folder, "ci/absent.yml", ["ci/present.yml"]).ShouldBeFalse("a guard on another file lets the missing one through");
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    private static bool IsResolved(string root, string path, IReadOnlyList<string> guards)
+    {
+        string relative = path.TrimStart('/');
+        if (guards.Any(guard => guard.TrimStart('/') == relative))
+        {
+            return true;
+        }
+
+        if (!relative.Contains('*', StringComparison.Ordinal))
+        {
+            return File.Exists(Path.Combine(root, relative));
+        }
+
+        string fixedPart = relative[..relative.IndexOf('*', StringComparison.Ordinal)];
+        string folder = Path.Combine(root, fixedPart[..(fixedPart.LastIndexOf('/') + 1)]);
+        return Directory.Exists(folder)
+            && Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
+                .Select(file => Path.GetRelativePath(root, file).Replace('\\', '/'))
+                .Any(file => Glob(relative).IsMatch(file));
+    }
+
+    private static Regex Glob(string pattern) => new(
+        "^" + Regex.Escape(pattern.TrimStart('/'))
+            .Replace(@"\*\*/", "(?:.*/)?", StringComparison.Ordinal)
+            .Replace(@"\*\*", ".*", StringComparison.Ordinal)
+            .Replace(@"\*", "[^/]*", StringComparison.Ordinal) + "$",
+        RegexOptions.None,
+        _budget);
+
+    private static IEnumerable<string> IncludedFiles()
+    {
+        string folder = Path.Combine(PipelineRoot, ".gitlab", "ci");
+        return Directory.Exists(folder)
+            ? Directory.EnumerateFiles(folder, "*.yml", SearchOption.AllDirectories).Order(StringComparer.Ordinal)
+            : [];
     }
 
     private static bool IsAllowed(string kind, string value) =>
@@ -121,7 +209,7 @@ public sealed class GitLabPipelinePinningTests
     private static string[] PipelineLines()
     {
         File.Exists(Pipeline).ShouldBeTrue($"{Pipeline} is missing: the project's gate runs from it.");
-        return File.ReadAllLines(Pipeline);
+        return [.. IncludedFiles().Prepend(Pipeline).SelectMany(File.ReadAllLines)];
     }
 
     private static IEnumerable<(string Where, string Reference)> Images(string[] lines)
@@ -162,34 +250,77 @@ public sealed class GitLabPipelinePinningTests
         }
     }
 
-    private static IEnumerable<(string Where, string Kind, string Value)> Includes(string[] lines)
+    private static IEnumerable<(string Where, string Kind, string Value, List<string> Guards)> Includes(string[] lines)
     {
         bool inside = false;
+        int? itemIndent = null;
+        int? existsIndent = null;
+        (string Where, string Kind, string Value, List<string> Guards)? current = null;
 
         foreach (var (line, number) in Content(lines))
         {
-            if (!char.IsWhiteSpace(line[0]))
+            int indent = line.Length - line.TrimStart().Length;
+
+            if (indent == 0)
             {
+                if (current is { } finished)
+                {
+                    yield return finished;
+                    current = null;
+                }
+
                 inside = false;
+                itemIndent = null;
+                existsIndent = null;
 
                 if (_includeKey.Match(line) is { Success: true } key)
                 {
                     if (key.Groups["value"].Success)
                     {
                         string value = Unquoted(key.Groups["value"].Value);
-                        yield return ($"line {number}", Kind(value), value);
+                        yield return ($"line {number}", Kind(value), value, []);
                     }
                     else
                     {
                         inside = true;
                     }
                 }
+
+                continue;
             }
-            else if (inside && _listItem.Match(line) is { Success: true } item && item.Groups["value"].Success)
+
+            if (!inside)
             {
-                string value = Unquoted(item.Groups["value"].Value);
-                yield return ($"line {number}", item.Groups["key"].Success ? item.Groups["key"].Value : Kind(value), value);
+                continue;
             }
+
+            existsIndent = indent > existsIndent ? existsIndent : null;
+            itemIndent ??= line.TrimStart().StartsWith('-') ? indent : null;
+
+            if (indent == itemIndent && _listItem.Match(line) is { Success: true } item)
+            {
+                if (current is { } finished)
+                {
+                    yield return finished;
+                }
+
+                current = item.Groups["value"].Success
+                    ? ($"line {number}", item.Groups["key"].Success ? item.Groups["key"].Value : Kind(Unquoted(item.Groups["value"].Value)), Unquoted(item.Groups["value"].Value), [])
+                    : null;
+            }
+            else if (current is not null && _existsKey.Match(line) is { Success: true } exists)
+            {
+                existsIndent = exists.Groups["indent"].Length;
+            }
+            else if (current is { } open && existsIndent is not null && _listItem.Match(line) is { Success: true } guard && guard.Groups["value"].Success && !guard.Groups["key"].Success)
+            {
+                open.Guards.Add(Unquoted(guard.Groups["value"].Value));
+            }
+        }
+
+        if (current is { } last)
+        {
+            yield return last;
         }
     }
 

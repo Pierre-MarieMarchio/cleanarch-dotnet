@@ -39,7 +39,8 @@ internal static class GitLabPipelineGate
 
         Checks <root>/.gitlab-ci.yml, a generated project's pipeline, and
         <root>/.template.config/variants/code-host-gitlab/.gitlab-ci.yml, the overlay a template
-        checkout holds, for what a YAML parse does not catch:
+        checkout holds, each with the local files it includes, merged as GitLab merges them, and
+        every file under the .gitlab/ci folder beside it, for what a YAML parse does not catch:
           - a job whose stage, test when it names none, is not declared in stages:, and an
             include of GitLab's scanner templates without the test stage their jobs run in
           - a needs: or dependencies: naming a job the file does not define
@@ -48,7 +49,10 @@ internal static class GitLabPipelineGate
             a digest pin
           - an include: that is neither local: nor one of GitLab's SAST and Secret Detection
             templates, the only ones allowed to float
-          - a job with no timeout:, its own or one it extends
+          - a local: include that names no file on disk, or a pattern that matches none, unless
+            its rules: hold an exists: naming it; a file under .gitlab/ci that nothing includes
+          - a job with no timeout:, or no script:, its own or one it extends
+          - a !reference naming a job or a key the pipeline does not define
           - a script line whose first word, past VAR=value assignments, is dotnet, in a job whose
             image, its own, one it extends or default:'s, is not the .NET SDK image
           - a local file a script names (script, project, settings) or a cache key file that is
@@ -76,7 +80,11 @@ internal static class GitLabPipelineGate
         "before_script", "after_script", "spec",
     };
 
-    private static readonly string[] _localOnly = ["local"];
+    private static readonly string[] _localKeys = ["local", "rules"];
+
+    private const string _includedFolder = ".gitlab/ci";
+
+    private const string _referenceTag = "!reference";
 
     private static readonly string[] _scriptKeys = ["before_script", "script", "after_script"];
 
@@ -102,48 +110,81 @@ internal static class GitLabPipelineGate
             .Where(File.Exists)
             .ToList();
 
+    public static List<string> IncludedFolderFiles(string pipeline)
+    {
+        var folder = Path.Combine(Path.GetDirectoryName(pipeline)!, _includedFolder);
+        return Directory.Exists(folder)
+            ? Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
+                .Where(file => file.EndsWith(".yml", StringComparison.Ordinal) || file.EndsWith(".yaml", StringComparison.Ordinal))
+                .Order(StringComparer.Ordinal)
+                .ToList()
+            : [];
+    }
+
     public static List<string> Validate(string root, string name, string text)
+        => Validate(root, root, name, text, out _);
+
+    public static List<string> Validate(string root, string includeBase, string name, string text, out HashSet<string> included)
     {
         var problems = new List<string>();
+        var read = new HashSet<string>(StringComparer.Ordinal);
+        included = read;
 
-        YamlNode? document;
-
-        try
+        if (Parse(name, text, problems) is not { } top)
         {
-            var stream = new YamlStream();
-            stream.Load(new StringReader(text));
-            document = stream.Documents.Count > 0 ? stream.Documents[0].RootNode : null;
-        }
-        catch (YamlException exception)
-        {
-            return [$"{name}: does not parse — {exception.Message}"];
+            return problems;
         }
 
-        if (document is not YamlMappingNode top)
+        var merged = new Dictionary<string, YamlNode>(StringComparer.Ordinal);
+        var scanners = false;
+        var pending = new Queue<(string Name, YamlMappingNode Document)>([(name, top)]);
+        var documents = new List<YamlMappingNode>();
+
+        while (pending.TryDequeue(out var current))
         {
-            return [$"{name}: top level is not a mapping"];
+            documents.Add(current.Document);
+            var includeProblems = IncludeProblems(Get(current.Document, "include"), includeBase, out var found, out var local);
+            scanners |= found;
+            foreach (var problem in includeProblems)
+            {
+                problems.Add($"{current.Name}: {problem}");
+            }
+
+            foreach (var file in local.Where(read.Add))
+            {
+                var relative = Path.GetRelativePath(includeBase, file).Replace('\\', '/');
+                var includedName = $"{name} > {relative}";
+                if (Parse(includedName, ReadText(file), problems) is { } document)
+                {
+                    pending.Enqueue((includedName, document));
+                }
+            }
         }
 
-        var definitions = top.Children
-            .Where(entry => entry.Key is YamlScalarNode { Value: { } key } && !_keywords.Contains(key))
-            .ToDictionary(entry => ScalarText(entry.Key), entry => entry.Value, StringComparer.Ordinal);
+        foreach (var document in documents.Skip(1).Append(top))
+        {
+            foreach (var entry in document.Children)
+            {
+                if (entry.Key is YamlScalarNode { Value: { } key } && !_keywords.Contains(key))
+                {
+                    merged[key] = merged.TryGetValue(key, out var earlier) ? Merge(earlier, entry.Value) : entry.Value;
+                }
+            }
+        }
+
+        var definitions = merged;
         var jobs = definitions.Where(entry => !entry.Key.StartsWith('.')).ToList();
 
         if (jobs.Count == 0)
         {
-            return [$"{name}: defines no jobs"];
+            problems.Add($"{name}: defines no jobs");
+            return problems;
         }
 
         var stagesNode = Get(top, "stages");
         var stages = new HashSet<string>(
             stagesNode is YamlSequenceNode declared ? declared.Children.Select(ScalarText) : _defaultStages,
             StringComparer.Ordinal) { ".pre", ".post" };
-
-        var includeProblems = IncludeProblems(Get(top, "include"), out var scanners);
-        foreach (var problem in includeProblems)
-        {
-            problems.Add($"{name}: {problem}");
-        }
 
         if (scanners && !stages.Contains(_defaultStage))
         {
@@ -208,8 +249,22 @@ internal static class GitLabPipelineGate
                 }
             }
 
+            if (chain.All(link => IsNull(Get(link, "script")) && IsNull(Get(link, "trigger"))))
+            {
+                problems.Add($"{name}: job '{jobName}' has no script:, its own or one it extends");
+            }
+
             var jobImage = chain.Select(link => ImageName(Get(link, "image"))).FirstOrDefault(found => found is not null) ?? defaultImage;
-            var lines = chain.SelectMany(link => _scriptKeys.SelectMany(key => ScriptLines(Get(link, key)))).ToList();
+            var unresolved = new List<string>();
+            var lines = _scriptKeys
+                .Select(key => chain.Select(link => Get(link, key)).FirstOrDefault(found => !IsNull(found)))
+                .SelectMany(node => ScriptLines(node, definitions, unresolved, 0))
+                .ToList();
+
+            foreach (var reference in unresolved.Distinct(StringComparer.Ordinal))
+            {
+                problems.Add($"{name}: job '{jobName}' has a !reference to {reference}, which the pipeline does not define");
+            }
 
             if (lines.Any(line => _dotnetCommand.IsMatch(line.Trim()))
                 && (jobImage is null || !jobImage.StartsWith(_sdkImage, StringComparison.Ordinal)))
@@ -219,10 +274,11 @@ internal static class GitLabPipelineGate
                     + $"give it the {_sdkImage}<version> image the Dockerfiles build with, pinned by digest");
             }
 
-            foreach (Match match in lines.SelectMany(line => _fileRef.Matches(line)))
+            foreach (var (line, match) in lines.SelectMany(line => _fileRef.Matches(line).Select(match => (line, match))))
             {
                 var reference = match.Groups[1].Value;
-                if (reference.Contains('*') || reference.Contains('$'))
+                var after = match.Index > 0 ? line[match.Index - 1] : ' ';
+                if (reference.Contains('*') || reference.Contains('$') || after is '$' or '}')
                 {
                     continue;
                 }
@@ -250,7 +306,7 @@ internal static class GitLabPipelineGate
         var pipelines = Discover(root);
 
         var listed = pipelines.Count > 0
-            ? string.Join(", ", pipelines.Select(path => Path.GetRelativePath(root, path).Replace('\\', '/')))
+            ? string.Join(", ", pipelines.Select(path => Relative(root, path)))
             : "(none)";
         Console.WriteLine($"Validated {pipelines.Count} pipeline(s): {listed}");
         Console.WriteLine();
@@ -261,11 +317,17 @@ internal static class GitLabPipelineGate
             return 1;
         }
 
-        var problems = pipelines
-            .SelectMany(path => Validate(root, Path.GetRelativePath(root, path).Replace('\\', '/'), ReadText(path)))
-            .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal)
-            .ToList();
+        var problems = new List<string>();
+        foreach (var pipeline in pipelines)
+        {
+            var name = Relative(root, pipeline);
+            problems.AddRange(Validate(root, Path.GetDirectoryName(pipeline)!, name, ReadText(pipeline), out var included));
+            problems.AddRange(IncludedFolderFiles(pipeline)
+                .Where(file => !included.Contains(file))
+                .Select(file => $"{name}: includes no '{Relative(root, file)}', which no pipeline then runs"));
+        }
+
+        problems = problems.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
 
         if (problems.Count > 0)
         {
@@ -293,6 +355,10 @@ internal static class GitLabPipelineGate
           - template: Jobs/SAST.gitlab-ci.yml
           - template: Jobs/Secret-Detection.gitlab-ci.yml
           - local: ci/extra.yml
+          - local: .gitlab/ci/web.yml
+            rules:
+              - exists:
+                  - .gitlab/ci/web.yml
         stages:
           - build
           - test
@@ -366,10 +432,27 @@ internal static class GitLabPipelineGate
         ("a project include", _cleanFixture.Replace("  - local: ci/extra.yml", "  - project: group/ci\n    file: ci.yml")),
         ("a template outside the allowlist", _cleanFixture.Replace("  - local: ci/extra.yml", "  - template: Jobs/Dependency-Scanning.gitlab-ci.yml")),
         ("an include as a URL string", _cleanFixture.Replace("  - local: ci/extra.yml", "  - https://example.com/ci.yml")),
+        ("a local include absent from disk", _cleanFixture.Replace("  - local: ci/extra.yml", "  - local: ci/absent.yml")),
+        ("a local include as a string absent from disk", _cleanFixture.Replace("  - local: ci/extra.yml", "  - ci/absent.yml")),
+        ("a local include pattern that matches no file", _cleanFixture.Replace("  - local: ci/extra.yml", "  - local: ci/*.absent.yml")),
+        (
+            "a local include guarded by rules: exists naming another file",
+            _cleanFixture.Replace("  - local: ci/extra.yml", "  - local: ci/absent.yml\n    rules:\n      - exists:\n          - ci/extra.yml")
+        ),
+        (
+            "a local include guarded by rules: if only",
+            _cleanFixture.Replace("  - local: ci/extra.yml", "  - local: ci/absent.yml\n    rules:\n      - if: $CI_COMMIT_BRANCH")
+        ),
+        ("a job an included file defines without a script", _cleanFixture.Replace("  - local: ci/extra.yml", "  - local: ci/partial.yml")),
+        ("a job without a script", _cleanFixture.Replace("    - docker info\n    - echo \"dotnet runs elsewhere\"\n", "").Replace("  script:\n  timeout", "  timeout")),
+        ("a !reference to a job the pipeline does not define", _cleanFixture.Replace("    - docker info\n", "    - !reference [.absent, script]\n")),
+        ("a !reference to a key the job does not define", _cleanFixture.Replace("    - docker info\n", "    - !reference [.extra, before_script]\n")),
+        ("dotnet in a script a !reference brings", _cleanFixture.Replace("    - docker info\n", "    - !reference [.dotnet-lines, script]\n")),
         ("a job without a timeout", _cleanFixture.Replace("  timeout: 5 minutes\n", "")),
         ("dotnet on an image that is not the SDK", _cleanFixture.Replace("    - echo \"dotnet runs elsewhere\"", "    - dotnet --info")),
         ("dotnet in a job with no image", _cleanFixture.Replace("test:\n  extends: .dotnet\n", "test:\n")),
         ("a local script absent from disk", _cleanFixture.Replace("tools/Present.cs", "tools/Absent.cs")),
+        ("a Dockerfile absent from disk", _cleanFixture.Replace("    - docker info\n", "    - docker build --file src/Absent/Dockerfile .\n")),
         ("a cache key file absent from disk", _cleanFixture.Replace("        - global.json\n", "        - Directory.Packages.props\n")),
         ("no jobs", "stages:\n  - test\n.hidden:\n  script:\n    - echo hidden\n"),
         ("a job that is not a mapping", _cleanFixture + "odd: 3\n"),
@@ -382,17 +465,62 @@ internal static class GitLabPipelineGate
         ("a pipeline with nothing wrong with it", _cleanFixture),
         ("no stages: and jobs in the default ones", _cleanFixture.Replace("stages:\n  - build\n  - test\n", "")),
         ("an include as a local string", _cleanFixture.Replace("  - local: ci/extra.yml", "  - ci/extra.yml")),
+        ("a local include with a leading slash", _cleanFixture.Replace("  - local: ci/extra.yml", "  - local: /ci/extra.yml")),
+        ("a local include pattern that matches a file", _cleanFixture.Replace("  - local: ci/extra.yml", "  - local: ci/ex*.yml")),
+        (
+            "an absent local include guarded by rules: exists naming it",
+            _cleanFixture.Replace("  - local: ci/extra.yml", "  - local: ci/extra.yml\n  - local: ci/absent.yml\n    rules:\n      - exists:\n          - ci/absent.yml")
+        ),
+        ("a Dockerfile under a folder a variable names", _cleanFixture.Replace("    - docker info\n", "    - docker build --file \"src/Web/apps/$app/Dockerfile\" src/Web\n    - docker build --file \"apps/${app}/Dockerfile\" .\n")),
+        ("a !reference to a script an included file defines", _cleanFixture.Replace("    - docker info\n", "    - !reference [.extra, script]\n")),
+        ("a job an included file completes, with no timeout of its own there", _cleanFixture),
         ("dotnet on the SDK image default: names", _cleanFixture.Replace("default:\n", $"default:\n  image: {_sdk}\n").Replace("test:\n  extends: .dotnet\n", "test:\n")),
         ("dotnet only in a comment and a container's command line", _cleanFixture.Replace("    - echo \"dotnet runs elsewhere\"", "    - docker run --rm sdk dotnet --info\n    - '# dotnet test runs in the test job'")),
         ("a timeout the job inherits through extends:", _cleanFixture.Replace("test:\n  extends: .dotnet\n  timeout: 10 minutes\n", "test:\n  extends: .dotnet\n").Replace(".dotnet:\n", ".dotnet:\n  timeout: 10 minutes\n")),
     ];
 
-    private static void FixtureRoot(string root)
+    private const string _extraFixture = """
+        .extra:
+          script:
+            - echo extra
+        .dotnet-lines:
+          script:
+            - dotnet --info
+        test:
+          variables:
+            EXTRA: "1"
+
+        """;
+
+    private const string _partialFixture = """
+        orphan:
+          timeout: 5 minutes
+          variables:
+            EXTRA: "1"
+
+        """;
+
+    private const string _webFixture = """
+        web:
+          extends: .dotnet
+          timeout: 5 minutes
+          script:
+            - dotnet --info
+
+        """;
+
+    private static void FixtureRoot(string root) => FixtureRoot(root, root);
+
+    private static void FixtureRoot(string root, string includeBase)
     {
         var tools = Path.Combine(root, "tools");
         Directory.CreateDirectory(tools);
         File.WriteAllText(Path.Combine(tools, "Present.cs"), "", _utf8NoBom);
         File.WriteAllText(Path.Combine(root, "global.json"), "{}", _utf8NoBom);
+        var included = Path.Combine(includeBase, "ci");
+        Directory.CreateDirectory(included);
+        File.WriteAllText(Path.Combine(included, "extra.yml"), _extraFixture, _utf8NoBom);
+        File.WriteAllText(Path.Combine(included, "partial.yml"), _partialFixture, _utf8NoBom);
     }
 
     private static int SilentRun(string root)
@@ -448,7 +576,9 @@ internal static class GitLabPipelineGate
             var root = Directory.CreateTempSubdirectory().FullName;
             try
             {
-                FixtureRoot(root);
+                var target = Path.Combine(root, location);
+                var includeBase = Path.GetDirectoryName(target)!;
+                FixtureRoot(root, includeBase);
                 discovery++;
 
                 if (SilentRun(root) == 0)
@@ -456,8 +586,6 @@ internal static class GitLabPipelineGate
                     failures.Add("passed over a root holding no pipeline");
                 }
 
-                var target = Path.Combine(root, location);
-                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
                 File.WriteAllText(target, faulted, _utf8NoBom);
                 discovery++;
 
@@ -472,6 +600,32 @@ internal static class GitLabPipelineGate
                 if (SilentRun(root) != 0)
                 {
                     failures.Add($"rejected '{location}', which carries no fault");
+                }
+
+                var web = Path.Combine(includeBase, ".gitlab", "ci", "web.yml");
+                Directory.CreateDirectory(Path.GetDirectoryName(web)!);
+                File.WriteAllText(web, _webFixture.Replace("extends: .dotnet\n", "extends: .absent\n"), _utf8NoBom);
+                discovery++;
+
+                if (SilentRun(root) == 0)
+                {
+                    failures.Add($"never read the .gitlab/ci/web.yml '{location}' includes, so its unknown extends: went unreported");
+                }
+
+                File.WriteAllText(web, _webFixture, _utf8NoBom);
+                discovery++;
+
+                if (SilentRun(root) != 0)
+                {
+                    failures.Add($"rejected the .gitlab/ci/web.yml '{location}' includes, which carries no fault");
+                }
+
+                File.WriteAllText(Path.Combine(includeBase, ".gitlab", "ci", "stray.yml"), _webFixture, _utf8NoBom);
+                discovery++;
+
+                if (SilentRun(root) == 0)
+                {
+                    failures.Add($"passed over a file under .gitlab/ci that '{location}' never includes");
                 }
             }
             finally
@@ -498,14 +652,15 @@ internal static class GitLabPipelineGate
         }
 
         Console.WriteLine(
-            "The gate fires on every faulted pipeline, on none of the sound ones, and reads both locations.");
+            "The gate fires on every faulted pipeline, on none of the sound ones, and reads both locations with the files they include.");
         return 0;
     }
 
-    private static List<string> IncludeProblems(YamlNode? include, out bool scanners)
+    private static List<string> IncludeProblems(YamlNode? include, string includeBase, out bool scanners, out List<string> local)
     {
         var problems = new List<string>();
         scanners = false;
+        local = [];
 
         IEnumerable<YamlNode> entries = include switch
         {
@@ -520,8 +675,11 @@ internal static class GitLabPipelineGate
             switch (entry)
             {
                 case YamlScalarNode { Value: { } path } when !path.Contains("://", StringComparison.Ordinal):
+                    problems.AddRange(LocalProblems(path, guards: [], includeBase, local));
                     break;
-                case YamlMappingNode mapping when Keys(mapping).SequenceEqual(_localOnly):
+                case YamlMappingNode mapping when Get(mapping, "local") is YamlScalarNode { Value: { } path }
+                    && Keys(mapping).All(key => _localKeys.Contains(key, StringComparer.Ordinal)):
+                    problems.AddRange(LocalProblems(path, ExistsGuards(Get(mapping, "rules")), includeBase, local));
                     break;
                 case YamlMappingNode mapping when Get(mapping, "template") is YamlScalarNode { Value: { } template }
                     && _allowedTemplates.Contains(template, StringComparer.Ordinal):
@@ -537,6 +695,114 @@ internal static class GitLabPipelineGate
 
         return problems;
     }
+
+    private static IEnumerable<string> LocalProblems(string path, List<string> guards, string includeBase, List<string> local)
+    {
+        var relative = path.TrimStart('/');
+        var matches = Matching(includeBase, relative);
+        local.AddRange(matches);
+
+        if (matches.Count > 0 || guards.Any(guard => guard.TrimStart('/') == relative))
+        {
+            yield break;
+        }
+
+        yield return relative.Contains('*')
+            ? $"includes local: '{path}', a pattern no file matches; guard it with rules: - exists: naming it, or remove it"
+            : $"includes local: '{path}', which does not exist on disk; guard it with rules: - exists: naming it, or remove it";
+    }
+
+    private static List<string> ExistsGuards(YamlNode? rules)
+        => rules is YamlSequenceNode sequence
+            ? sequence.Children
+                .Select(rule => Get(rule, "exists"))
+                .SelectMany(exists => exists switch
+                {
+                    YamlSequenceNode paths => paths.Children.Select(ScalarText),
+                    YamlMappingNode mapping when Get(mapping, "paths") is YamlSequenceNode paths => paths.Children.Select(ScalarText),
+                    YamlScalarNode single when !IsNull(single) => [single.Value!],
+                    _ => [],
+                })
+                .ToList()
+            : [];
+
+    private static List<string> Matching(string includeBase, string relative)
+    {
+        if (!relative.Contains('*'))
+        {
+            var file = Path.Combine(includeBase, relative);
+            return File.Exists(file) ? [Path.GetFullPath(file)] : [];
+        }
+
+        var pattern = new Regex(
+            "^" + Regex.Escape(relative).Replace(@"\*\*/", "(?:.*/)?", StringComparison.Ordinal).Replace(@"\*\*", ".*", StringComparison.Ordinal).Replace(@"\*", "[^/]*", StringComparison.Ordinal) + "$");
+        return Directory.Exists(includeBase)
+            ? Directory.EnumerateFiles(includeBase, "*", SearchOption.AllDirectories)
+                .Where(file => pattern.IsMatch(Path.GetRelativePath(includeBase, file).Replace('\\', '/')))
+                .Select(Path.GetFullPath)
+                .Order(StringComparer.Ordinal)
+                .ToList()
+            : [];
+    }
+
+    private static YamlMappingNode? Parse(string name, string text, List<string> problems)
+    {
+        try
+        {
+            var stream = new YamlStream();
+            stream.Load(new StringReader(text));
+            var document = stream.Documents.Count > 0 ? stream.Documents[0].RootNode : null;
+            if (document is YamlMappingNode mapping)
+            {
+                return mapping;
+            }
+
+            if (document is null || IsNull(document))
+            {
+                return new YamlMappingNode();
+            }
+
+            problems.Add($"{name}: top level is not a mapping");
+        }
+        catch (YamlException exception)
+        {
+            problems.Add($"{name}: does not parse — {exception.Message}");
+        }
+
+        return null;
+    }
+
+    private static YamlNode Merge(YamlNode earlier, YamlNode later)
+    {
+        if (earlier is not YamlMappingNode first || later is not YamlMappingNode second)
+        {
+            return later;
+        }
+
+        var merged = new YamlMappingNode();
+        foreach (var entry in first.Children)
+        {
+            merged.Add(entry.Key, entry.Value);
+        }
+
+        foreach (var entry in second.Children)
+        {
+            var key = ScalarText(entry.Key);
+            var existing = merged.Children.FirstOrDefault(pair => ScalarText(pair.Key) == key);
+            if (existing.Key is null)
+            {
+                merged.Add(entry.Key, entry.Value);
+            }
+            else
+            {
+                merged.Children[existing.Key] = Merge(existing.Value, entry.Value);
+            }
+        }
+
+        return merged;
+    }
+
+    private static string Relative(string root, string path) => Path.GetRelativePath(root, path).Replace('\\', '/');
 
     private static string Describe(YamlNode node) => node switch
     {
@@ -616,12 +882,31 @@ internal static class GitLabPipelineGate
         _ => [],
     };
 
-    private static IEnumerable<string> ScriptLines(YamlNode? node) => node switch
+    private static IEnumerable<string> ScriptLines(YamlNode? node, Dictionary<string, YamlNode> definitions, List<string> unresolved, int depth) => node switch
     {
         YamlScalarNode scalar when !IsNull(scalar) => (scalar.Value ?? "").Split('\n'),
-        YamlSequenceNode sequence => sequence.Children.SelectMany(ScriptLines),
+        YamlSequenceNode reference when !reference.Tag.IsEmpty && !reference.Tag.IsNonSpecific && reference.Tag.Value == _referenceTag => Referenced(reference, definitions, unresolved, depth),
+        YamlSequenceNode sequence => sequence.Children.SelectMany(child => ScriptLines(child, definitions, unresolved, depth)),
         _ => [],
     };
+
+    private static IEnumerable<string> Referenced(YamlSequenceNode reference, Dictionary<string, YamlNode> definitions, List<string> unresolved, int depth)
+    {
+        var path = reference.Children.Select(ScalarText).ToList();
+        YamlNode? target = path.Count > 0 && definitions.TryGetValue(path[0], out var job) ? job : null;
+        foreach (var key in path.Skip(1))
+        {
+            target = Get(target, key);
+        }
+
+        if (target is null || path.Count < 2 || depth > 10)
+        {
+            unresolved.Add(string.Join('.', path));
+            return [];
+        }
+
+        return ScriptLines(target, definitions, unresolved, depth + 1);
+    }
 
     private static IEnumerable<string> CacheKeyFiles(YamlMappingNode job)
     {

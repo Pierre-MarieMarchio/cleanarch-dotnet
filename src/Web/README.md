@@ -80,7 +80,11 @@ dotnet cleanarch add web-app --name PlaceholderSite --framework <framework>
 <!--#if (githubHost)-->
 Pass the project's `--auth`, `--ci` and `--agent-files` too when they are not the defaults.
 <!--#endif-->
-<!--#if (!githubHost)-->
+<!--#if (gitlabHost)-->
+Pass the project's `--auth`, `--code-host`, `--ci` and `--agent-files` too when they are not the
+defaults.
+<!--#endif-->
+<!--#if (!githubHost && !gitlabHost)-->
 Pass the project's `--auth`, `--code-host` and `--agent-files` too when they are not the defaults.
 <!--#endif-->
 
@@ -91,7 +95,14 @@ the web apps' end-to-end tests, `docs/features/web-frontend.md` and, unless `--c
 project already. The lines `--web` writes in files the item template cannot edit are listed below,
 then those of the app's own `README.md`.
 <!--#endif-->
-<!--#if (!githubCi)-->
+<!--#if (gitlabCi)-->
+`--workspace` writes this folder, the shared packages, the browser smoke among them, the API client,
+the web apps' end-to-end tests, `docs/features/web-frontend.md` and, unless `--ci false`,
+`.gitlab/ci/web.yml`, which `.gitlab-ci.yml` includes once it exists and which brings the browser
+the end-to-end job drives. The API side is in every project already. The lines `--web` writes in
+files the item template cannot edit are listed below, then those of the app's own `README.md`.
+<!--#endif-->
+<!--#if (!githubCi && !gitlabCi)-->
 `--workspace` writes this folder, the shared packages, the browser smoke among them, the API client,
 the web apps' end-to-end tests and `docs/features/web-frontend.md`. The API side is in every project
 already. The lines `--web` writes in files the item template cannot edit are listed below, then
@@ -641,6 +652,54 @@ its `pnpm-lock.yaml`.
   ```
 
 <!--#endif-->
+<!--#if (gitlabCi)-->
+- in `docs/guides/build-and-ci.md`, after the line:
+
+  ```markdown
+  | `compose` | the Compose manifest against `.env.example`, and its healthchecks on `/health` |
+  ```
+
+  add:
+
+  ```markdown
+  | `web` | in `src/Web`: frozen install, audit, lint, test, build, and a failure when the API client differs from the API's document |
+  | `web-image` | one image per app under `src/Web/apps`, unprivileged and exposing 8080 only |
+  ```
+
+<!--#endif-->
+<!--#if (gitlabCi)-->
+- in `docs/guides/build-and-ci.md`, before the line:
+
+  ```markdown
+  The load smoke never fails the pipeline: its thresholds describe a broken system, and a `429` counts
+  ```
+
+  add:
+
+  ```markdown
+  `.gitlab/ci/web.yml` holds the `web` and `web-image` jobs, and the browser `end-to-end` drives:
+  `.gitlab-ci.yml` includes it while it exists, so the file a web app brings edits nothing else. A
+  pipeline cannot fan a job out over the folders it finds, so `web-image` builds the apps one after
+  the other on a Docker-in-Docker service, and judges each even when another fails.
+
+  ```
+
+<!--#endif-->
+<!--#if (gitlabCi)-->
+- in `docs/guides/build-and-ci.md`, before the line:
+
+  ```markdown
+  GitLab's SAST and Secret Detection templates are the only includes not in this repository: they follow
+  ```
+
+  add:
+
+  ```markdown
+  Node.js is pinned the same way, and pnpm comes from corepack, at the version and checksum
+  `packageManager` names in `src/Web/package.json`.
+  ```
+
+<!--#endif-->
 - in `docs/guides/removing-features.md`, after the line:
 
   ```markdown
@@ -799,7 +858,9 @@ its `pnpm-lock.yaml`.
   After the end-to-end suite, `end-to-end` drives every web app in Chromium, through
   `pnpm --filter "*browser-smoke" smoke` in `src/Web`. The package reads the apps `cleanarch.json` records
   and each one's port from `WEB_<APP>_HOST_PORT`, in the environment and then in `.env.example`, so an app
-  added later is driven without an edit. For each app, one test:
+  added later is driven without an edit. It opens each app on `127.0.0.1`, or on the host `STACK_HOST`
+  names, which Chromium then treats as a secure origin, as it treats the loopback. For each app, one
+  test:
 
   - loads `/`, which answers with a success status and renders text;
   - fails on any `securitypolicyviolation` the page raises, any console error and any uncaught exception;

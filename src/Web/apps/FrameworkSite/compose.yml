@@ -13,7 +13,7 @@ services:
       PUBLIC_ORIGIN: ${WEB_FRAMEWORK_SITE_ORIGIN:-http://localhost:5173}
     #endif
     ports:
-      - "127.0.0.1:${WEB_FRAMEWORK_SITE_HOST_PORT:-5173}:8080"
+      - "${STACK_PUBLISH_ADDRESS:-127.0.0.1}:${WEB_FRAMEWORK_SITE_HOST_PORT:-5173}:8080"
     depends_on:
       api:
         condition: service_healthy

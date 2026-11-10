@@ -2189,7 +2189,14 @@
         {
           "condition": "(!gitlabCi)",
           "exclude": [
-            ".gitlab-ci.yml"
+            ".gitlab-ci.yml",
+            ".gitlab/ci/**"
+          ]
+        },
+        {
+          "condition": "(!anyWeb)",
+          "exclude": [
+            ".gitlab/ci/web.yml"
           ]
         }
       ]

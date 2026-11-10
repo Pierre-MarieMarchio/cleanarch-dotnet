@@ -5,7 +5,7 @@ services:
       dockerfile: apps/PlaceholderSite/Dockerfile
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${WEB_PLACEHOLDER_SITE_HOST_PORT:-8081}:8080"
+      - "${STACK_PUBLISH_ADDRESS:-127.0.0.1}:${WEB_PLACEHOLDER_SITE_HOST_PORT:-8081}:8080"
     depends_on:
       api:
         condition: service_healthy
