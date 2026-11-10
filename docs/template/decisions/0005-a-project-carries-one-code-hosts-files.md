@@ -39,9 +39,9 @@ live on, and the gate the template proves was no longer the one the project ran.
   value stays out of the choices, so no project is generated without it.
 - **`--ci` keeps its meaning for the chosen host**: that host's pipelines. Under `none` there is
   none to write, so the launcher does not ask it and `cleanarch.json` records `"ci": false`.
-- **The one unpinned include a GitLab pipeline may carry is GitLab's own SAST template**, which
-  follows the instance's version: a pinned component is not available on every self-managed
-  instance, and a pipeline that names one fails there before it runs.
+- **The only unpinned includes a GitLab pipeline may carry are GitLab's own SAST and Secret
+  Detection templates**, which follow the instance's version: a pinned component is not available on
+  every self-managed instance, and a pipeline that names one fails there before it runs.
 
 `TemplatePackagingTests` holds the decision:
 `EveryCodeHost_IsGitHubsTree_ANoneThatWritesNothing_OrAVariantOfItsOwn` fails on a choice of
@@ -71,7 +71,8 @@ live on, and the gate the template proves was no longer the one the project ran.
 - A generated project reads as written for its host, and the pages condition on it; under `none`
   they say that CI and dependency updates are the team's to add.
 - Each host's files evolve together: a step added to one host's gate is added to every other's, and
-  a test pairs the gate jobs across hosts once a second host's pipeline exists.
+  `TemplatePackagingTests.AGitLabProject_RunsEveryCommandOfTheGitHubGate` pairs the gate jobs of
+  `ci.yml` with GitLab's.
 - A GitLab pipeline is never run by the template's own CI, which runs on GitHub. Its schema, the
   template gate and a local runner stand in, and a first run on GitLab.com proves it before the value
   is offered.

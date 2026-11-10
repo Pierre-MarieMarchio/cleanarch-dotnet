@@ -164,10 +164,14 @@ any other.
 | GitHub Actions | The gate runs where the repository lives | [Workflows](../guides/build-and-ci.md#workflows) | — |
 | CodeQL code scanning beside the gate, weekly and on every change to `main` | Taint paths a test does not walk, reported where GitHub shows alerts | [Workflows](../guides/build-and-ci.md#workflows) | — |
 | <!--#endif--> |
-| <!--#if (sonarWorkflow)--> |
+| <!--#if (gitlabCi)--> |
+| GitLab CI/CD | The gate runs where the repository lives | [Pipeline](../guides/build-and-ci.md#pipeline) | — |
+| GitLab's SAST and Secret Detection beside the gate, on every merge request and every push to `main` or `develop` | What a test does not look for, reported in each job's artifacts | [Pipeline](../guides/build-and-ci.md#pipeline) | — |
+| <!--#endif--> |
+| <!--#if (sonarWorkflow || sonarPipeline)--> |
 | Sonar for static analysis and coverage | Issues and coverage read in one place, locally as in CI | [Sonar](../guides/build-and-ci.md#sonar) | — |
 | <!--#endif--> |
-| <!--#if (sonar && !sonarWorkflow)--> |
+| <!--#if (sonar && !sonarWorkflow && !sonarPipeline)--> |
 | Sonar for static analysis and coverage | Issues and coverage read in one place, locally | [Sonar](../guides/build-and-ci.md#sonar) | — |
 | <!--#endif--> |
 | <!--#if (presentationBlazorServer)--> |

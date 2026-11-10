@@ -307,6 +307,14 @@
       "type": "computed",
       "value": "(githubCi && sonar)"
     },
+    "gitlabCi": {
+      "type": "computed",
+      "value": "(ci && gitlabHost)"
+    },
+    "sonarPipeline": {
+      "type": "computed",
+      "value": "(gitlabCi && sonar)"
+    },
     "agentFiles": {
       "type": "parameter",
       "displayName": "Agent instructions",
@@ -1692,6 +1700,7 @@
             "SUPPORT.md",
             "tools/CheckDocPaths.cs",
             "tools/CheckWorkflows.cs",
+            "tools/CheckGitLabCi.cs",
             "tools/CheckComments.cs",
             "tools/WebLockfiles.cs",
             "launcher/**",
@@ -2050,6 +2059,12 @@
           ]
         },
         {
+          "condition": "(!gitlabCi)",
+          "exclude": [
+            "tests/Architecture/AT.Architecture.Tests/Rules/GitLabPipelinePinningTests.cs"
+          ]
+        },
+        {
           "condition": "(!githubCi)",
           "exclude": [
             ".github/workflows/ci.yml",
@@ -2169,7 +2184,15 @@
     {
       "source": "./.template.config/variants/code-host-gitlab/",
       "target": "./",
-      "condition": "(gitlabHost)"
+      "condition": "(gitlabHost)",
+      "modifiers": [
+        {
+          "condition": "(!gitlabCi)",
+          "exclude": [
+            ".gitlab-ci.yml"
+          ]
+        }
+      ]
     },
     {
       "source": "./.template.config/variants/no-aspire/",

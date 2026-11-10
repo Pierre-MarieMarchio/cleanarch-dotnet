@@ -1,0 +1,202 @@
+# GitLab's own templates follow the instance's version and cannot be pinned; no other include is remote.
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
+  - template: Jobs/Secret-Detection.gitlab-ci.yml
+
+# The included scanners' jobs run in test too.
+stages:
+  - test
+
+# Merge requests to the default branch, main or develop, pushes to those branches, and a manual run; a newer pipeline cancels the older one, except on those branches.
+workflow:
+  auto_cancel:
+    on_new_commit: interruptible
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && ($CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "develop")
+    - if: ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web") && ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop")
+      auto_cancel:
+        on_new_commit: none
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+variables:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+  # Inside the project directory, so the cache can hold it.
+  NUGET_PACKAGES: $CI_PROJECT_DIR/.nuget/packages
+  CONFIGURATION: Release
+  SOLUTION: AppTemplate.slnx
+  # The scanners run in merge request pipelines, the only ones a feature branch gets.
+  AST_ENABLE_MR_PIPELINES: "true"
+
+default:
+  interruptible: true
+
+# Directory.Packages.props holds every package version and global.json the SDK; GitLab keys a cache on two files at most.
+.dotnet:
+  image: mcr.microsoft.com/dotnet/sdk:10.0.403-noble@sha256:212fe4cb74627d5adf9817a4088906ae3edff1bd853bb27565d4b46731efe61e
+  cache:
+    key:
+      files:
+        - Directory.Packages.props
+        - global.json
+      prefix: nuget
+    paths:
+      - .nuget/packages
+    policy: pull
+
+build-test:
+  extends: .dotnet
+  stage: test
+  timeout: 30 minutes
+  # Testcontainers starts the integration tests' databases on this daemon, and reaches their ports through its host name.
+  services:
+    - name: docker:29.9.3-dind@sha256:08a98015fce594af7c382883bea080ea206de74402a95da9dc52b6428c8cd121
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: /certs
+    DOCKER_CERT_PATH: /certs/client
+    DOCKER_TLS_VERIFY: "1"
+    TESTCONTAINERS_HOST_OVERRIDE: docker
+    #if (sonarPipeline)
+    SONAR_HOST_URL: https://sonarcloud.io
+    SONAR_USER_HOME: $CI_PROJECT_DIR/.sonar
+  # The analysis rides on this job's build and tests. It is off while the SONAR_ORGANIZATION and SONAR_PROJECT_KEY CI/CD variables are unset, for a fork's merge request, which gets no CI/CD variable, for Renovate's, whose dependency bumps hold no code to judge, and for a push to a branch other than the default one, which SonarCloud's free plan does not analyse; full history then, for its blame and new-code baseline.
+  rules:
+    - if: $SONAR_ORGANIZATION && $SONAR_PROJECT_KEY && $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID == $CI_PROJECT_ID && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME !~ /^renovate\//
+      variables:
+        SONAR_ENABLED: "true"
+        GIT_DEPTH: "0"
+    - if: $SONAR_ORGANIZATION && $SONAR_PROJECT_KEY && $CI_PIPELINE_SOURCE != "merge_request_event" && ($CI_PIPELINE_SOURCE != "push" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH)
+      variables:
+        SONAR_ENABLED: "true"
+        GIT_DEPTH: "0"
+    - when: on_success
+  #endif
+  cache:
+    #if (sonarPipeline)
+    # Keyed by the Java version, since another runtime cannot read the cache.
+    - key: sonar-java21
+      paths:
+        - .sonar/cache
+    #endif
+    - key:
+        files:
+          - Directory.Packages.props
+          - global.json
+        prefix: nuget
+      paths:
+        - .nuget/packages
+      policy: pull-push
+  script:
+    - dotnet --info
+    - dotnet restore "$SOLUTION"
+    - dotnet tool restore
+    # Generated is committed, so Kiota at the version the tool manifest pins writes it again from the OpenAPI reference and any difference fails.
+    - |
+      if ls src/Presentation/*.Presentation.Client/*.csproj > /dev/null 2>&1; then
+        dotnet cleanarch openapi --check --no-web
+      fi
+    # Using order, the BOM, line endings, IDE0003 and IDE0049, which the build's code-style analysis does not check; before the build, to fail fast.
+    - dotnet cleanarch format --check
+    #if (sonarPipeline)
+    # The scanner shells out to a JRE; 21 is the oldest Java the service supports, from the distribution's packages as tools/sonar-scanner.Dockerfile installs it.
+    - |
+      if [ "${SONAR_ENABLED:-}" = "true" ]; then
+        apt-get update
+        apt-get install --yes --no-install-recommends openjdk-21-jre-headless
+        rm -rf /var/lib/apt/lists/*
+      fi
+    # The quality gate fails this job when it is red or SonarCloud cannot be reached. The mail templates are excluded from duplication only; the report pattern matches the extension, as dotnet cleanarch coverage does.
+    - |
+      if [ "${SONAR_ENABLED:-}" = "true" ]; then
+        dotnet sonarscanner begin \
+          /k:"$SONAR_PROJECT_KEY" \
+          /o:"$SONAR_ORGANIZATION" \
+          /d:sonar.token="$SONAR_TOKEN" \
+          /d:sonar.host.url="$SONAR_HOST_URL" \
+          /d:sonar.cs.cobertura.reportsPaths="TestResults/**/*.cobertura.xml" \
+          /d:sonar.cpd.exclusions="**/*.html" \
+          /d:sonar.scanner.scanAll=false \
+          /d:sonar.qualitygate.wait=true
+      fi
+    #endif
+    # The warnings-as-errors properties live in Directory.Build.props and Directory.Build.targets, and no flag here overrides them.
+    - dotnet build "$SOLUTION" --configuration "$CONFIGURATION" --no-restore
+    # The platform runs only the test modules the solution names, so a project missing from it would be skipped silently.
+    - |
+      mapfile -t projects < <(find tests -name '*.csproj' 2>/dev/null | sort)
+      if [ "${#projects[@]}" -eq 0 ]; then
+        echo "No *.csproj found under tests/. The test suite is mandatory."
+        exit 1
+      fi
+      echo "Found ${#projects[@]} test project(s):"
+      solution_paths=$(tr '\\' '/' < "$SOLUTION")
+      missing=0
+      for p in "${projects[@]}"; do
+        if grep -qF -- "$p" <<< "$solution_paths"; then
+          echo "  in solution : $p"
+        else
+          echo "  MISSING     : $p"
+          missing=1
+        fi
+      done
+      if [ "$missing" -ne 0 ]; then
+        echo "A project under tests/ is missing from $SOLUTION, so dotnet test would skip it silently."
+        exit 1
+      fi
+    # The summary and the coverage floor run whatever the tests answered, and any of them failing fails the job: after_script cannot.
+    - |
+      status=0
+      dotnet test \
+        --solution "$SOLUTION" \
+        --configuration "$CONFIGURATION" \
+        --no-build \
+        --results-directory TestResults \
+        --report-xunit-trx \
+        --coverage \
+        --coverage-settings coverage.runsettings \
+        --coverage-output-format cobertura || status=$?
+      #if (sonarPipeline)
+      if [ "${SONAR_ENABLED:-}" = "true" ]; then
+        dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN" || status=$?
+      fi
+      #endif
+      dotnet cleanarch test --reports-only || status=$?
+      dotnet cleanarch coverage --reports-only --json TestResults/coverage-summary.json || status=$?
+      exit "$status"
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - TestResults/**/*.trx
+      - TestResults/**/*.cobertura.xml
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: TestResults/**/*.cobertura.xml
+
+hygiene:
+  extends: .dotnet
+  stage: test
+  timeout: 10 minutes
+  script:
+    - dotnet tool restore
+    - dotnet cleanarch docs-index --check
+
+vulnerable-packages:
+  extends: .dotnet
+  stage: test
+  timeout: 15 minutes
+  script:
+    - dotnet restore "$SOLUTION"
+    # The listing exits 0 on a finding, so its report is read; answer with a pin in Directory.Packages.props, never by relaxing NuGetAuditLevel.
+    - |
+      set -o pipefail
+      dotnet list package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
+      if grep -qi "has the following vulnerable packages" vulnerable.txt; then
+        echo "A referenced package has a known advisory. Bump the pin in Directory.Packages.props."
+        exit 1
+      fi
+      echo "No known vulnerable packages."

@@ -234,6 +234,37 @@ A newer run of `web.yml` cancels the older one on every branch but `main`.
 anything but its 40-character commit SHA, a local `./` action excepted, and on an image a workflow
 runs, as a `container:`, a service, a `docker://` step or the BuildKit driver, without its digest.
 <!--#endif-->
+<!--#if (gitlabCi)-->
+
+## Pipeline
+
+`.gitlab-ci.yml` runs on a merge request to `main`, `develop` or the default branch, on a push to one
+of them, and on a manual run. A newer pipeline cancels the older one, except on those three branches.
+
+| Job | Does |
+|---|---|
+| <!--#if (sonarPipeline)--> |
+| `build-test` | restore, the .NET client against the OpenAPI reference when the project holds it, formatting, build, every test project in the solution, tests with coverage and the floor, and the Sonar analysis around them when it is set up; the test results and the coverage kept for 7 days, and the coverage shown on the merge request's diff |
+| <!--#endif--> |
+| <!--#if (!sonar)--> |
+| `build-test` | restore, the .NET client against the OpenAPI reference when the project holds it, formatting, build, every test project in the solution, tests with coverage and the floor; the test results and the coverage kept for 7 days, and the coverage shown on the merge request's diff |
+| <!--#endif--> |
+| `hygiene` | the documentation index check `verify` runs first |
+| `vulnerable-packages` | the vulnerability listing |
+| GitLab's SAST and Secret Detection jobs | the scanners of GitLab's own templates; their reports are the jobs' artifacts |
+
+The test summary and the coverage floor run whatever the tests answered, and any of the three
+failing fails `build-test`. Its integration tests start their containers through Testcontainers on a
+Docker-in-Docker service over TLS, which needs a runner that allows a privileged service, as
+GitLab.com's do. GitLab's SAST runs on every tier, but the merge request widget that lists its
+findings is Ultimate's.
+
+Every image is pinned to a digest, and the .NET jobs run the SDK image every Dockerfile builds with.
+GitLab's SAST and Secret Detection templates are the only includes not in this repository: they follow
+the instance's version, and nothing pins them on every instance. `GitLabPipelinePinningTests` reads
+`.gitlab-ci.yml` and fails on an image or a service without its digest, on an include that is neither
+a local file nor one of those two templates, and on an SDK image other than the Dockerfiles'.
+<!--#endif-->
 <!--#if (sonar)-->
 
 ## Sonar
@@ -249,6 +280,16 @@ a required check wherever `Build & test` is one. The steps are skipped until the
 `SONAR_ORGANIZATION` and `SONAR_PROJECT_KEY` are set, and for a fork's or Dependabot's pull request;
 they read the secret `SONAR_TOKEN`. The first analysis of the default branch can come back red,
 since everything is new code until a baseline exists.
+<!--#endif-->
+<!--#if (sonarPipeline)-->
+In CI it can still fail a merge request: the quality gate judges new code only, so the code already
+there blocks nobody. It runs inside the `build-test` job of `.gitlab-ci.yml`, around the build and the
+tests that job already runs, so the code is not built a second time. The job waits on the quality
+gate and fails when it is red or when SonarCloud cannot be reached. The steps are skipped until the
+CI/CD variables `SONAR_ORGANIZATION` and `SONAR_PROJECT_KEY` are set, for a fork's or Renovate's merge
+request, and for a push to a branch other than the default one; they read the masked variable
+`SONAR_TOKEN`. The first analysis of the default branch can come back red, since everything is new
+code until a baseline exists.
 <!--#endif-->
 <!--#if (sonar)-->
 
