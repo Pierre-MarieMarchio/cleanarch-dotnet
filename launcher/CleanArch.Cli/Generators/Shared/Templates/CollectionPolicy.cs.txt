@@ -20,7 +20,9 @@ public sealed class PlaceholderCollectionPolicy : ICollectionPolicy
     public IReadOnlyList<SortableField> SortableFields { get; } =
     [
 #if fields
-%FSortables%
+//#each field where sortable
+        SortableField.%field.Sorting%(%field.Name%Field),
+//#end
 #else
         SortableField.Keyset(NameField),
 #endif
