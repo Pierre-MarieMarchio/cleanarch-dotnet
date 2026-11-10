@@ -347,7 +347,7 @@
         { "choice": "gitlab", "description": "The project was generated with --code-host gitlab." },
         { "choice": "none", "description": "The project was generated with --code-host none." }
       ],
-      "description": "The project's --code-host value: the worker's lines to add name the .github files only where the project has them."
+      "description": "The project's --code-host value: the worker's lines to add name the code host's files only where the project has them."
     },
     "githubHost": {
       "type": "computed",
@@ -358,7 +358,7 @@
       "displayName": "Project generated with --ci",
       "datatype": "bool",
       "defaultValue": "true",
-      "description": "The project's --ci value: the worker's lines to add name the release workflow only where the project has it."
+      "description": "The project's --ci value: the worker's lines to add name the release pipeline only where the project has it."
     },
     "githubCi": {
       "type": "computed",
