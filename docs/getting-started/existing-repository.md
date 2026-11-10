@@ -105,51 +105,45 @@ Two facts decide the subdirectory shape:
    needs re-pointing; copy `.env.example` to `.env` beside it.
 <!--#endif-->
 <!--#if (gitlabCi)-->
-3. Move the pipeline to the git root, under a folder of its own if the host has its own pipeline:
+3. Move the `.gitlab` folder to the git root, every path under it kept, renaming a template whose
+   name the host's already uses, then the pipeline:
 
    ```bash
-   mkdir -p .gitlab/ci/api
-   mv services/api/.gitlab-ci.yml        .gitlab/ci/api.yml
-   <!--#if (serverDatabase)-->
-   mv services/api/.gitlab/ci/release.yml .gitlab/ci/api/release.yml
-   <!--#endif-->
+   mkdir -p .gitlab
+   cp -a services/api/.gitlab/. .gitlab/
+   rm -r services/api/.gitlab
+   mv services/api/.gitlab-ci.yml .gitlab-ci.yml
    ```
 
-<!--#endif-->
-<!--#if (gitlabCi && anyWeb)-->
-   Move `.gitlab/ci/web.yml` the same way.
-
-<!--#endif-->
-<!--#if (gitlabCi)-->
-   Without a pipeline of the host's own, the root file moves to `.gitlab-ci.yml` instead. With one,
-   the host's includes it:
+   If the host has a `.gitlab-ci.yml` of its own, the last line moves this one to `.gitlab/ci/api.yml`
+   instead, and the host's includes it; its `local:` includes keep their paths:
 
    ```yaml
    include:
      - local: .gitlab/ci/api.yml
    ```
 
-   A project runs one pipeline, so merge its `stages:`, its `workflow:` rules and GitLab's SAST and
-   Secret Detection templates into the host's rather than keep two of each. Each `local:` include and
-   its `exists:` rule names its file's new place, and a job runs from the git root, so prefix every
-   other path the pipeline names (the solution, the cache keys' files, `.config/dotnet-tools.json`,
-   `coverage.minimum`, `global.json`) with the subdirectory.
+   A project runs one pipeline, so the host's then holds `stages:`, `workflow:` and GitLab's SAST and
+   Secret Detection templates once, merged from both. A job runs from the git root, so prefix with the
+   subdirectory every other path a job names (the solution, the cache keys' files,
+   `.config/dotnet-tools.json`, `coverage.minimum`, `global.json`).
 
-<!--#endif-->
-<!--#if (gitlabCi)-->
-4. Move `.gitlab/merge_request_templates` and `.gitlab/issue_templates` to the git root, beside the
-   host's own, which GitLab reads from there only. Merge `.gitlab/renovate.jsonc` into the host's
-   Renovate configuration, at the git root, each `matchFileNames` entry prefixed with the
-   subdirectory. Renovate reads that one file only.
-
-5. Keep Compose in the subdirectory. Its build contexts are relative to the compose file, so nothing
-   needs re-pointing; copy `.env.example` to `.env` beside it.
 <!--#endif-->
 <!--#if (gitlabHost && !ci)-->
-3. Move `.gitlab/merge_request_templates` and `.gitlab/issue_templates` to the git root, beside the
-   host's own, which GitLab reads from there only. Merge `.gitlab/renovate.jsonc` into the host's
-   Renovate configuration, at the git root, each `matchFileNames` entry prefixed with the
-   subdirectory. Renovate reads that one file only.
+3. Move the `.gitlab` folder to the git root, every path under it kept, renaming a template whose
+   name the host's already uses:
+
+   ```bash
+   mkdir -p .gitlab
+   cp -a services/api/.gitlab/. .gitlab/
+   rm -r services/api/.gitlab
+   ```
+
+<!--#endif-->
+<!--#if (gitlabHost)-->
+   GitLab reads the merge request and issue templates from there only, beside the host's own.
+   Renovate reads one configuration file: if the host has one, merge `.gitlab/renovate.jsonc` into
+   it; either way, prefix each `matchFileNames` entry with the subdirectory.
 
 4. Keep Compose in the subdirectory. Its build contexts are relative to the compose file, so nothing
    needs re-pointing; copy `.env.example` to `.env` beside it.

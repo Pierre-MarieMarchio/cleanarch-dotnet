@@ -582,21 +582,6 @@ its `pnpm-lock.yaml`.
   ```
 
 <!--#endif-->
-<!--#if (gitlabCi)-->
-- in `docs/getting-started/existing-repository.md`, before the line:
-
-  ```markdown
-     Without a pipeline of the host's own, the root file moves to `.gitlab-ci.yml` instead. With one,
-  ```
-
-  add:
-
-  ```markdown
-     Move `.gitlab/ci/web.yml` the same way.
-
-  ```
-
-<!--#endif-->
 - in `docs/getting-started/first-run.md`, after the line:
 
   ```markdown
