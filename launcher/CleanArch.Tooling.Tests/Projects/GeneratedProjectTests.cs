@@ -61,6 +61,33 @@ public sealed class GeneratedProjectTests : IDisposable
         project.Ci.ShouldBeFalse("a project on GitHub generated with --ci false holds no ci.yml");
     }
 
+    [Fact]
+    public void Find_ReadsGitLab_FromThePipelineFileOrTheFolder_AndTiesCiToThePipeline()
+    {
+        AProject();
+        Write(".gitlab/merge_request_templates/Default.md", string.Empty);
+
+        ProjectFacts folderOnly = GeneratedProject.Find(_root).ShouldNotBeNull();
+        folderOnly.CodeHost.ShouldBe("gitlab");
+        folderOnly.Ci.ShouldBeFalse("a GitLab project generated with --ci false holds no .gitlab-ci.yml");
+
+        Write(".gitlab-ci.yml", string.Empty);
+
+        ProjectFacts withPipeline = GeneratedProject.Find(_root).ShouldNotBeNull();
+        withPipeline.CodeHost.ShouldBe("gitlab");
+        withPipeline.Ci.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Find_PrefersGitHub_WhenBothHostsLeaveFiles()
+    {
+        AProject();
+        Write(".github/dependabot.yml", string.Empty);
+        Write(".gitlab-ci.yml", string.Empty);
+
+        GeneratedProject.Find(_root).ShouldNotBeNull().CodeHost.ShouldBe("github");
+    }
+
     [Theory]
     [InlineData("all", "TodoLists", "Reminders", "Notes", "Maintenance")]
     [InlineData("notes", "Notes", "Maintenance")]

@@ -27,6 +27,7 @@ public static class GeneratedProject
     {
         string web = Path.Combine(root, "src", "Web");
         bool hasWorkspace = Directory.Exists(web);
+        string codeHost = CodeHost(root);
 
         return new ProjectFacts(
             root,
@@ -38,10 +39,20 @@ public static class GeneratedProject
             Directory.Exists(Path.Combine(root, "src", "Infrastructure", ProjectFacts.FolderOf(name, "Infrastructure.Storage"))),
             File.Exists(Path.Combine(root, "src", "Presentation", ProjectFacts.FolderOf(name, "Presentation.Client"), name + ".Presentation.Client.csproj")),
             DatabaseProvider(root, name),
-            Directory.Exists(Path.Combine(root, ".github")) ? "github" : "none",
-            File.Exists(Path.Combine(root, ".github", "workflows", "ci.yml")),
+            codeHost,
+            File.Exists(Path.Combine(root, codeHost == "gitlab" ? ".gitlab-ci.yml" : Path.Combine(".github", "workflows", "ci.yml"))),
             File.Exists(Path.Combine(root, "AGENTS.md")),
             Directory.Exists(Path.Combine(root, "src", "Presentation", ProjectFacts.FolderOf(name, "Api"))));
+    }
+
+    private static string CodeHost(string root)
+    {
+        if (Directory.Exists(Path.Combine(root, ".github")))
+        {
+            return "github";
+        }
+
+        return File.Exists(Path.Combine(root, ".gitlab-ci.yml")) || Directory.Exists(Path.Combine(root, ".gitlab")) ? "gitlab" : "none";
     }
 
     public static string? WorkspaceScope(string packageJson)

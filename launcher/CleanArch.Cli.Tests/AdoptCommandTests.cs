@@ -75,6 +75,20 @@ public sealed class AdoptCommandTests : IDisposable
     }
 
     [Fact]
+    public void Adopt_WithTheGitLabPipeline_RecordsGitLab_AndPipelines()
+    {
+        AProjectBeforeTheTool();
+        Directory.Delete(Path.Combine(_root, ".github"), recursive: true);
+        Write(".gitlab-ci.yml", string.Empty);
+
+        Run(["adopt"], _root).ShouldBe(CleanArchCommand.Succeeded);
+
+        ProjectOptions options = ProjectLocator.Find(_root).ShouldNotBeNull().File.Options;
+        options.CodeHost.ShouldBe("gitlab");
+        options.Ci.ShouldBe(true);
+    }
+
+    [Fact]
     public void AdoptDryRun_PrintsTheFile_AndWritesNothing()
     {
         AProjectBeforeTheTool();
