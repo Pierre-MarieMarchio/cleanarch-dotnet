@@ -85,7 +85,7 @@ gives the steps, and [the project tool](docs/reference/cli.md) every command.
 | **HTTP contract** | Problem documents with stable codes, default-deny authorisation, `Idempotency-Key`, offset and keyset paging, rate limits and timeouts, on every endpoint. |
 | **Files, jobs, mail** | An S3-compatible file store with inspection and quotas; timers under leases, in the API process or in a worker; multilingual mail over SMTP or Postmark. |
 | **Web apps** | A pnpm workspace with Vue, React, React Router, Svelte, Angular, Blazor WebAssembly or a static page, and a client generated from the API's own document. |
-| **Gate** | Formatting, warnings as errors, the tests with a coverage floor, migration drift and vulnerable packages, run from a clone; CI, CodeQL, release and Sonar workflows. |
+| **Gate** | Formatting, warnings as errors, the tests with a coverage floor, migration drift and vulnerable packages, run from a clone; the same gate in GitHub Actions with CodeQL or in a GitLab pipeline with its SAST, a release on a tag, Dependabot or Renovate, and Sonar. |
 | **Documentation** | For the project, not the template: overview, first run, architecture, one page per feature, guides, references and ADRs, conditioned on the options chosen. |
 
 ```mermaid
@@ -107,6 +107,7 @@ of each layer and the tests that fail when one points the other way.
 | `--database` | `postgresql`, `sqlserver`, `sqlite` | `postgresql` |
 | `--examples` | `all`, `notes`, `none` | `all` |
 | `--files` | `true`, `false` | `true` |
+| `--code-host` | `github`, `gitlab`, `none` | `github` |
 | `--ci` | `true`, `false` | `true` |
 | `--sonar` | `true`, `false` | `true` |
 | `--agent-files` | `true`, `false` | `true` |

@@ -90,7 +90,8 @@ its Compose stack. The leg that sets `coverage`, the worker, MCP and Blazor WebA
 external sign-in and every example, then runs the generated project's `coverage`, every suite
 again under coverage, against the `coverage.minimum` it carries, which every shape shares and nothing
 lowers to pass; its suites take under a minute, so the step adds about two minutes to a leg of about
-seven and a half. The defaults leg, the local-auth leg without examples and the external-auth leg
+seven and a half. The same leg generates `--code-host gitlab` and checks the GitLab files it writes,
+as [code hosts](#code-hosts) says. The defaults leg, the local-auth leg without examples and the external-auth leg
 without examples also run the generator round trip: `add feature` writes an owner feature, a shared one, an aggregate one and an
 aggregate one on `get,list,create` in turn, the first and the third with `--fields` naming a field of
 every type, nullable ones and bounds among them, the aggregates after `add use-case` adds a command, a
@@ -170,7 +171,7 @@ hosts.
 | defaults | none |
 | several hosts, local auth, notes | `--presentation blazor-server --presentation mcp --presentation worker --examples notes --files false --aspire true`, the API brought by the MCP server's access keys |
 | local auth, no files, no ci, no sonar | `--auth local --examples none --files false --ci false --sonar false --presentation api --presentation worker` |
-| worker, mcp and blazor wasm, external auth, all examples | `--presentation api --presentation mcp --presentation worker --auth external --examples all --files true --web blazor-wasm` |
+| worker, mcp and blazor wasm, external auth, all examples | `--presentation api --presentation mcp --presentation worker --auth external --examples all --files true --web blazor-wasm --code-host gitlab` |
 | sql server, avalonia, external auth, all examples | `--database sqlserver --auth external --examples all --files true --presentation avalonia` |
 | no api, blazor server, mcp and worker, external auth, no agent files | `--presentation blazor-server --presentation mcp --presentation worker --auth external --examples notes --files false --agent-files false` |
 | external auth, no examples, no files | `--auth external --examples none --files false`, then `cleanarch-presentation --framework avalonia` |
@@ -240,6 +241,7 @@ same name, `Template acceptance (<leg>)`, the check the `develop` ruleset requir
 | `.template.config/starters/blazor-server`, `.template.config/starters/avalonia`, `.template.config/starters/wpf`, `.template.config/starters/mcp`, the `cleanarch-presentation` item template | the legs that pass that `--presentation`, or add the project with the item template |
 | `.template.config/starters/worker` | the legs that pass `--presentation worker` |
 | a `.template.config/variants/database-<name>` overlay | that provider's legs |
+| the `.template.config/variants/code-host-gitlab` overlay | the leg that passes `--code-host gitlab` |
 | `src/AppHost`, its integration tests and `LocalStackParityTests` | the leg that passes `--aspire true` |
 | anything else: `src`, `tests`, the shared pages, `tools`, the props, `template.json`, the other variants | every leg, the Windows ones included |
 
@@ -358,15 +360,15 @@ A project carries the files of one code host, or none
 `.github` folder at the root, and the project's own issue forms and pull request template in
 `.template.config/variants/project/.github`, run by this repository's CI and held by
 `WorkflowPinningTests`, `IssueFormTests` and `PullRequestTemplateTests`. Every source that writes
-under `.github` carries `githubHost`, or `githubCi` for a workflow, so `--code-host none` writes no
-`.github` path, and the web app's workflows follow the project's `--code-host` and `--ci`, which
+under `.github` carries `githubHost`, or `githubCi` for a workflow, so `--code-host gitlab` and
+`none` write no `.github` path, and the web app's workflows follow the project's `--code-host` and `--ci`, which
 `add web-app` and `add presentation` pass from `cleanarch.json`.
 
 | Symbol | Reads |
 |---|---|
-| `codeHost` | the host chosen: `github` by default, or `none` |
+| `codeHost` | the host chosen: `github` by default, `gitlab`, or `none` |
 | `githubHost` | `codeHost == "github"`: the `.github` folder, Dependabot, the issue forms, the pull request template |
-| `gitlabHost` | `codeHost == "gitlab"`: the overlay under `.template.config/variants/code-host-gitlab/`; never true while `gitlab` is not a choice |
+| `gitlabHost` | `codeHost == "gitlab"`: the overlay under `.template.config/variants/code-host-gitlab/`, Renovate, the merge request and issue templates |
 | `anyCodeHost` | `codeHost != "none"`: a host whose pipelines `--ci` can write |
 | `githubCi` | `ci && githubHost`: the GitHub Actions workflows |
 | `sonarWorkflow` | `githubCi && sonar`: the Sonar steps of `ci.yml` |
@@ -382,7 +384,9 @@ its own, and until every overlay folder is written once, under a `<value>Host` s
 receive it, yet the package carries it, since `dotnet new` refuses a template whose source folder is
 missing. Its rule in `rules.json` runs the `defaults` leg, whose project a condition gone wrong would
 change, until the change that offers the value gives it the tag of the leg that generates it. Its pipeline holds the same gate as `ci.yml`, and is proved by the options of a leg that
-fits it rather than a leg of its own.
+fits it rather than a leg of its own. GitLab's overlay is complete and `gitlab` a choice: its rule
+runs the leg "worker, mcp and blazor wasm, external auth, all examples", which generates
+`--code-host gitlab`.
 
 GitLab's overlay holds the merge request and issue templates under `.gitlab`:
 `merge_request_templates/Default.md`, which GitLab fills a new merge request's description with, asks
@@ -503,13 +507,19 @@ folder, an image a script runs with `docker run` or names in an `image=` or `gen
 them, its local includes to a file or an `exists:` guard, and its SDK image to the Dockerfiles',
 reading the overlay in this checkout; `tools/CheckGitLabCi.cs` checks the rest, the included files
 merged into the root file as GitLab merges them, and that the job that signs keylessly with cosign,
-and it alone, takes a `SIGSTORE_ID_TOKEN` for the `sigstore` audience. This repository's CI never runs the pipeline: its schema, that gate and a local runner
-stand in until a first run on GitLab.com. Still missing before `gitlab` is a choice: the app host's `LocalStackTests` under `--aspire true`,
-which fail in `build-test` because the app host reaches the containers it starts through the Docker
-host's loopback, which a Docker-in-Docker service keeps to itself, so its health checks time out;
-the
-steps of `docs/getting-started/existing-repository.md` that move the pipeline to the git root, and
-the choice itself.
+and it alone, takes a `SIGSTORE_ID_TOKEN` for the `sigstore` audience. This repository's CI never runs the pipeline, so the leg that generates
+`--code-host gitlab` checks the GitLab files it writes instead: `tools/CheckGitLabCi.cs` on the
+project, `check-jsonschema` against the schema GitLab publishes for its pipeline files, and
+`renovate-config-validator` on `.gitlab/renovate.jsonc`. GitLab's `build-test` does
+not run the app host's `LocalStackTests` under `--aspire true`: the app host reaches the containers it
+starts through the Docker host's loopback, which a Docker-in-Docker service keeps to itself, so their
+health checks would time out. A project's `cleanarch.json` records `codeHost` as it was chosen, and
+`adopt` reads `gitlab` back from `.gitlab-ci.yml` or a `.gitlab` folder at the root.
+
+Two limits stay with the project: a GitLab project creates its `bug` and `enhancement` labels itself,
+as `docs/getting-started/first-run.md` says, and a keyless `cosign sign` needs a Sigstore instance
+that trusts the issuer of the job's ID token, which the public one does for GitLab.com alone, as
+`docs/guides/deployment.md` says.
 
 ## Adding an option
 
@@ -1200,8 +1210,8 @@ project on the thread and fails on any glyph above Latin-1 outside the WGL4 list
 | `--examples` | `all` with `Features/TodoLists` in the application project, `notes` with `Features/Notes` alone, `none` otherwise |
 | `--files` | the `Infrastructure.Storage` project |
 | `--database` | the provider package `Infrastructure.Core` references: SQL Server, SQLite, PostgreSQL otherwise |
-| `--code-host` | `github` with a `.github` folder at the root, `none` otherwise |
-| `--ci`, `--agent-files` | `.github/workflows/ci.yml`, `AGENTS.md` |
+| `--code-host` | `github` with a `.github` folder at the root, `gitlab` with `.gitlab-ci.yml` or a `.gitlab` folder there, `none` otherwise |
+| `--ci`, `--agent-files` | `.github/workflows/ci.yml` or `.gitlab-ci.yml`, `AGENTS.md` |
 | `--agent-files-example` | nothing: recorded `false`, the lines it writes being the team's to replace |
 | `--has-api` | the `src/Presentation/<Initials>.Api` folder |
 | `--scope`, `--workspace` | the name in `src/Web/package.json`, the project's name in kebab case without one; `src/Web` |
