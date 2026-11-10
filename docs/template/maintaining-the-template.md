@@ -18,15 +18,16 @@ still holds.
 |---|---|
 | `tools/CheckDocPaths.cs` | every repository path in a Markdown code span exists, and every `docs/` path a workflow, script or `.http` file names; `CHANGELOG.md` and the plans folder are exempt |
 | `tools/CheckWorkflows.cs` | what a YAML parse misses: a dangling `needs:`, an action on a mutable tag, an image without a digest, a missing `permissions:`, an undeclared `$VAR`, a path absent from disk, a trigger filtered by `paths:` or `paths-ignore:`, a job-level `if:` on a pull request's matrix job, a job that runs `dotnet` on the runner image's SDK |
+| `tools/CheckGitLabCi.cs` | what a YAML parse misses in a GitLab pipeline, the overlay's here and a generated project's at its root: a stage `stages:` does not declare, a dangling `needs:`, `dependencies:` or `extends:`, an image or a service without a digest, an include that is neither local nor GitLab's SAST or Secret Detection template, a job without `timeout:`, a job that runs `dotnet` on another image than the .NET SDK's, a path absent from disk |
 | `tools/CheckComments.cs` | no comment outside the allowlist, one guidance line at a time in configuration files, no Markdown narrating the repository's history |
 | `tools/WebLockfiles.cs --check` | each generated web shape's lockfile equals what the pinned pnpm writes for it; needs pnpm (`npm install --global corepack`, then `corepack enable`) |
 | `openapi --check` | `src/Presentation/AT.Presentation.Client/Generated` equals what the pinned Kiota writes from the OpenAPI reference; needs the tools `dotnet tool restore` restores |
 
 The launcher's own build is a gate too: its analysis row under [the launcher](#the-launcher) gives the rules it holds.
 
-Each of the three `Check*.cs` gates runs its `--self-test` first, against fixtures that must make it
+Each of the four `Check*.cs` gates runs its `--self-test` first, against fixtures that must make it
 fire and fixtures that must leave it silent, and fails when it examined nothing. A rule added to one of
-them comes with the fixture that fails without it. These three files and `tools/WebLockfiles.cs` are
+them comes with the fixture that fails without it. These four files and `tools/WebLockfiles.cs` are
 excluded from generation, and `verify` runs them only
 where `.template.config/template.json` exists, so one command serves both.
 
@@ -369,6 +370,8 @@ under `.github` carries `githubHost`, or `githubCi` for a workflow, so `--code-h
 | `anyCodeHost` | `codeHost != "none"`: a host whose pipelines `--ci` can write |
 | `githubCi` | `ci && githubHost`: the GitHub Actions workflows |
 | `sonarWorkflow` | `githubCi && sonar`: the Sonar steps of `ci.yml` |
+| `gitlabCi` | `ci && gitlabHost`: the GitLab pipeline, `.gitlab-ci.yml` in the overlay |
+| `sonarPipeline` | `gitlabCi && sonar`: the Sonar steps of the GitLab pipeline |
 
 A page conditions a line that names a host's file on that host's symbol, and gives `none` a whole
 sentence that holds without it. Another host comes as a whole-file overlay under
@@ -393,6 +396,23 @@ checkout; `TemplatePackagingTests` holds them to the GitHub files, the sections 
 request template and every field and label of the forms, so the two hosts cannot drift. A quick action
 adds a label only where the project has it: GitLab creates none, as GitHub does `bug` and
 `enhancement`.
+
+The overlay's `.template.config/variants/code-host-gitlab/.gitlab-ci.yml` is GitLab's pipeline: a
+modifier of the overlay's source leaves it out unless `gitlabCi`, and `template.json` excludes
+`GitLabPipelinePinningTests` under `(!gitlabCi)`. It holds the gate of `ci.yml`: the `build-test`,
+`hygiene` and `vulnerable-packages` jobs, on the .NET SDK image the Dockerfiles build with, the
+integration tests on a Docker-in-Docker service, the Sonar steps under `sonarPipeline`, and GitLab's
+SAST and Secret Detection templates in place of CodeQL, the only includes allowed to float.
+`AGitLabProject_RunsEveryCommandOfTheGitHubGate`, in `TemplatePackagingTests`, reads the `dotnet`
+commands of those three jobs of `ci.yml`, past its `templateMaintenance` blocks, and fails until the
+GitLab job of the same name runs each one, so the two gates cannot drift; `GitLabPipelinePinningTests`
+holds the images, services and includes of a GitLab project's pipeline, and its SDK image to the
+Dockerfiles', reading the overlay in this checkout; `tools/CheckGitLabCi.cs` checks the rest. This
+repository's CI never runs the pipeline: its schema, that gate and a local runner stand in until a
+first run on GitLab.com. Still missing before `gitlab` is a choice: the image, Compose, end-to-end,
+load, web and release jobs, Renovate in place of Dependabot, a Docker CLI in `build-test` for the
+app host's `LocalStackTests` under `--aspire true`, which the SDK image lacks, and the steps of
+`docs/getting-started/existing-repository.md` that move the pipeline to the git root.
 
 ## Adding an option
 

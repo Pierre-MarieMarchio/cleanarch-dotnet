@@ -271,6 +271,7 @@ public sealed class VerifyCommandTests : IDisposable
         string tools = project.Folder("tools");
         File.WriteAllText(Path.Combine(tools, "CheckDocPaths.cs"), string.Empty);
         File.WriteAllText(Path.Combine(tools, "CheckWorkflows.cs"), string.Empty);
+        File.WriteAllText(Path.Combine(tools, "CheckGitLabCi.cs"), string.Empty);
         File.WriteAllText(Path.Combine(tools, "CheckComments.cs"), string.Empty);
         File.WriteAllText(Path.Combine(project.Folder(".template.config"), "template.json"), "{}");
         File.WriteAllText(Path.Combine(project.Folder("launcher"), "CleanArch.Create.slnx"), "<Solution />");
@@ -278,7 +279,7 @@ public sealed class VerifyCommandTests : IDisposable
         Run(["verify"], project.Root).ShouldBe(CleanArchCommand.Succeeded);
 
         string[] lines = _output.ToString().Split(Environment.NewLine);
-        foreach (string gate in new[] { "CheckDocPaths.cs", "CheckWorkflows.cs", "CheckComments.cs" })
+        foreach (string gate in new[] { "CheckDocPaths.cs", "CheckWorkflows.cs", "CheckGitLabCi.cs", "CheckComments.cs" })
         {
             lines.ShouldContain($"dotnet run {Path.Combine("tools", gate)} --self-test");
             lines.ShouldContain($"dotnet run {Path.Combine("tools", gate)} {project.Root}");

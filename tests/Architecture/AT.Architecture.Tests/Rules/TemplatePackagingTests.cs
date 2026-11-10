@@ -707,6 +707,116 @@ public sealed class TemplatePackagingTests
             .ShouldBeEmpty("A file generated into a project talks about the template: it is written for the project.");
     }
 
+    private static readonly string[] _gateJobs = ["build-test", "hygiene", "vulnerable-packages"];
+
+    private static readonly Regex _yamlMarker = new(@"^\s*#(?<keyword>if|else|endif)\b\s*(?<condition>.*)$", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _topLevelKey = new(@"^(?<name>[A-Za-z][\w-]*):\s*$", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _workflowJob = new(@"^  (?<name>[A-Za-z][\w-]*):\s*$", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _dotnetCommand = new(@"^(?:-\s+)?(?:run:\s+)?(?<command>dotnet\s.*)$", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _assignment = new(@"^\s*(?<name>[A-Za-z_]\w*)=", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _whitespace = new(@"\s+", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly string[] _shellJoins = ["|", "&", ";", ">", "2>"];
+
+    [Fact]
+    public void AGitLabProject_RunsEveryCommandOfTheGitHubGate()
+    {
+        string root = ProjectReferenceGraph.RepositoryRoot;
+        var github = GateCommands(
+            File.ReadAllLines(Path.Combine(root, ".github", "workflows", "ci.yml")),
+            line => _workflowJob.Match(line) is { Success: true } job && job.Groups["name"].Value != "jobs" ? job.Groups["name"].Value : null);
+        var gitlab = GateCommands(
+            File.ReadAllLines(Path.Combine(root, ".template.config", "variants", "code-host-gitlab", ".gitlab-ci.yml")),
+            line => _topLevelKey.Match(line) is { Success: true } key ? key.Groups["name"].Value : null);
+
+        foreach (string job in _gateJobs)
+        {
+            github.TryGetValue(job, out var expected).ShouldBeTrue($"ci.yml has no {job} job, which this rule pairs with the GitLab pipeline's.");
+            expected!.Count.ShouldBeGreaterThan(1, $"Far fewer dotnet commands were read from ci.yml's {job} job than it runs.");
+            gitlab.TryGetValue(job, out var actual).ShouldBeTrue($"The GitLab pipeline has no {job} job, which pairs with ci.yml's.");
+            expected
+                .Where(command => !actual!.Any(candidate => RunsTheSameCommand(candidate, command)))
+                .ShouldBeEmpty($"The GitLab pipeline's {job} job does not run these commands of ci.yml's: a step added to one host's gate is added to the other's.");
+        }
+    }
+
+    private static bool RunsTheSameCommand(string candidate, string command) =>
+        candidate == command
+        || (candidate.StartsWith(command + " ", StringComparison.Ordinal)
+            && _shellJoins.Any(join => candidate[(command.Length + 1)..].StartsWith(join, StringComparison.Ordinal)));
+
+    private static Dictionary<string, List<string>> GateCommands(string[] lines, Func<string, string?> jobOf)
+    {
+        var kept = new List<string>();
+        var templateOnly = new HashSet<string>(StringComparer.Ordinal);
+        var branches = new Stack<(bool TemplateOnly, bool Kept)>();
+
+        foreach (string line in lines)
+        {
+            if (_yamlMarker.Match(line) is { Success: true } marker)
+            {
+                switch (marker.Groups["keyword"].Value)
+                {
+                    case "if":
+                        bool template = marker.Groups["condition"].Value.Trim() == "(templateMaintenance)";
+                        branches.Push((template, !template));
+                        break;
+                    case "else":
+                        var branch = branches.Pop();
+                        branches.Push((branch.TemplateOnly, branch.TemplateOnly || !branch.Kept));
+                        break;
+                    default:
+                        branches.Pop();
+                        break;
+                }
+
+                continue;
+            }
+
+            if (branches.All(branch => branch.Kept))
+            {
+                kept.Add(line);
+            }
+            else if (_assignment.Match(line) is { Success: true } assignment)
+            {
+                templateOnly.Add(assignment.Groups["name"].Value);
+            }
+        }
+
+        var commands = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        List<string>? current = null;
+
+        for (int index = 0; index < kept.Count; index++)
+        {
+            if (jobOf(kept[index]) is { } job)
+            {
+                current = commands[job] = [];
+                continue;
+            }
+
+            if (current is null || _dotnetCommand.Match(kept[index].Trim()) is not { Success: true } match)
+            {
+                continue;
+            }
+
+            string command = match.Groups["command"].Value;
+            while (command.EndsWith('\\') && index + 1 < kept.Count)
+            {
+                command = command[..^1] + " " + kept[++index].Trim();
+            }
+
+            current.Add(string.Join(' ', _whitespace.Split(command.Trim())
+                .Where(word => !templateOnly.Any(name => word == $"${{{name}}}" || word == $"${name}"))));
+        }
+
+        return commands;
+    }
+
     private const string _withoutGitHub = "(!githubHost)";
 
     private const string _githubFolder = ".github";

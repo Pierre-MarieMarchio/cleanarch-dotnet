@@ -246,6 +246,12 @@ jobs:
       - name: Workflows are structurally sound
         run: dotnet run tools/CheckWorkflows.cs .
 
+      - name: The GitLab pipeline gate can fail
+        run: dotnet run tools/CheckGitLabCi.cs --self-test
+
+      - name: The GitLab pipeline is structurally sound
+        run: dotnet run tools/CheckGitLabCi.cs .
+
       - name: The comment gate can fail
         run: dotnet run tools/CheckComments.cs --self-test
 

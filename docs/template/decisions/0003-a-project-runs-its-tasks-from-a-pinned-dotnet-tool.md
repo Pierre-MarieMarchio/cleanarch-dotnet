@@ -114,7 +114,7 @@ expose one by one.
      Roslyn, none of which a file-based app carries; the code a generator writes is to change
      through the code templates of the second depth once they exist.
 - **The template's own tasks and gates stay here.** `tools/CheckComments.cs`,
-  `tools/CheckDocPaths.cs`, `tools/CheckWorkflows.cs` and the web lockfiles' task audit this
+  `tools/CheckDocPaths.cs`, `tools/CheckWorkflows.cs`, `tools/CheckGitLabCi.cs` and the web lockfiles' task audit this
   repository and the generated trees, and the tool never carries them. This repository runs the tool
   from its source, and the acceptance matrix packs it into a local feed that each generated project
   restores from with `dotnet tool restore --add-source`.
