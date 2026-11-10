@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Nodes;
+﻿using System.Runtime.CompilerServices;
+using System.Text.Json.Nodes;
 using static CleanArch.Cli.Generators.Shared.CSharpNames;
 using static CleanArch.Cli.Generators.Shared.ProjectFolders;
 
@@ -455,15 +456,19 @@ internal static class FeatureCode
             Add($"src/Presentation/{jobsHost}", "Features/BackgroundJobs/Jobs/DeletedAccountSweepJobsExtensions.cs", FeatureTemplates.DeletedAccountSweepJobs, extra: jobs);
             Add($"src/Presentation/{jobsHost}", "Features/BackgroundJobs/Jobs/DeletedAccountSweepOptions.cs", FeatureTemplates.DeletedAccountSweepOptions, extra: jobs);
 
-            var (relative, template) = adapter == "Auth"
-                ? ("Features/Auth/Composition/AccountUserAccountDirectory.cs", FeatureTemplates.LocalUserAccountDirectory)
-                : ("Features/ExternalIdentity/Composition/ExternalIdentityUserAccountDirectory.cs", FeatureTemplates.ExternalUserAccountDirectory);
-
             foreach (string host in ComposingHosts(root, spec))
             {
+                string composing = $"src/Presentation/{host}";
                 var named = new Dictionary<string, string>(StringComparer.Ordinal) { ["H"] = ProjectInFolder(spec.Prefix, host) };
 
-                Add($"src/Presentation/{host}", relative, template, extra: named);
+                if (adapter == "Auth")
+                {
+                    Add(composing, "Features/Auth/Composition/AccountUserAccountDirectory.cs", FeatureTemplates.LocalUserAccountDirectory, extra: named);
+                }
+                else
+                {
+                    Add(composing, "Features/ExternalIdentity/Composition/ExternalIdentityUserAccountDirectory.cs", FeatureTemplates.ExternalUserAccountDirectory, extra: named);
+                }
             }
         }
 
@@ -472,45 +477,45 @@ internal static class FeatureCode
             string domain = ProjectOf(spec, "src/Domain", "Domain");
 
             Add(domain, $"{_feature}/Model/Entities/%A%.cs", FeatureTemplates.Aggregate, "agg");
-            Add(domain, $"{_feature}/Repositories/I%A%Repository.cs", FeatureTemplates.RepositoryPort, "agg&wq");
+            Add(domain, $"{_feature}/Repositories/I%A%Repository.cs", FeatureTemplates.RepositoryPort, "agg && wq");
         }
 
         internal void Application()
         {
             string application = ProjectOf(spec, "src/Application", "Application");
 
-            Add(application, $"{_feature}/Model/Dtos/%A%ContentDto.cs", FeatureTemplates.ContentDto, "rec&content");
+            Add(application, $"{_feature}/Model/Dtos/%A%ContentDto.cs", FeatureTemplates.ContentDto, "rec && content");
             Add(application, $"{_feature}/Model/Dtos/%A%Dto.cs", FeatureTemplates.Dto, "dto");
             Add(application, $"{_feature}/Model/Dtos/%A%SummaryDto.cs", FeatureTemplates.SummaryDto, "list");
-            Add(application, $"{_feature}/Model/Dtos/%A%ListQueryDto.cs", FeatureTemplates.ListQuery, "rec&list");
+            Add(application, $"{_feature}/Model/Dtos/%A%ListQueryDto.cs", FeatureTemplates.ListQuery, "rec && list");
             Add(application, $"{_feature}/Model/Errors/%A%Errors.cs", FeatureTemplates.Errors, "notfound");
             Add(application, $"{_feature}/Model/Policies/%A%CollectionPolicy.cs", FeatureTemplates.CollectionPolicy, "list");
-            Add(application, $"{_feature}/Model/Policies/%A%InputPolicy.cs", FeatureTemplates.InputPolicy, "rec&policy");
+            Add(application, $"{_feature}/Model/Policies/%A%InputPolicy.cs", FeatureTemplates.InputPolicy, "rec && policy");
             Add(application, $"{_feature}/Ports/%A%Queries/I%A%Queries.cs", FeatureTemplates.QueriesPort, "rq");
             Add(application, $"{_feature}/Ports/%A%Queries/%A%Filter.cs", FeatureTemplates.Filter, "list");
-            Add(application, $"{_feature}/Ports/%A%Store/I%A%Store.cs", FeatureTemplates.StorePort, "rec&stage");
-            Add(application, $"{_feature}/Ports/%A%Store/%A%ChangeStatus.cs", FeatureTemplates.ChangeStatus, "rec&change");
+            Add(application, $"{_feature}/Ports/%A%Store/I%A%Store.cs", FeatureTemplates.StorePort, "rec && stage");
+            Add(application, $"{_feature}/Ports/%A%Store/%A%ChangeStatus.cs", FeatureTemplates.ChangeStatus, "rec && change");
             Add(application, $"{_feature}/Services/I%A%Service.cs", FeatureTemplates.ServicePort, "rec");
             Add(application, $"{_feature}/Services/%A%Service.cs", FeatureTemplates.Service, "rec");
-            Add(application, $"{_feature}/Model/Dtos/%A%ContentDtoValidator.cs", FeatureTemplates.ContentValidator, "rec&content");
-            Add(application, $"{_feature}/Model/Mapping/%A%DtoMapping.cs", FeatureTemplates.DtoMapping, "agg&content");
-            Add(application, $"{_feature}/Services/I%A%Service.cs", FeatureTemplates.AccessServicePort, "agg&change");
-            Add(application, $"{_feature}/Services/%A%Service.cs", FeatureTemplates.AccessService, "agg&change");
+            Add(application, $"{_feature}/Model/Dtos/%A%ContentDtoValidator.cs", FeatureTemplates.ContentValidator, "rec && content");
+            Add(application, $"{_feature}/Model/Mapping/%A%DtoMapping.cs", FeatureTemplates.DtoMapping, "agg && content");
+            Add(application, $"{_feature}/Services/I%A%Service.cs", FeatureTemplates.AccessServicePort, "agg && change");
+            Add(application, $"{_feature}/Services/%A%Service.cs", FeatureTemplates.AccessService, "agg && change");
         }
 
         internal void UseCases()
         {
             string application = ProjectOf(spec, "src/Application", "Application");
 
-            Add(application, $"{_queries}/Get%A%/Get%A%.cs", FeatureTemplates.GetUseCase, "agg&get");
-            Add(application, $"{_queries}/Get%A%/Get%A%QueryValidator.cs", FeatureTemplates.GetQueryValidator, "agg&get");
-            Add(application, $"{_queries}/Get%F%/Get%F%.cs", FeatureTemplates.ListUseCase, "agg&list");
-            Add(application, $"{_commands}/Create%A%/Create%A%.cs", FeatureTemplates.CreateUseCase, "agg&create");
-            Add(application, $"{_commands}/Create%A%/Create%A%CommandValidator.cs", FeatureTemplates.CreateCommandValidator, "agg&create");
-            Add(application, $"{_commands}/Update%A%/Update%A%.cs", FeatureTemplates.UpdateUseCase, "agg&update");
-            Add(application, $"{_commands}/Update%A%/Update%A%CommandValidator.cs", FeatureTemplates.UpdateCommandValidator, "agg&update");
-            Add(application, $"{_commands}/Delete%A%/Delete%A%.cs", FeatureTemplates.DeleteUseCase, "agg&delete");
-            Add(application, $"{_commands}/Delete%A%/Delete%A%CommandValidator.cs", FeatureTemplates.DeleteCommandValidator, "agg&delete");
+            Add(application, $"{_queries}/Get%A%/Get%A%.cs", FeatureTemplates.GetUseCase, "agg && get");
+            Add(application, $"{_queries}/Get%A%/Get%A%QueryValidator.cs", FeatureTemplates.GetQueryValidator, "agg && get");
+            Add(application, $"{_queries}/Get%F%/Get%F%.cs", FeatureTemplates.ListUseCase, "agg && list");
+            Add(application, $"{_commands}/Create%A%/Create%A%.cs", FeatureTemplates.CreateUseCase, "agg && create");
+            Add(application, $"{_commands}/Create%A%/Create%A%CommandValidator.cs", FeatureTemplates.CreateCommandValidator, "agg && create");
+            Add(application, $"{_commands}/Update%A%/Update%A%.cs", FeatureTemplates.UpdateUseCase, "agg && update");
+            Add(application, $"{_commands}/Update%A%/Update%A%CommandValidator.cs", FeatureTemplates.UpdateCommandValidator, "agg && update");
+            Add(application, $"{_commands}/Delete%A%/Delete%A%.cs", FeatureTemplates.DeleteUseCase, "agg && delete");
+            Add(application, $"{_commands}/Delete%A%/Delete%A%CommandValidator.cs", FeatureTemplates.DeleteCommandValidator, "agg && delete");
             Add(application, $"{_feature}/Services/Consumers/%Verb%%A%OnAccountDeletedConsumer.cs", FeatureTemplates.AccountDeletedConsumer, "owner");
         }
 
@@ -521,15 +526,15 @@ internal static class FeatureCode
             Add(persistence, $"{_feature}/Rows/Models/%A%Record.cs", FeatureTemplates.RecordPlain, "rec");
             Add(persistence, $"{_feature}/Rows/Models/%A%Record.cs", FeatureTemplates.RecordAudited, "agg");
             Add(persistence, $"{_feature}/Rows/Configurations/%A%RecordConfiguration.cs", FeatureTemplates.Configuration);
-            Add(persistence, $"{_feature}/Access/Stores/%A%Store.cs", FeatureTemplates.Store, "rec&stage");
+            Add(persistence, $"{_feature}/Access/Stores/%A%Store.cs", FeatureTemplates.Store, "rec && stage");
             Add(persistence, $"{_feature}/Rows/Mapping/I%A%Mapper.cs", FeatureTemplates.MapperPort, "agg");
             Add(persistence, $"{_feature}/Rows/Mapping/%A%Mapper.cs", FeatureTemplates.Mapper, "agg");
             Add(persistence, $"{_feature}/Rows/Tracking/I%A%Tracker.cs", FeatureTemplates.TrackerPort, "agg");
             Add(persistence, $"{_feature}/Rows/Tracking/%A%Tracker.cs", FeatureTemplates.Tracker, "agg");
-            Add(persistence, $"{_feature}/Access/Repositories/%A%Repository.cs", FeatureTemplates.Repository, "agg&wq");
+            Add(persistence, $"{_feature}/Access/Repositories/%A%Repository.cs", FeatureTemplates.Repository, "agg && wq");
             Add(persistence, $"{_feature}/Access/Queries/%A%Queries.cs", FeatureTemplates.Queries, "rq");
-            Add(persistence, $"{_feature}/Access/Queries/%A%SortMap.cs", FeatureTemplates.SortMap, "list&!fields");
-            Add(persistence, $"{_feature}/Access/Queries/%A%SortMap.cs", FeatureTemplates.FieldSortMap, "list&fields");
+            Add(persistence, $"{_feature}/Access/Queries/%A%SortMap.cs", FeatureTemplates.SortMap, "list && !fields");
+            Add(persistence, $"{_feature}/Access/Queries/%A%SortMap.cs", FeatureTemplates.FieldSortMap, "list && fields");
         }
 
         internal void Api()
@@ -542,7 +547,7 @@ internal static class FeatureCode
             Add(api, $"{_feature}/Contracts/Responses/%A%Response.cs", FeatureTemplates.Response, "dto");
             Add(api, $"{_feature}/Contracts/Responses/%A%SummaryResponse.cs", FeatureTemplates.SummaryResponse, "list");
             Add(api, $"{_feature}/Controllers/%F%Controller.cs", FeatureTemplates.Controller);
-            Add(api, $"{_feature}/Contracts/Mapping/%A%ResponseMapping.cs", FeatureTemplates.ResponseMapping, "dto|list");
+            Add(api, $"{_feature}/Contracts/Mapping/%A%ResponseMapping.cs", FeatureTemplates.ResponseMapping, "dto || list");
         }
 
         internal void UnitTests()
@@ -551,15 +556,15 @@ internal static class FeatureCode
             string domainTests = ProjectOf(spec, "tests/Domain", "Domain.UnitTests");
             string persistenceTests = ProjectOf(spec, "tests/Infrastructure", "Infrastructure.Persistence.UnitTests");
 
-            AddTest(applicationTests, $"{_feature}/Model/Dtos/%A%ContentDtoValidatorTests.cs", FeatureTemplates.ContentValidatorTests, "rec&content&!fields");
-            AddTest(applicationTests, $"{_feature}/Model/Dtos/%A%ContentDtoValidatorTests.cs", FeatureTemplates.FieldContentValidatorTests, "rec&content&fields");
+            AddTest(applicationTests, $"{_feature}/Model/Dtos/%A%ContentDtoValidatorTests.cs", FeatureTemplates.ContentValidatorTests, "rec && content && !fields");
+            AddTest(applicationTests, $"{_feature}/Model/Dtos/%A%ContentDtoValidatorTests.cs", FeatureTemplates.FieldContentValidatorTests, "rec && content && fields");
             AddTest(applicationTests, $"{_feature}/Services/%A%ServiceTests.cs", FeatureTemplates.ServiceTests, "rec");
             CommandValidatorTests(applicationTests);
-            AddTest(domainTests, $"{_feature}/Model/Entities/%A%Tests.cs", FeatureTemplates.AggregateTests, "agg&!fields");
-            AddTest(domainTests, $"{_feature}/Model/Entities/%A%Tests.cs", FeatureTemplates.FieldAggregateTests, "agg&fields");
+            AddTest(domainTests, $"{_feature}/Model/Entities/%A%Tests.cs", FeatureTemplates.AggregateTests, "agg && !fields");
+            AddTest(domainTests, $"{_feature}/Model/Entities/%A%Tests.cs", FeatureTemplates.FieldAggregateTests, "agg && fields");
             AddTest(persistenceTests, $"{_feature}/Rows/Configurations/%A%RecordConfigurationTests.cs", FeatureTemplates.ConfigurationTests);
-            AddTest(persistenceTests, $"{_feature}/%A%MapperFidelityTests.cs", FeatureTemplates.MapperFidelityTests, "agg&!fields");
-            AddTest(persistenceTests, $"{_feature}/%A%MapperFidelityTests.cs", FeatureTemplates.FieldMapperFidelityTests, "agg&fields");
+            AddTest(persistenceTests, $"{_feature}/%A%MapperFidelityTests.cs", FeatureTemplates.MapperFidelityTests, "agg && !fields");
+            AddTest(persistenceTests, $"{_feature}/%A%MapperFidelityTests.cs", FeatureTemplates.FieldMapperFidelityTests, "agg && fields");
         }
 
         internal void FieldTests()
@@ -582,13 +587,13 @@ internal static class FeatureCode
                 applicationTests,
                 $"{_commands}/Create%A%/Create%A%CommandValidatorTests.cs",
                 FeatureTemplates.CommandValidatorTests,
-                "agg&create&!fields",
+                "agg && create && !fields",
                 new() { ["Op"] = "Create", ["CommandNew"] = "new Create%A%Command(name!, description!)" });
             AddTest(
                 applicationTests,
                 $"{_commands}/Update%A%/Update%A%CommandValidatorTests.cs",
                 FeatureTemplates.CommandValidatorTests,
-                "agg&update&!fields",
+                "agg && update && !fields",
                 new() { ["Op"] = "Update", ["CommandNew"] = "new Update%A%Command(Guid.CreateVersion7(), name!, description!)" });
         }
 
@@ -600,7 +605,7 @@ internal static class FeatureCode
                 applicationTests,
                 $"{_commands}/{operation}%A%/{operation}%A%CommandValidatorTests.cs",
                 FeatureTemplates.FieldCommandValidatorTests,
-                $"agg&{operation.ToLowerInvariant()}",
+                $"agg && {operation.ToLowerInvariant()}",
                 new()
                 {
                     ["Op"] = operation,
@@ -609,9 +614,15 @@ internal static class FeatureCode
                 });
         }
 
-        private void Add(string project, string relative, string template, string when = "", Dictionary<string, string>? extra = null)
+        private void Add(
+            string project,
+            string relative,
+            string template,
+            string when = "",
+            Dictionary<string, string>? extra = null,
+            [CallerArgumentExpression(nameof(template))] string name = "")
         {
-            if (when.Length > 0 && !Template.Evaluate(when, _flags))
+            if (when.Length > 0 && !Condition.Parse(when, Template.KnownFlags).Evaluate(_flags))
             {
                 return;
             }
@@ -620,14 +631,32 @@ internal static class FeatureCode
 
             Emissions.Add(new Emission(
                 $"{project}/{Template.Substitute(relative, tokens)}",
-                Template.Render(template, _flags, tokens, _fields)));
+                Render(name, template, tokens)));
         }
 
-        private void AddTest(string project, string relative, string template, string when = "", Dictionary<string, string>? extra = null)
+        private string Render(string name, string template, Dictionary<string, string> tokens)
+        {
+            try
+            {
+                return Template.Render(template, _flags, tokens, _fields);
+            }
+            catch (InvalidOperationException exception)
+            {
+                throw new InvalidOperationException($"{name}: {exception.Message}", exception);
+            }
+        }
+
+        private void AddTest(
+            string project,
+            string relative,
+            string template,
+            string when = "",
+            Dictionary<string, string>? extra = null,
+            [CallerArgumentExpression(nameof(template))] string name = "")
         {
             if (Directory.Exists(System.IO.Path.Combine(root, project)))
             {
-                Add(project, relative, template, when, extra);
+                Add(project, relative, template, when, extra, name);
             }
             else if (!Skipped.Contains(project, StringComparer.Ordinal))
             {
