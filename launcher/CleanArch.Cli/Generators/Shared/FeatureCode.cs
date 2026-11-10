@@ -186,15 +186,15 @@ internal static class FeatureCode
 
         if (spec.Fields is { } fields)
         {
-            FieldTokens(tokens, spec, fields);
+            CodeTokens(tokens, spec, fields, flags);
         }
 
         return tokens;
     }
 
-    internal static void FieldTokens(Dictionary<string, string> tokens, FeatureSpec spec, IReadOnlyList<Field> fields)
+    private static void CodeTokens(Dictionary<string, string> tokens, FeatureSpec spec, IReadOnlyList<Field> fields, HashSet<string> flags)
     {
-        var writer = new FieldTokenWriter(tokens, spec, fields, Flags(spec));
+        var writer = new FieldTokenWriter(tokens, spec, fields, flags);
 
         writer.Contracts();
         writer.Tests();
@@ -438,7 +438,7 @@ internal static class FeatureCode
 
         private readonly Dictionary<string, string> _tokens = Tokens(spec);
 
-        private readonly TemplateList? _fields = spec.Fields is { } fields ? FieldBlocks.For(fields, Flags(spec)) : null;
+        private readonly TemplateList? _fields = spec.Fields is { } fields ? FieldBlocks.For(fields) : null;
 
         internal List<Emission> Emissions { get; } = [];
 
@@ -688,7 +688,6 @@ internal static class FeatureCode
 
         internal void Contracts()
         {
-            _tokens["FPolicyConstants"] = FieldCode.Constants(_fields);
             _tokens["FRulesCommand"] = FieldCode.Rules(_fields, "command", _spec.Type);
             _tokens["FRulesContent"] = FieldCode.Rules(_fields, "content", _limits);
             _tokens["FSortables"] = FieldCode.Joined(_fields.Where(FieldCode.IsSortable).Select(field =>
@@ -699,7 +698,7 @@ internal static class FeatureCode
         {
             _tokens["FServiceInvalid"] = ServiceRefusal();
             _tokens["FContentValidatorTests"] = FieldCode.ValidatorTests(_fields, $"{_spec.Type}ContentDto", "AValidContentDto", _limits);
-            _tokens["FAggregateTests"] = FieldCode.AggregateTests(_fields, _flags.Contains("create"), _flags.Contains("update"), "%OwnerIdArg%");
+            _tokens["FAggregateTests"] = FieldCode.AggregateTests(_fields, _flags.Contains("create"), _flags.Contains("update"));
             _tokens["FConfigurationTests"] = FieldCode.ConfigurationTests(_fields, _limits);
             _tokens["FApiInstants"] = ApiInstants();
             _tokens["FApiRefusal"] = ApiRefusal();

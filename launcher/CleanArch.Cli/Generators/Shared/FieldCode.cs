@@ -119,11 +119,6 @@ internal static class FieldCode
 
     internal static string Joined(IEnumerable<string> lines, string separator = "\n") => string.Join(separator, lines);
 
-    internal static string List(IEnumerable<string> items, string indent, string last = "") =>
-        string.Join(",\n", items.Select(item => indent + item)) + last;
-
-    internal static string Constants(IEnumerable<Field> fields) => Joined(fields.SelectMany(ConstantsOf), "\n\n");
-
     internal static IEnumerable<string> ConstantsOf(Field field)
     {
         if (IsReference(field))
@@ -147,7 +142,7 @@ internal static class FieldCode
 
     internal static int IntegerDigits(Field field) => field.Precision - field.Scale;
 
-    internal static string Trimmed(Field field, string source) => $"{source}.{field.Name}{(field.Nullable ? "?" : string.Empty)}.Trim()";
+    internal static string Trimmed(Field field) => $"content.{field.Name}{(field.Nullable ? "?" : string.Empty)}.Trim()";
 
     private static string Subject(Field field) => $"%An% %L% {Label(field)}";
 
@@ -179,9 +174,11 @@ internal static class FieldCode
 
     private static string Count(int count, string noun) => $"{count} {noun}{(count == 1 ? string.Empty : "s")}";
 
+    internal static string RequireMethod(Field field) => $"Require{field.Name}";
+
     internal static string Require(Field field)
     {
-        string name = $"Require{field.Name}";
+        string name = RequireMethod(field);
         string type = Type(field);
 
         switch (field.Kind)
@@ -385,9 +382,9 @@ internal static class FieldCode
     internal static string WireParameter(Field field) =>
         (IsRequiredOnTheWire(field) ? "[property: JsonRequired] " : string.Empty) + $"{Type(field)} {field.Name}";
 
-    internal static string Store(Field field, string source)
+    internal static string Stored(Field field)
     {
-        string read = $"{source}.{field.Name}";
+        string read = $"content.{field.Name}";
 
         if (field.Kind != FieldKind.DateTimeOffset)
         {
@@ -402,19 +399,19 @@ internal static class FieldCode
             ? $"    public string {field.Name} {{ get; set; }} = string.Empty;"
             : $"    public {Type(field)} {field.Name} {{ get; set; }}";
 
-    internal static string Configuration(Field field, string holder)
+    internal static string Configuration(Field field)
     {
         string property = $"        builder.Property(record => record.{field.Name})";
         var links = new List<string>();
 
         if (IsReference(field))
         {
-            links.Add($".HasMaxLength({holder}.{field.Name}MaxLength)");
+            links.Add($".HasMaxLength(%Limits%.{field.Name}MaxLength)");
         }
 
         if (field.Kind == FieldKind.Decimal)
         {
-            links.Add($".HasPrecision({holder}.{field.Name}Precision, {holder}.{field.Name}Scale)");
+            links.Add($".HasPrecision(%Limits%.{field.Name}Precision, %Limits%.{field.Name}Scale)");
         }
 
         if (!field.Nullable)
@@ -429,15 +426,6 @@ internal static class FieldCode
             _ => Joined([property, .. links.Select(link => "            " + link)]) + ";",
         };
     }
-
-    internal static string SortIndex(string features, Field field, bool owner) =>
-        Joined(
-        [
-            owner
-                ? $"        builder.HasIndex(record => new {{ record.OwnerId, record.{field.Name}, record.Id }})"
-                : $"        builder.HasIndex(record => new {{ record.{field.Name}, record.Id }})",
-            $"            .HasDatabaseName(\"{FieldCode.IndexName(features, field, owner)}\");",
-        ]);
 
     internal static string CursorKey(Field field) =>
         field.Kind == FieldKind.String
@@ -582,9 +570,6 @@ internal static class FieldCode
     private static string Constant(Field field, string? holder, string suffix, decimal value) =>
         holder is null ? Literal(field, value) : $"{holder}.{field.Name}{suffix}";
 
-    internal static string Assertion(string owner, Field field, string expected) =>
-        $"        {owner}.{field.Name}.ShouldBe({expected});";
-
     internal static string ValidatorTests(IReadOnlyList<Field> fields, string message, string builder, string holder)
     {
         var tests = new List<string>
@@ -632,16 +617,16 @@ internal static class FieldCode
         return Joined(tests, "\n\n");
     }
 
-    internal static string Construction(IEnumerable<string> arguments) => "new(\n" + List(arguments, "        ") + ")";
+    internal static string Construction(IEnumerable<string> arguments) => "new(\n" + string.Join(",\n", arguments.Select(argument => "        " + argument)) + ")";
 
     internal static string Arguments(IReadOnlyList<Field> fields, Func<Field, string> value) => string.Join(", ", fields.Select(value));
 
     internal static string WithOne(IReadOnlyList<Field> fields, Field changed, string value) =>
         Arguments(fields, field => ReferenceEquals(field, changed) ? value : Sample(field, 1));
 
-    internal static string AggregateTests(IReadOnlyList<Field> fields, bool create, bool update, string ownerArgument)
+    internal static string AggregateTests(IReadOnlyList<Field> fields, bool create, bool update)
     {
-        var tests = new AggregateTestWriter(fields, ownerArgument);
+        var tests = new AggregateTestWriter(fields);
 
         return Joined(
             [
@@ -652,7 +637,7 @@ internal static class FieldCode
             "\n\n");
     }
 
-    private sealed class AggregateTestWriter(IReadOnlyList<Field> fields, string ownerArgument)
+    private sealed class AggregateTestWriter(IReadOnlyList<Field> fields)
     {
         private readonly string _ones = Arguments(fields, field => Sample(field, 1));
 
@@ -665,7 +650,7 @@ internal static class FieldCode
                 "    [Fact]",
                 "    public void Create_KeepsEveryField_WithItsStringsTrimmed()",
                 "    {",
-                $"        var %L% = %A%.Create({ownerArgument}{Arguments(fields, Padded)});",
+                $"        var %L% = %A%.Create(%OwnerIdArg%{Arguments(fields, Padded)});",
                 string.Empty,
                 "        %L%.Id.ShouldNotBe(Guid.Empty);",
                 Asserted(1),
@@ -682,7 +667,7 @@ internal static class FieldCode
                 "    [Fact]",
                 "    public void Update_ReplacesEveryField()",
                 "    {",
-                $"        var %L% = %A%.Rehydrate(Guid.CreateVersion7(), {ownerArgument}{_ones});",
+                $"        var %L% = %A%.Rehydrate(Guid.CreateVersion7(), %OwnerIdArg%{_ones});",
                 string.Empty,
                 $"        %L%.Update({Arguments(fields, field => Sample(field, 2))});",
                 string.Empty,
@@ -707,7 +692,7 @@ internal static class FieldCode
                     "    {",
                     $"        string stored = new('a', %A%.{text.Name}MaxLength + 1);",
                     string.Empty,
-                    $"        var %L% = %A%.Rehydrate(Guid.CreateVersion7(), {ownerArgument}{WithOne(fields, text, "stored")});",
+                    $"        var %L% = %A%.Rehydrate(Guid.CreateVersion7(), %OwnerIdArg%{WithOne(fields, text, "stored")});",
                     string.Empty,
                     $"        %L%.{text.Name}.ShouldBe(stored);",
                     "    }",
@@ -718,13 +703,13 @@ internal static class FieldCode
             [
                 "    [Fact]",
                 "    public void Rehydrate_RefusesAnEmptyId() =>",
-                $"        Should.Throw<DomainException>(() => %A%.Rehydrate(Guid.Empty, {ownerArgument}{_ones}));",
+                $"        Should.Throw<DomainException>(() => %A%.Rehydrate(Guid.Empty, %OwnerIdArg%{_ones}));",
             ]);
         }
 
         private static string Padded(Field field) => field.Kind == FieldKind.String ? $"\"  {Sample(field, 1)[1..^1]}  \"" : Sample(field, 1);
 
-        private string Asserted(int which) => Joined(fields.Select(field => Assertion("%L%", field, Sample(field, which))));
+        private string Asserted(int which) => Joined(fields.Select(field => $"        %L%.{field.Name}.ShouldBe({Sample(field, which)});"));
 
         private string InUtc(Field field) =>
             $$"""
@@ -733,7 +718,7 @@ internal static class FieldCode
                 {
                     var sent = new DateTimeOffset(2026, 3, 4, 7, 6, 7, TimeSpan.FromHours(2));
 
-                    var %L% = %A%.Create({{ownerArgument}}{{WithOne(fields, field, "sent")}});
+                    var %L% = %A%.Create(%OwnerIdArg%{{WithOne(fields, field, "sent")}});
 
                     %L%.{{field.Name}}.ShouldBe(sent);
                     %L%.{{field.Name}}{{(field.Nullable ? "!.Value" : string.Empty)}}.Offset.ShouldBe(TimeSpan.Zero);
@@ -744,7 +729,7 @@ internal static class FieldCode
             $$"""
                 [Fact]
                 public void Create_Refuses{{field.Name}}{{name}}() =>
-                    Should.Throw<DomainException>(() => %A%.Create({{ownerArgument}}{{WithOne(fields, field, value)}}));
+                    Should.Throw<DomainException>(() => %A%.Create(%OwnerIdArg%{{WithOne(fields, field, value)}}));
             """;
 
         private string UpdateRefuses(Field first)
@@ -756,7 +741,7 @@ internal static class FieldCode
                 "    [Fact]",
                 $"    public void Update_Refuses{first.Name}{name}_AndChangesNothing()",
                 "    {",
-                $"        var %L% = %A%.Rehydrate(Guid.CreateVersion7(), {ownerArgument}{_ones});",
+                $"        var %L% = %A%.Rehydrate(Guid.CreateVersion7(), %OwnerIdArg%{_ones});",
                 string.Empty,
                 $"        Should.Throw<DomainException>(() => %L%.Update({Arguments(fields, field => ReferenceEquals(field, first) ? value : Sample(field, 2))}));",
                 string.Empty,

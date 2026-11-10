@@ -31,7 +31,8 @@ internal sealed class PlaceholderRecordConfiguration : IEntityTypeConfiguration<
 #if owner
 #if fields
 //#each field where sortable separator "\n\n"
-%field.SortIndex%
+        builder.HasIndex(record => new { record.OwnerId, record.%field.Name%, record.Id })
+            .HasDatabaseName("IX_Placeholders_OwnerId_%field.Name%_Id");
 //#end
 #else
         builder.HasIndex(record => new { record.OwnerId, record.Name, record.Id })
@@ -43,7 +44,8 @@ internal sealed class PlaceholderRecordConfiguration : IEntityTypeConfiguration<
 #else
 #if fields
 //#each field where sortable separator "\n\n"
-%field.SortIndex%
+        builder.HasIndex(record => new { record.%field.Name%, record.Id })
+            .HasDatabaseName("IX_Placeholders_%field.Name%_Id");
 //#end
 #else
         builder.HasIndex(record => new { record.Name, record.Id })

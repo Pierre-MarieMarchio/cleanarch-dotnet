@@ -49,7 +49,7 @@ internal static class FeatureReport
                 : "a Guid and a nullable field do not, being long, unordered on SQLite, or ordered apart on each provider.");
         }
 
-        if (spec.Deletion == "anonymise" && fields.Where(field => FieldCode.Anonymised(field) is null).Select(field => field.Name).ToList() is { Count: > 0 } kept)
+        if (spec.Deletion == "anonymise" && fields.Where(field => !FieldCode.IsAnonymised(field)).Select(field => field.Name).ToList() is { Count: > 0 } kept)
         {
             output.WriteLine($"--deletion anonymise rewrites the strings, the texts and the nullable fields, and keeps {string.Join(", ", kept)}:");
             output.WriteLine("rewrite whatever of them still says who the owner was.");
