@@ -44,7 +44,8 @@ internal static class NewFeature
         + "  placed beside a line it finds, and records them in the manifest; when one of those lines is\n"
         + "  missing it writes nothing. It refuses while a context has no initial migration or the\n"
         + "  business model has a change no migration holds, then builds, adds the Add<Features>\n"
-        + "  migration and rewrites the OpenAPI reference and the clients written from it.";
+        + "  migration and rewrites the OpenAPI reference and the clients written from it. A file comes\n"
+        + "  from the project's copy of its code template, under code-templates/add-feature, where it has one.";
 
     internal static readonly string[] _operationNames = ["get", "list", "create", "update", "delete"];
 

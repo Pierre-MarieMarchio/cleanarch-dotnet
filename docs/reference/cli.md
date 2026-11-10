@@ -230,12 +230,9 @@ edit. A manifest the tool cannot read refuses the copy until it is repaired or m
 
 When a newer tool changes the text of a template this project holds a copy of, `add feature` and
 `add field` still write from the copy and warn on the error output, under `--dry-run` too, without
-changing their exit code: `warning: <path> overrides a template the tool has changed since version
-<version>, which it was copied from`, followed by how to take the change. To take it, move the copy
-aside, copy the template again, and carry your changes over; a copy committed untouched before it is
-edited gives git the merge base that carries them. A template written by hand, which the manifest
-does not record, is never reported, and a manifest the tool cannot read is a warning there, not a
-refusal. The report of either generator lists the copies it wrote from, except when it refuses.
+changing their exit code; [changing generated code](../guides/changing-generated-code.md#when-the-tool-changes-a-template)
+says how to take the change. The report of either generator lists the copies it wrote from, except
+when it refuses.
 
 <!--#endif-->
 ## Ejecting a command

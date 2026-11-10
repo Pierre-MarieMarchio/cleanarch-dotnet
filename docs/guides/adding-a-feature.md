@@ -104,6 +104,14 @@ The command writes:
   made, with the line it is placed beside, so the edit can be undone exactly;
 - the feature page `docs/features/<features>.md`, from `docs/_page-templates/feature.md`.
 
+<!--#if (canAddFeature)-->
+It writes each code file from a code template: this project's copy under
+`code-templates/add-feature/` where it holds one, the tool's text otherwise, and its report lists the
+copies it used under `Written from this project's code templates:`.
+[Changing generated code](changing-generated-code.md) says how to copy one and edit it. The edits
+below stay the tool's, whatever the copies hold.
+
+<!--#endif-->
 <!--#if (!api)-->
 This project holds no HTTP API, so it writes no controller, no contract and no API test: the hosts
 offer the feature through its use cases.
@@ -281,6 +289,11 @@ and stops at the first step that fails; the same command resumes once the failur
 manifest records each field with its default, the new SHA-256 of each file, and under `addedFields`
 the declaration, the migration and each file's change, so `remove feature` reads the files as
 untouched.
+
+It renders the feature from the same code templates as `add feature`, before and after the new
+fields, and warns, still writing, when a copy is not the text the manifest records the feature was
+written from: [what the feature records](changing-generated-code.md#what-the-feature-records) says
+what the warning means.
 <!--#if (accounts)-->
 A field is written through the syntax tree while the feature's edits are lines placed beside an
 anchor: the composing edits go beside a line a reader can see, in C# and Markdown alike, while a field rewrites
