@@ -46,13 +46,21 @@ internal sealed class FieldGeneration(Addition addition, GenerationContext conte
     protected override bool Draft(List<string> problems)
     {
         _changes = FieldChanges(Root, addition, _failures);
+        problems.AddRange(addition.Templates.Problems);
+
+        foreach (string path in addition.Templates.DifferingFrom(addition.Manifest.Templates))
+        {
+            Error.WriteLine(
+                $"warning: {path} is not the text {ManifestPath(addition.After)} records the feature was written from; add field compares "
+                + "the files with what it writes today, so a member the difference reaches reads as changed by hand.");
+        }
 
         if (_failures.Count == 0)
         {
             _manifest = UpdatedManifest(addition, _changes);
         }
 
-        return true;
+        return problems.Count == 0;
     }
 
     protected override int RefuseEdits(IReadOnlyList<string> failures) =>
@@ -69,10 +77,8 @@ internal sealed class FieldGeneration(Addition addition, GenerationContext conte
 
     private static List<FieldChange> FieldChanges(string root, Addition addition, List<string> problems)
     {
-        var templates = Overrides(root);
-        var before = Plan(addition.Before, root, templates, out _).ToDictionary(emission => emission.Path, StringComparer.Ordinal);
-        var after = Plan(addition.After, root, templates, out _);
-        problems.AddRange(templates.Problems);
+        var before = Plan(addition.Before, root, addition.Templates, out _).ToDictionary(emission => emission.Path, StringComparer.Ordinal);
+        var after = Plan(addition.After, root, addition.Templates, out _);
         var recorded = addition.Manifest.Files.Keys.ToHashSet(StringComparer.Ordinal);
 
         foreach (string path in before.Keys.Where(path => after.All(emission => emission.Path != path)))
@@ -149,6 +155,7 @@ internal sealed class FieldGeneration(Addition addition, GenerationContext conte
             manifest.Record(change.Path, change.Bytes);
         }
 
+        manifest.RecordTemplates(addition.Templates.Used);
         manifest.RecordAddition(
             string.Join(", ", addition.Added.Select(field => field.Declared)),
             addition.Migration,

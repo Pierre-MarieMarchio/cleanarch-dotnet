@@ -67,6 +67,11 @@ internal sealed class TemplateOverrides
         }
     }
 
+    internal IEnumerable<string> DifferingFrom(IReadOnlyDictionary<string, string> recorded) =>
+        recorded.Keys.Union(_used.Keys, StringComparer.Ordinal)
+            .Where(path => !recorded.TryGetValue(path, out string? was) || !_used.TryGetValue(path, out string? now) || was != now)
+            .Order(StringComparer.Ordinal);
+
     internal void ReportUsed(TextWriter output)
     {
         if (_used.Count == 0)
