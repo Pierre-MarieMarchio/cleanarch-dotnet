@@ -52,10 +52,14 @@ internal static class NewField
         }
 
         string migration = MigrationName(features, added);
+        var templates = Overrides(root);
+        var addition = added.Any(field => IsPresent(before.Fields, field))
+            ? Repeated(root, features, manifest, templates, before, added, migration, problems)
+            : Widened(root, features, manifest, templates, before, added, migration, problems);
 
-        return added.Any(field => IsPresent(before.Fields, field))
-            ? Repeated(root, features, manifest, before, added, migration, problems)
-            : Widened(root, features, manifest, before, added, migration, problems);
+        problems.AddRange(templates.Problems);
+
+        return problems.Count > 0 ? null : addition;
     }
 
     private static FeatureManifest? ReadManifest(string root, string features, List<string> problems)
@@ -99,7 +103,7 @@ internal static class NewField
     private static bool IsPresent(IReadOnlyList<Field> existing, Field field) =>
         existing.Any(present => string.Equals(present.Name, field.Name, StringComparison.OrdinalIgnoreCase));
 
-    private static Addition? Repeated(string root, string features, FeatureManifest manifest, FeatureSpec before, List<Field> added, string migration, List<string> problems)
+    private static Addition? Repeated(string root, string features, FeatureManifest manifest, TemplateOverrides templates, FeatureSpec before, List<Field> added, string migration, List<string> problems)
     {
         var existing = before.Fields;
         string declared = string.Join(", ", added.Select(field => field.Declared));
@@ -108,7 +112,7 @@ internal static class NewField
 
         if (recorded && !Migrated(root, after, migration, added))
         {
-            return new Addition(before with { Fields = [.. existing.Where(field => !added.Any(one => one.Name == field.Name))] }, after, added, migration, manifest, Pending: true);
+            return new Addition(before with { Fields = [.. existing.Where(field => !added.Any(one => one.Name == field.Name))] }, after, added, migration, manifest, templates, Pending: true);
         }
 
         foreach (var field in added.Where(field => IsPresent(existing, field)))
@@ -123,7 +127,7 @@ internal static class NewField
         return null;
     }
 
-    private static Addition? Widened(string root, string features, FeatureManifest manifest, FeatureSpec before, List<Field> added, string migration, List<string> problems)
+    private static Addition? Widened(string root, string features, FeatureManifest manifest, TemplateOverrides templates, FeatureSpec before, List<Field> added, string migration, List<string> problems)
     {
         var existing = before.Fields;
         IReadOnlyList<Field> combined = [.. existing, .. added];
@@ -134,9 +138,7 @@ internal static class NewField
             .Select(problem => problem.Replace("--fields", "The fields to add", StringComparison.Ordinal)));
 
         var widened = before with { Fields = combined };
-        var templates = Overrides(root);
         var names = Plan(widened, root, templates, out _).Select(emission => System.IO.Path.GetFileNameWithoutExtension(emission.Path)).ToList();
-        problems.AddRange(templates.Problems);
         var conflicts = FieldCode.Conflicts(existing, features, before.Type, names, before.Deletion, before.Access == "owner", before.Has("list")).ToHashSet(StringComparer.Ordinal);
 
         problems.AddRange(FieldCode.Conflicts(combined, features, before.Type, names, before.Deletion, before.Access == "owner", before.Has("list"))
@@ -149,7 +151,7 @@ internal static class NewField
             problems.Add($"A migration named {migration} already exists, and the migration of these fields takes that name. Rename that one first.");
         }
 
-        return problems.Count > 0 ? null : new Addition(before, widened, added, migration, manifest, Pending: false);
+        return problems.Count > 0 ? null : new Addition(before, widened, added, migration, manifest, templates, Pending: false);
     }
 
     private static string MigrationName(string features, List<Field> added) =>

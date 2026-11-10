@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using CleanArch.Cli.Generators.Shared;
 using Xunit;
 using static CleanArch.Cli.Generators.Shared.FeatureCode;
@@ -33,6 +34,12 @@ public sealed partial class NewFeatureTests
 
     [Fact]
     public void DotFilesAreIgnored() => Expectations.Hold(DotFilesAreIgnoredCases);
+
+    [Fact]
+    public void AddFieldUsesTheOverrideForBothRenders() => Expectations.Hold(AddFieldUsesTheOverrideForBothRendersCases);
+
+    [Fact]
+    public void AddFieldWarnsWhenTheOverrideChangedSinceAddFeature() => Expectations.Hold(AddFieldWarnsWhenTheOverrideChangedSinceAddFeatureCases);
 
     private static string ToolText(string reference) => ToolTemplates.Of(TemplateFolder)[reference];
 
@@ -197,5 +204,65 @@ public sealed partial class NewFeatureTests
         expect(expected.Code == 0, $"add feature refused the run the dot-file test compares: {expected.Error}");
         expect(result.Code == 0, $"add feature read a dot file in code-templates as a template: {result.Error}");
         expect(Same(WrittenFiles(plain), WrittenFiles(dotted)), $"A dot file in code-templates changed what add feature wrote: {Differing(WrittenFiles(plain), WrittenFiles(dotted))}");
+    }
+
+    private const string _fieldMarker = "    // a field this project's template marks";
+
+    private static string MarkingEachField() =>
+        ToolText(_record).Replace("%field.RecordProperty%", $"{_fieldMarker}\n%field.RecordProperty%", StringComparison.Ordinal) + "\n";
+
+    private static void AddFieldUsesTheOverrideForBothRendersCases(string scratch, Action<bool, string> expect)
+    {
+        string[] options = [.. _fieldShapes[0].Options];
+        string widened = FieldTree(scratch);
+        string root = FieldTree(scratch);
+
+        Put(widened, OverridePath(_record), MarkingEachField());
+        Put(root, OverridePath(_record), MarkingEachField());
+
+        var expected = Invoke(widened, ["Things", "Thing", .. options, "--fields", $"{_existingFields}, Notes:text?"]);
+        var created = Invoke(root, ["Things", "Thing", .. options, "--fields", _existingFields]);
+        var added = InvokeField(root, Migrating(root, [], "Things"), "Things", "Notes:text?");
+        string record = File.ReadAllText(System.IO.Path.Combine(root, "src/Infrastructure/A.Infrastructure.Persistence/Features/Things/Rows/Models/ThingRecord.cs"));
+
+        expect(expected.Code == 0 && created.Code == 0, $"add feature refused a run the add field override test compares: {expected.Error}{created.Error}");
+        expect(added.Code == 0, $"add field refused a field over a feature written from an override: {added.Error}");
+        expect(
+            Regex.Count(record, Regex.Escape(_fieldMarker)) == 3,
+            $"add field did not write the added field through the override's block, beside the two fields add feature wrote: {record}");
+        expect(
+            Same(FeatureFiles(widened), FeatureFiles(root)),
+            $"add field did not leave each file as add feature writes it from the same override with the field added: {Differing(FeatureFiles(widened), FeatureFiles(root))}");
+        expect(!added.Error.Contains("warning:", StringComparison.Ordinal), $"add field warned over an override that has not changed: {added.Error}");
+        expect(
+            ManifestOfThings(root)["templates"]?.ToJsonString() == ManifestOfThings(widened)["templates"]?.ToJsonString(),
+            "add field did not record the override it wrote from as add feature records it.");
+    }
+
+    private static void AddFieldWarnsWhenTheOverrideChangedSinceAddFeatureCases(string scratch, Action<bool, string> expect)
+    {
+        string root = FieldTree(scratch);
+
+        Put(root, OverridePath(_record), MarkingEachField());
+
+        var created = Invoke(root, ["Things", "Thing", .. _fieldShapes[0].Options, "--fields", _existingFields]);
+        string changed = MarkingEachField() + "#if list\n#endif\n";
+
+        Put(root, OverridePath(_record), changed);
+
+        var added = InvokeField(root, Migrating(root, [], "Things"), "Things", "Notes:text?");
+        var recorded = ManifestOfThings(root)["templates"]!.AsArray().Single()!;
+
+        expect(created.Code == 0, $"add feature refused the run the warning test reads: {created.Error}");
+        expect(added.Code == 0, $"add field refused, or failed, over an override changed since add feature: {added.Error}");
+        expect(
+            added.Error.Contains(
+                $"warning: {OverridePath(_record)} is not the text {FeatureManifest.PathOf("Things")} records the feature was written from; add field compares "
+                    + "the files with what it writes today, so a member the difference reaches reads as changed by hand.\n",
+                StringComparison.Ordinal),
+            $"add field did not warn that the override changed since add feature wrote the feature: {added.Error}");
+        expect(
+            recorded["sha256"]!.GetValue<string>() == ToolTemplates.Digest(changed),
+            "add field did not record the override's text it wrote from, once written.");
     }
 }
