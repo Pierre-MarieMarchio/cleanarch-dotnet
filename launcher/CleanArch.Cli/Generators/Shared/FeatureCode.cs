@@ -690,8 +690,6 @@ internal static class FeatureCode
         {
             _tokens["FRulesCommand"] = FieldCode.Rules(_fields, "command", _spec.Type);
             _tokens["FRulesContent"] = FieldCode.Rules(_fields, "content", _limits);
-            _tokens["FSortables"] = FieldCode.Joined(_fields.Where(FieldCode.IsSortable).Select(field =>
-                $"        SortableField.{(FieldCode.IsKeyset(field) ? "Keyset" : "OffsetOnly")}({field.Name}Field),"));
         }
 
         internal void Tests()
