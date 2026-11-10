@@ -1,5 +1,5 @@
 using AppTemplate.Application.Features.Placeholders.Model.Policies; //?PlaceholderInputPolicy|PlaceholderCollectionPolicy
-#if agg
+#if aggregate
 using AppTemplate.Domain.Features.Placeholders.Model.Entities; //?Placeholder
 #endif
 using AppTemplate.Infrastructure.Core.Common.Contexts;
@@ -60,7 +60,7 @@ public sealed class PlaceholderRecordConfigurationTests
 
 #endif
     [Fact]
-#if prefixed
+#if prefixedTables
     public void TheTable_IsPrefixedWithThePlaceholdersSchema()
     {
         Entity().GetTableName().ShouldBe($"{AppDbContext.PlaceholdersSchema}_Placeholders");

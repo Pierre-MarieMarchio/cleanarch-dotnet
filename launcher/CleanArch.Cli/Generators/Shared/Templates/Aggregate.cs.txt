@@ -10,7 +10,7 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
 //#each field where constants separator "\n\n"
 %field.Constants%
 //#end
-#if content
+#if takesContent
 
 //#each field where decimal separator "\n\n"
     private const decimal %field.Ceiling% = 1e%field.IntegerDigits%m;
@@ -21,7 +21,7 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
 
     public const int DescriptionMaxLength = 2_000;
 #endif
-#if anontext
+#if anonymisedText
 
     public const string AnonymisedText = "[deleted account]";
 #endif
@@ -64,7 +64,7 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
     public %field.Type% %field.Name% %field.Accessors%
 //#end
 #else
-#if (update || anon)
+#if (update || anonymise)
     public string Name { get; private set; }
 
     public string Description { get; private set; }
@@ -161,7 +161,7 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
 #endif
 
 #endif
-#if anon
+#if anonymise
     public void Anonymise()
     {
 #if fields
@@ -175,12 +175,12 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
     }
 
 #endif
-#if (content && fields)
+#if (takesContent && fields)
 //#each field where require separator "\n\n"
 %field.Require%
 //#end
 #endif
-#if (content && !fields)
+#if (takesContent && !fields)
     private static string RequireName(string name)
     {
         string trimmed = name?.Trim() ?? string.Empty;

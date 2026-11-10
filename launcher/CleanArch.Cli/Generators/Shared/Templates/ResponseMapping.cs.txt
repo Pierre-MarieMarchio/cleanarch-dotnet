@@ -8,7 +8,7 @@ namespace AppTemplate.Api.Features.Placeholders.Contracts.Mapping;
 
 internal static class PlaceholderResponseMapping
 {
-#if dto
+#if returnsOne
     public static PlaceholderResponse ToResponse(PlaceholderDto placeholder)
     {
         ArgumentNullException.ThrowIfNull(placeholder);
@@ -38,7 +38,7 @@ internal static class PlaceholderResponseMapping
         result.Map(value => PagedResponse.From(value, ToResponse));
 
 #endif
-#if dto
+#if returnsOne
 #if etag
     public static Result<%ReadResponse%> ToPlaceholderResponse(Result<%ReadDto%> result) =>
         result.Map(value => new Versioned<PlaceholderResponse>(ToResponse(value.Value), value.Version));

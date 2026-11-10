@@ -37,7 +37,7 @@ internal sealed class PlaceholderQueries(AppDbContext context) : IPlaceholderQue
     }
 
 #endif
-#if single
+#if readsOne
     public Task<%ReadDto%?> GetAsync(
 #if owner
         UserId ownerId,

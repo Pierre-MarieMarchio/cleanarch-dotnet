@@ -14,17 +14,17 @@ using FluentValidation; //?IValidator
 namespace AppTemplate.Application.Features.Placeholders.Services;
 
 internal sealed class PlaceholderService(
-#if rq
+#if reads
     IPlaceholderQueries queries,
 #endif
-#if wq
+#if writes
     IPlaceholderStore store,
     IUnitOfWork unitOfWork,
 #endif
-#if clock
+#if stampsTime
     TimeProvider timeProvider,
 #endif
-#if content
+#if takesContent
     IValidator<PlaceholderContentDto> validator,
 #endif
     ICurrentUser currentUser) : IPlaceholderService
@@ -186,7 +186,7 @@ internal sealed class PlaceholderService(
     }
 
 #endif
-#if single
+#if readsOne
     private async Task<Result<%ReadDto%>> ReadAsync(
 #if owner
         UserId ownerId,
@@ -202,14 +202,14 @@ internal sealed class PlaceholderService(
     }
 
 #endif
-#if (trim && fields)
+#if (trimsText && fields)
     private static PlaceholderContentDto Trimmed(PlaceholderContentDto content) => content with { /*#each field where string separator ", "*/%field.Name% = %field.Trimmed%/*#end*/ };
 #endif
-#if (trim && !fields)
+#if (trimsText && !fields)
     private static PlaceholderContentDto Trimmed(PlaceholderContentDto content) => content with { Name = content.Name.Trim() };
 
 #endif
-#if change
+#if changesOne
     private static Error FailureOf(PlaceholderChangeStatus status, Guid placeholderId) => status switch
     {
         PlaceholderChangeStatus.NotFound => PlaceholderErrors.PlaceholderNotFound(placeholderId),

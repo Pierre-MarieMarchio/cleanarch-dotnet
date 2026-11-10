@@ -5,7 +5,7 @@ using AppTemplate.Api.Common.Idempotency; //?Idempotent
 using AppTemplate.Api.Features.Placeholders.Contracts.Mapping; //?PlaceholderResponseMapping
 using AppTemplate.Api.Features.Placeholders.Contracts.Requests; //?CreatePlaceholderRequest|UpdatePlaceholderRequest|GetPlaceholdersRequest
 using AppTemplate.Api.Features.Placeholders.Contracts.Responses; //?PlaceholderResponse|PlaceholderSummaryResponse
-#if rec
+#if record
 using AppTemplate.Application.Features.Placeholders.Model.Dtos; //?PlaceholderContentDto|PlaceholderListQueryDto
 using AppTemplate.Application.Features.Placeholders.Services;
 #else

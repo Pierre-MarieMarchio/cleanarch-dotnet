@@ -5,7 +5,12 @@ namespace CleanArch.Cli.Tests.Generators;
 
 public sealed class ConditionTests
 {
-    private static readonly HashSet<string> _known = new(StringComparer.Ordinal) { "get", "list", "create" };
+    private static readonly FlagSet _known = new("a test", new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["get"] = "Get.",
+        ["list"] = "List.",
+        ["create"] = "Create.",
+    });
 
     private static readonly (string Text, string[] Flags, bool Holds)[] _readings =
     [
@@ -29,8 +34,8 @@ public sealed class ConditionTests
 
     private static readonly (string Text, string Expected, string Control)[] _refusals =
     [
-        ("get && nonsense", "'nonsense' is not a known flag in 'get && nonsense'", "get && list"),
-        ("DEBUG", "'DEBUG' is not a known flag", "get"),
+        ("get && nonsense", "'nonsense' is not a flag of a test in 'get && nonsense'", "get && list"),
+        ("DEBUG", "'DEBUG' is not a flag of a test", "get"),
         ("", "'' ends where a flag", "get"),
         ("get ||", "'get ||' ends where a flag", "get || list"),
         ("!", "'!' ends where a flag", "!get"),

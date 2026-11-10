@@ -2114,34 +2114,54 @@ public sealed partial class NewFeatureTests
         const string compilable = "namespace AppTemplate.Placeholders;\n\n#if (get && !list)\n    class Placeholder;\n#elif list\nclass placeholderList;\n#else\nclass None;\n#endif\n";
 
         expect(
-            Refuses(() => Template.Render("namespace N;\n#if (get && nonsense)\n#endif", get, names), "line 2: 'nonsense' is not a known flag"),
-            "An #if naming a flag the generators do not know was rendered, or refused without naming its line and the flag.");
-        expect(Template.Render(compilable, get, names) == "namespace Acme.People;\n\n    class Person;\n", "An #if holding kept a line other than its own, or a reference name was not replaced, Placeholders included.");
-        expect(Template.Render(compilable, ["list"], names) == "namespace Acme.People;\n\nclass personList;\n", "An #elif holding kept a line other than its own.");
-        expect(Template.Render(compilable, [], names) == "namespace Acme.People;\n\nclass None;\n", "An #else did not take over when no condition held.");
-        expect(Template.Render("namespace N;\n#if list || get\nclass Kept;\n#endif\n", get, names) == "namespace N;\nclass Kept;\n", "An #if joining flags with || did not hold when only its second flag did.");
+            Refuses(() => Render("namespace N;\n#if (get && nonsense)\n#endif", get), "line 2: 'nonsense' is not a flag of dotnet cleanarch add feature"),
+            "An #if naming a flag add feature does not know was rendered, or refused without naming its line and the flag.");
+        expect(Render(compilable, get) == "namespace Acme.People;\n\n    class Person;\n", "An #if holding kept a line other than its own, or a reference name was not replaced, Placeholders included.");
+        expect(Render(compilable, ["list"]) == "namespace Acme.People;\n\nclass personList;\n", "An #elif holding kept a line other than its own.");
+        expect(Render(compilable, []) == "namespace Acme.People;\n\nclass None;\n", "An #else did not take over when no condition held.");
+        expect(Render("namespace N;\n#if list || get\nclass Kept;\n#endif\n", get) == "namespace N;\nclass Kept;\n", "An #if joining flags with || did not hold when only its second flag did.");
         expect(
             !Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(FeatureTemplates.Errors).GetDiagnostics().Any(),
             "The Errors template is no longer valid C#, which its compilable form promises.");
+
+        var setting = new FlagSet("dotnet cleanarch add setting", new Dictionary<string, string>(StringComparer.Ordinal) { ["secret"] = "A key holds a secret." });
+
+        expect(
+            Refuses(() => Render("namespace N;\n#if secret\n#endif\n", get), "line 2: 'secret' is not a flag of dotnet cleanarch add feature"),
+            "A feature template naming the flag of another generator was rendered: the vocabulary of add feature is not its own.");
+        expect(
+            Refuses(() => Template.Render("namespace N;\n#if aggregate\n#endif\n", setting, [], names), "line 2: 'aggregate' is not a flag of dotnet cleanarch add setting"),
+            "A template naming a flag of add feature was rendered under another generator's vocabulary.");
+        expect(
+            Template.Render("namespace N;\n#if secret\nclass Kept;\n#endif\n", setting, ["secret"], names) == "namespace N;\nclass Kept;\n",
+            "A template naming a flag of the vocabulary it is rendered under was refused, or did not keep its branch.");
+
+        expect(
+            Refuses(() => Render("namespace N;\nclass %Plural%;\n", get), "'%Plural%' is a token this generation does not set"),
+            "A template naming a token the generation does not set was rendered, the token written as code.");
+        expect(Render("namespace N;\nclass %A%;\n", get) == "namespace N;\nclass Person;\n", "A token the generation sets was refused, or not replaced.");
 
         var fields = FieldBlocks.For(FieldGrammar.Parse("Title:string(120), Size:int, Notes:text?", FieldProfile.Feature, [])!, []);
         const string arguments = "namespace N;\n    M(\n//#each field separator \",\\n\"\n        %field.Type% %field.Parameter%\n//#end \");\"\n";
 
         expect(
-            Template.Render(arguments, [], names, fields) == "namespace N;\n    M(\n        string title,\n        int size,\n        string? notes);\n",
+            Render(arguments, [], fields) == "namespace N;\n    M(\n        string title,\n        int size,\n        string? notes);\n",
             "A line block did not write one item per field, joined by its separator, with its tail after the last.");
         expect(
-            Template.Render("namespace N;\n//#each field where anonymised\n%field.Name%\n//#end\n", [], names, fields) == "namespace N;\nTitle\nNotes\n",
+            Render("namespace N;\n//#each field where anonymised\n%field.Name%\n//#end\n", [], fields) == "namespace N;\nTitle\nNotes\n",
             "A block with a where wrote a field without its trait, or left out one with it.");
         expect(
-            Template.Render("namespace N;\nM(/*#each field separator \", \"*/%field.Name%/*#end*/);\n", [], names, fields) == "namespace N;\nM(Title, Size, Notes);\n",
+            Render("namespace N;\nM(/*#each field separator \", \"*/%field.Name%/*#end*/);\n", [], fields) == "namespace N;\nM(Title, Size, Notes);\n",
             "An inline block did not join its items on the line it stands in.");
         expect(
-            Refuses(() => Template.Render("namespace N;\n//#each field\n%field.Colour%\n//#end\n", [], names, fields), "'%field.Colour%' is not a token of a field"),
+            Refuses(() => Render("namespace N;\n//#each field\n%field.Colour%\n//#end\n", [], fields), "'%field.Colour%' is not a token of a field"),
             "A block naming a token a field does not have was rendered, so a typo would write the token itself.");
         expect(
-            Refuses(() => Template.Render("namespace N;\n//#each field\n%field.Name%\n", [], names, fields), "'//#each' stands outside a block"),
+            Refuses(() => Render("namespace N;\n//#each field\n%field.Name%\n", [], fields), "'//#each' stands outside a block"),
             "A block that never closes was rendered, its marker and tokens written as code.");
+
+        string Render(string template, HashSet<string> flags, TemplateList? list = null) =>
+            Template.Render(template, FeatureFlags.Vocabulary, flags, names, list);
 
         static bool Refuses(Action render, string expected)
         {

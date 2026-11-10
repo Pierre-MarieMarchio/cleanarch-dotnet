@@ -91,7 +91,7 @@ internal static class FeatureReport
             }
         }
 
-        if (spec.HasApi && Flags(spec).Contains("notfound"))
+        if (spec.HasApi && Flags(spec).Contains("notFound"))
         {
             output.WriteLine(applied
                 ? "The row of its refusal, added under ### Resources in docs/reference/api.md, which the error-code tests read:"
@@ -189,7 +189,7 @@ internal static class FeatureReport
             output.WriteLine($"  2. {ProjectOf(spec, "src/Application", "Application")}/ApplicationModule.cs: an Add{spec.Features}() beside the others");
             output.WriteLine($"       services.AddFeature(\"{spec.Features}\");   // its validators, found by folder, and the use-case pipeline");
 
-            if (IsRecord || _flags.Contains("change"))
+            if (IsRecord || _flags.Contains("changesOne"))
             {
                 output.WriteLine($"       services.AddScoped<I{a}Service, {a}Service>();");
             }
@@ -212,7 +212,7 @@ internal static class FeatureReport
             output.WriteLine($"  3. {Persistence}/PersistenceModule.cs: an Add{spec.Features}Feature(services),");
             output.WriteLine("     called from AddPersistenceModule, registering the adapters of this feature's ports:");
 
-            if (IsRecord && _flags.Contains("stage"))
+            if (IsRecord && _flags.Contains("store"))
             {
                 output.WriteLine($"       services.TryAddScoped<I{a}Store, {a}Store>();");
             }
@@ -224,7 +224,7 @@ internal static class FeatureReport
                 output.WriteLine($"       services.TryAddScoped<I{a}Repository, {a}Repository>();");
             }
 
-            if (_flags.Contains("rq"))
+            if (_flags.Contains("reads"))
             {
                 output.WriteLine($"       services.TryAddScoped<I{a}Queries, {a}Queries>();");
             }
