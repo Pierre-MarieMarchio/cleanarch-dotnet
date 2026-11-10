@@ -598,7 +598,9 @@ public sealed partial class NewFeatureTests
 
     private static void WithFieldsCases(string scratch, Action<bool, string> expect)
     {
-        foreach (var (group, digest) in WithFieldsDigests(scratch, expect))
+        var syntax = new GeneratedSyntax();
+
+        foreach (var (group, digest) in WithFieldsDigests(scratch, expect, syntax))
         {
             string recorded = _withFieldsDigests.Single(entry => entry.Group == group).Digest;
 
@@ -608,13 +610,16 @@ public sealed partial class NewFeatureTests
                 + $"when this digest was recorded: digest {digest}, recorded {recorded}. A change to that output is a change for every "
                 + "project that runs add feature --fields: make it on purpose, then record the new digest.");
         }
+
+        syntax.Hold("add feature with --fields", expect);
     }
 
-    private static IEnumerable<(string Group, string Digest)> WithFieldsDigests(string scratch, Action<bool, string> expect, Action<string, string>? seen = null)
+    private static IEnumerable<(string Group, string Digest)> WithFieldsDigests(string scratch, Action<bool, string> expect, GeneratedSyntax syntax)
     {
         foreach (var (group, options, reaction, api, database) in _digestGroups)
         {
             string root = DigestTree(scratch, reaction, api, database, integration: true);
+            var seen = syntax.In(group);
             bool fieldTests = false;
             using var digest = Digest(out var feed);
 
@@ -669,7 +674,9 @@ public sealed partial class NewFeatureTests
 
     private static void FieldAdditionOutputCases(string scratch, Action<bool, string> expect)
     {
-        foreach (var (group, digest) in FieldAdditionDigests(scratch, expect))
+        var syntax = new GeneratedSyntax();
+
+        foreach (var (group, digest) in FieldAdditionDigests(scratch, expect, syntax))
         {
             string recorded = _fieldAdditionDigests.Single(entry => entry.Group == group).Digest;
 
@@ -679,9 +686,11 @@ public sealed partial class NewFeatureTests
                 + $"was recorded: digest {digest}, recorded {recorded}. A change to that output is a change for every project that runs "
                 + "add field: make it on purpose, then record the new digest.");
         }
+
+        syntax.Hold("add field", expect);
     }
 
-    private static IEnumerable<(string Group, string Digest)> FieldAdditionDigests(string scratch, Action<bool, string> expect, Action<string, string>? seen = null)
+    private static IEnumerable<(string Group, string Digest)> FieldAdditionDigests(string scratch, Action<bool, string> expect, GeneratedSyntax syntax)
     {
         (string Group, string[] Options, bool Api, string Database)[] features =
         [
@@ -697,6 +706,7 @@ public sealed partial class NewFeatureTests
         foreach (var (group, options, api, database) in features)
         {
             string root = DigestTree(scratch, reaction: true, api, database, integration: true);
+            var seen = syntax.In(group);
             var created = Invoke(root, ["Things", "Thing", .. options, "--fields", _existingFields]);
 
             expect(created.Code == 0, $"[{group}] add feature refused the feature add field extends: {created.Error}");
@@ -722,11 +732,7 @@ public sealed partial class NewFeatureTests
                     string written = hash == "<directory>" ? hash : File.ReadAllText(System.IO.Path.Combine(root, path));
 
                     feed(written);
-
-                    if (path.EndsWith(".cs", StringComparison.Ordinal))
-                    {
-                        seen?.Invoke(path, written);
-                    }
+                    seen(path, written);
                 }
             }
 

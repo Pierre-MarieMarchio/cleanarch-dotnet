@@ -2003,7 +2003,9 @@ public sealed partial class NewFeatureTests
 
     private static void WithoutFieldsCases(string scratch, Action<bool, string> expect)
     {
-        foreach (var (group, digest) in WithoutFieldsDigests(scratch))
+        var syntax = new GeneratedSyntax();
+
+        foreach (var (group, digest) in WithoutFieldsDigests(scratch, syntax))
         {
             string recorded = _withoutFieldsDigests.Single(entry => entry.Group == group).Digest;
 
@@ -2013,6 +2015,8 @@ public sealed partial class NewFeatureTests
                 + $"generator wrote before --fields existed: digest {digest}, recorded {recorded}. A change to that output "
                 + "is a change for every project that runs add feature: make it on purpose, then record the new digest.");
         }
+
+        syntax.Hold("add feature without --fields", expect);
     }
 
     private static string? Option(string[] options, string name) => Array.IndexOf(options, name) is >= 0 and var at ? options[at + 1] : null;
@@ -2053,7 +2057,7 @@ public sealed partial class NewFeatureTests
             GeneratorRun.Project(root),
             problems);
 
-    private static List<Emission> FeedPlan(Action<string> feed, string root, FeatureSpec spec, Action<string, string>? seen = null)
+    private static List<Emission> FeedPlan(Action<string> feed, string root, FeatureSpec spec, Action<string, string> seen)
     {
         var plan = Plan(spec, root, out var skipped);
         var editor = Edits(root, spec, plan);
@@ -2067,15 +2071,18 @@ public sealed partial class NewFeatureTests
         {
             feed(emission.Path);
             feed(emission.Content);
-            seen?.Invoke(emission.Path, emission.Content);
+            seen(emission.Path, emission.Content);
         }
 
         feed(manifest.Content);
 
         foreach (var (path, _, bytes) in TextEdits.Replacements(editor))
         {
+            string edited = Encoding.UTF8.GetString(bytes);
+
             feed(path);
-            feed(Encoding.UTF8.GetString(bytes));
+            feed(edited);
+            seen(path, edited);
         }
 
         feed(report.ToString());
@@ -2095,11 +2102,12 @@ public sealed partial class NewFeatureTests
         return api ? root : WithoutTheApi(root, "A.Worker");
     }
 
-    private static IEnumerable<(string Group, string Digest)> WithoutFieldsDigests(string scratch, Action<string, string>? seen = null)
+    private static IEnumerable<(string Group, string Digest)> WithoutFieldsDigests(string scratch, GeneratedSyntax syntax)
     {
         foreach (var (group, options, reaction, api, database) in _digestGroups)
         {
             string root = DigestTree(scratch, reaction, api, database, integration: false);
+            var seen = syntax.In(group);
             using var digest = Digest(out var feed);
 
             foreach (string[] subset in _operationSubsets)
@@ -2133,9 +2141,12 @@ public sealed partial class NewFeatureTests
         expect(Render(compilable, ["list"]) == "namespace Acme.People;\n\nclass personList;\n", "An #elif holding kept a line other than its own.");
         expect(Render(compilable, []) == "namespace Acme.People;\n\nclass None;\n", "An #else did not take over when no condition held.");
         expect(Render("namespace N;\n#if list || get\nclass Kept;\n#endif\n", get) == "namespace N;\nclass Kept;\n", "An #if joining flags with || did not hold when only its second flag did.");
-        expect(
-            !Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(FeatureTemplates.Errors).GetDiagnostics().Any(),
-            "The Errors template is no longer valid C#, which its compilable form promises.");
+
+        var tokenFree = new List<string>();
+        string[] unparsed = [.. TokenFreeTemplatesThatDoNotParse(tokenFree.Add)];
+
+        expect(tokenFree.Contains("Errors.cs.txt"), $"Errors.cs.txt, written without a token, is not among the templates read as such: {string.Join(", ", tokenFree)}");
+        expect(unparsed.Length == 0, $"A template without a token is not C# a compiler reads, under each combination of the flags it names: {string.Join(" | ", unparsed)}");
 
         var setting = new FlagSet("dotnet cleanarch add setting", new Dictionary<string, string>(StringComparer.Ordinal) { ["secret"] = "A key holds a secret." });
 
@@ -2172,6 +2183,30 @@ public sealed partial class NewFeatureTests
         expect(
             Refuses(() => Render("namespace N;\n//#each field\n%field.Name%\n", [], fields), "'//#each' stands outside a block"),
             "A block that never closes was rendered, its marker and tokens written as code.");
+
+        expect(Render(Selecting("string"), [], fields) == "namespace N;\nTitle\n", "A block whose where names a trait of a field did not keep the fields that have it.");
+        expect(
+            Refuses(() => Render(Selecting("colour"), [], fields), "'colour' is not a trait a field has"),
+            "A block whose where names a trait a field does not have was rendered, so a typo would select every field or none.");
+
+        expect(Render(Over("field"), [], fields) == "namespace N;\nTitle\nSize\nNotes\n", "A block over the fields did not write one item per field.");
+        expect(
+            Refuses(() => Render(Over("row"), [], fields), "A block repeats over 'row', which this generation does not list"),
+            "A block over an item the generation does not list was rendered.");
+
+        expect(Render("namespace N;\n//#each field\nclass %field.Name%;\n//#end\n", [], fields) == "namespace N;\nclass Title;\nclass Size;\nclass Notes;\n", "A field token inside a block was not replaced.");
+        expect(
+            Refuses(() => Render("namespace N;\nclass %field.Name%;\n", [], fields), "'%field.Name%' stands outside a block"),
+            "A field token outside any block was rendered, written as code.");
+
+        expect(Render(Tailed("string"), [], fields) == "namespace N;\nM(\nTitle);\nN();\n", "A block selecting a field did not write it followed by its tail.");
+        expect(Render(Tailed("decimal"), [], fields) == "namespace N;\nM(\nN();\n", "A block selecting no field wrote something, its tail or a blank line included.");
+
+        static string Selecting(string trait) => $"namespace N;\n//#each field where {trait}\n%field.Name%\n//#end\n";
+
+        static string Over(string item) => $"namespace N;\n//#each {item}\n%field.Name%\n//#end\n";
+
+        static string Tailed(string trait) => $"namespace N;\nM(\n//#each field where {trait}\n%field.Name%\n//#end \");\"\nN();\n";
 
         string Render(string template, HashSet<string> flags, TemplateList? list = null) =>
             Template.Render(template, FeatureFlags.Vocabulary, flags, names, list);
