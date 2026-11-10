@@ -176,6 +176,7 @@
       "defaultValue": "github",
       "choices": [
         { "choice": "github", "description": "The project was generated with --code-host github." },
+        { "choice": "gitlab", "description": "The project was generated with --code-host gitlab." },
         { "choice": "none", "description": "The project was generated with --code-host none." }
       ],
       "description": "The project's --code-host value: with --workspace, the workspace's Dependabot entries and its workflows join the .github files only where the project has them."

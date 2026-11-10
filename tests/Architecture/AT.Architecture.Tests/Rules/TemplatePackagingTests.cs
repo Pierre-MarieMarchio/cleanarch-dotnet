@@ -1603,11 +1603,11 @@ public sealed class TemplatePackagingTests
                 continue;
             }
 
+            hosts.ShouldContain(host, $"{variant} writes the files of --code-host {host}, which --code-host does not offer: an overlay ships with its value.");
             Directory.Exists(Path.Combine(root, variant)).ShouldBeTrue($"--code-host {host} has no {variant} to write its files from.");
             symbols.TryGetProperty($"{host}Host", out var symbol).ShouldBeTrue($"template.json has no {host}Host symbol, which writes {variant}.");
             Text(symbol, "value").ShouldBe($"(codeHost == \"{host}\")", $"{host}Host must read --code-host {host} alone.");
-            conditions.ShouldBe([$"({host}Host)"], $"{variant} must be written once, under {host}Host alone, which is true for --code-host {host} only: "
-                + "an overlay whose value is not yet a choice is unfinished, and no project receives it until the value is offered.");
+            conditions.ShouldBe([$"({host}Host)"], $"{variant} must be written once, under {host}Host alone, which is true for --code-host {host} only.");
         }
 
         foreach (string item in (string[])[WebAppItemManifestPath(), PresentationItemManifestPath()])

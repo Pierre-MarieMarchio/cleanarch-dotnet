@@ -344,6 +344,7 @@
       "defaultValue": "github",
       "choices": [
         { "choice": "github", "description": "The project was generated with --code-host github." },
+        { "choice": "gitlab", "description": "The project was generated with --code-host gitlab." },
         { "choice": "none", "description": "The project was generated with --code-host none." }
       ],
       "description": "The project's --code-host value: the worker's lines to add name the .github files only where the project has them."

@@ -202,6 +202,10 @@ build-test:
         echo "A project under tests/ is missing from $SOLUTION, so dotnet test would skip it silently."
         exit 1
       fi
+    #if (aspire)
+    # The app host publishes its containers on the Docker host's loopback, which the Docker-in-Docker service keeps to itself: its tests run where the daemon is local.
+    - dotnet sln "$SOLUTION" remove tests/Integration/AT.AppHost.IntegrationTests/AppTemplate.AppHost.IntegrationTests.csproj
+    #endif
     # The summary and the coverage floor run whatever the tests answered, and any of them failing fails the job: after_script cannot.
     - |
       status=0
