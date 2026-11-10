@@ -1,18 +1,10 @@
-﻿using System.Text;
-using System.Text.RegularExpressions;
-using Microsoft.CodeAnalysis;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.TemplateEngine.Core;
-using Microsoft.TemplateEngine.Core.Contracts;
-using Microsoft.TemplateEngine.Core.Expressions.Cpp;
-using Microsoft.TemplateEngine.Core.Operations;
-using Microsoft.TemplateEngine.Core.Util;
+﻿using System.Text.RegularExpressions;
 
 namespace CleanArch.Cli.Generators.Shared;
 
 internal static class Template
 {
-    private static readonly HashSet<string> _knownFlags = new(StringComparer.Ordinal)
+    internal static readonly IReadOnlySet<string> KnownFlags = new HashSet<string>(StringComparer.Ordinal)
     {
         "get", "list", "create", "update", "delete", "owner", "shared", "rec", "agg", "etag",
         "content", "change", "wq", "dto", "single", "rq", "notfound", "clock", "stage",
@@ -24,49 +16,17 @@ internal static class Template
         ("AppTemplate", "P"), ("Placeholders", "F"), ("Placeholder", "A"), ("placeholder", "L"),
     ];
 
-    private static readonly ConditionalTokens _preprocessor = new()
-    {
-        IfTokens = new[] { "#if" }.TokenConfigs(),
-        ElseIfTokens = new[] { "#elif" }.TokenConfigs(),
-        ElseTokens = new[] { "#else" }.TokenConfigs(),
-        EndIfTokens = new[] { "#endif" }.TokenConfigs(),
-    };
-
-    private static readonly Regex _preprocessorCondition = new(
-        @"^[ \t]*#(?:if|elif)\b(?<condition>.*)$",
-        RegexOptions.Multiline,
-        TimeSpan.FromSeconds(2));
-
-    private static readonly Regex _symbol = new(@"\b[A-Za-z_]\w*\b", RegexOptions.None, TimeSpan.FromSeconds(2));
-
-    private static readonly UTF8Encoding _utf8 = new(encoderShouldEmitUTF8Identifier: false);
-
-    private static readonly Regex _tokenPattern = new("%([A-Za-z]+)%", RegexOptions.None, TimeSpan.FromSeconds(2));
-
-    private static readonly Regex _directivePattern = new(
-        @"^\s*%(?:if (?<condition>[^%]+)|(?<else>else)|(?<end>end))%\s*$",
+    private static readonly Regex _referenceName = new(
+        string.Join('|', _referenceNames.Select(reference => reference.Name)),
         RegexOptions.None,
         TimeSpan.FromSeconds(2));
+
+    private static readonly Regex _tokenPattern = new("%([A-Za-z]+)%", RegexOptions.None, TimeSpan.FromSeconds(2));
 
     private static readonly Regex _markedUsing = new(
         @"^using (?<namespace>[^;]+);\s*//\?(?<types>.+)$",
         RegexOptions.None,
         TimeSpan.FromSeconds(2));
-
-    internal static bool Evaluate(string condition, HashSet<string> flags) =>
-        condition.Split('|').Any(group => group.Split('&').All(atom =>
-        {
-            string trimmed = atom.Trim();
-            bool negated = trimmed.StartsWith('!');
-            string name = negated ? trimmed[1..] : trimmed;
-
-            if (!_knownFlags.Contains(name))
-            {
-                throw new InvalidOperationException($"'{name}' is not a flag a template may name.");
-            }
-
-            return flags.Contains(name) != negated;
-        }));
 
     internal static string Substitute(string text, Dictionary<string, string> tokens)
     {
@@ -89,98 +49,15 @@ internal static class Template
 
     internal static string Render(string template, HashSet<string> flags, Dictionary<string, string> tokens, TemplateList? list = null)
     {
-        var kept = new List<string>();
-        var frames = new Stack<(bool Parent, bool Condition)>();
-        bool emitting = true;
+        string selected = Directives.Apply(template.ReplaceLineEndings("\n"), flags, KnownFlags);
+        string expanded = TemplateBlocks.Expand(ReplaceReferenceNames(selected, tokens), list);
 
-        foreach (string line in TemplateBlocks.Expand(RenderCompilableForm(template.ReplaceLineEndings("\n"), flags, tokens), list).Split('\n'))
-        {
-            var directive = _directivePattern.Match(line);
-
-            if (!directive.Success)
-            {
-                if (emitting)
-                {
-                    kept.Add(line);
-                }
-
-                continue;
-            }
-
-            if (directive.Groups["condition"].Success)
-            {
-                bool holds = Evaluate(directive.Groups["condition"].Value, flags);
-
-                frames.Push((emitting, holds));
-                emitting = emitting && holds;
-            }
-            else if (directive.Groups["else"].Success)
-            {
-                var (parent, condition) = frames.Peek();
-
-                emitting = parent && !condition;
-            }
-            else
-            {
-                emitting = frames.Pop().Parent;
-            }
-        }
-
-        if (frames.Count > 0)
-        {
-            throw new InvalidOperationException("A template opens an %if% it never closes.");
-        }
-
-        return Tidy(PruneUsings(Substitute(string.Join('\n', kept), tokens)));
+        return Tidy(PruneUsings(Substitute(expanded, tokens)));
     }
 
-    private static string RenderCompilableForm(string template, HashSet<string> flags, Dictionary<string, string> tokens)
-    {
-        var bare = _preprocessorCondition.Matches(template)
-            .Select(directive => directive.Groups["condition"].Value.Trim())
-            .FirstOrDefault(condition => (condition.Contains("&&") || condition.Contains("||")) && !(condition.StartsWith('(') && condition.EndsWith(')')));
-
-        if (bare is not null)
-        {
-            throw new InvalidOperationException($"'{bare}' joins flags without parentheses around the whole condition.");
-        }
-
-        var unknown = _preprocessorCondition.Matches(template)
-            .SelectMany(directive => _symbol.Matches(directive.Groups["condition"].Value))
-            .FirstOrDefault(symbol => symbol.Value is not ("true" or "false") && !_knownFlags.Contains(symbol.Value));
-
-        if (unknown is not null)
-        {
-            throw new InvalidOperationException($"'{unknown.Value}' is not a flag a template may name.");
-        }
-
-        var variables = new VariableCollection();
-
-        foreach (string flag in _knownFlags)
-        {
-            variables[flag] = flags.Contains(flag);
-        }
-
-        var operations = new List<IOperationProvider>
-        {
-            new Conditional(_preprocessor, wholeLine: true, trimWhitespace: true, CppStyleEvaluatorDefinition.Evaluate, id: null, initialState: true),
-        };
-
-        foreach (var (name, token) in _referenceNames)
-        {
-            if (tokens.TryGetValue(token, out string? value))
-            {
-                operations.Add(new Replacement(name.TokenConfig(), value, id: null, initialState: true));
-            }
-        }
-
-        using var source = new MemoryStream(_utf8.GetBytes(template));
-        using var target = new MemoryStream();
-
-        Processor.Create(new EngineConfig(NullLogger.Instance, variables), operations).Run(source, target);
-
-        return _utf8.GetString(target.ToArray());
-    }
+    private static string ReplaceReferenceNames(string text, Dictionary<string, string> tokens) =>
+        _referenceName.Replace(text, match =>
+            tokens.TryGetValue(_referenceNames.Single(reference => reference.Name == match.Value).Token, out string? value) ? value : match.Value);
 
     private static string PruneUsings(string text)
     {
