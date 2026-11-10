@@ -7,12 +7,20 @@ include:
     rules:
       - exists:
           - .gitlab/ci/web.yml
+  #if (serverDatabase)
+  # The release a tag runs, in a file of its own beside the gate.
+  - local: .gitlab/ci/release.yml
+  #endif
 
 # The included scanners' jobs run in test too.
 stages:
   - test
 
+#if (serverDatabase)
+# Merge requests to the default branch, main or develop, pushes to those branches, a v*.*.* tag, which releases, and a manual run; a newer pipeline cancels the older one, except on those branches.
+#else
 # Merge requests to the default branch, main or develop, pushes to those branches, and a manual run; a newer pipeline cancels the older one, except on those branches.
+#endif
 workflow:
   auto_cancel:
     on_new_commit: interruptible
@@ -21,6 +29,9 @@ workflow:
     - if: ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web") && ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop")
       auto_cancel:
         on_new_commit: none
+    #if (serverDatabase)
+    - if: $CI_COMMIT_TAG =~ /^v[^\/]*\.[^\/]*\.[^\/]*$/
+    #endif
     - if: $CI_PIPELINE_SOURCE == "web"
 
 variables:
@@ -36,6 +47,13 @@ variables:
 
 default:
   interruptible: true
+
+# A tag's pipeline runs no gate job: the gate judges a change, and a tag carries none.
+.gate:
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - when: on_success
 
 # Directory.Packages.props holds every package version and global.json the SDK; GitLab keys a cache on two files at most.
 .dotnet:
@@ -89,6 +107,7 @@ default:
 
 build-test:
   extends:
+    - .gate
     - .dotnet
     - .docker
   stage: test
@@ -99,6 +118,8 @@ build-test:
     SONAR_USER_HOME: $CI_PROJECT_DIR/.sonar
   # The analysis rides on this job's build and tests. It is off while the SONAR_ORGANIZATION and SONAR_PROJECT_KEY CI/CD variables are unset, for a fork's merge request, which gets no CI/CD variable, for Renovate's, whose dependency bumps hold no code to judge, and for a push to a branch other than the default one, which SonarCloud's free plan does not analyse; full history then, for its blame and new-code baseline.
   rules:
+    - if: $CI_COMMIT_TAG
+      when: never
     - if: $SONAR_ORGANIZATION && $SONAR_PROJECT_KEY && $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID == $CI_PROJECT_ID && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME !~ /^renovate\//
       variables:
         SONAR_ENABLED: "true"
@@ -213,7 +234,9 @@ build-test:
         path: TestResults/**/*.cobertura.xml
 
 hygiene:
-  extends: .dotnet
+  extends:
+    - .gate
+    - .dotnet
   stage: test
   timeout: 10 minutes
   script:
@@ -221,7 +244,9 @@ hygiene:
     - dotnet cleanarch docs-index --check
 
 vulnerable-packages:
-  extends: .dotnet
+  extends:
+    - .gate
+    - .dotnet
   stage: test
   timeout: 15 minutes
   script:
@@ -238,7 +263,9 @@ vulnerable-packages:
 #if (api)
 
 docker:
-  extends: .docker
+  extends:
+    - .gate
+    - .docker
   image: docker:29.9.3-cli@sha256:2357639ad1ea7d0194134bf3292622fd4e562483966ed674e5d7c945b5f3b28d
   stage: test
   timeout: 25 minutes
@@ -265,6 +292,7 @@ docker:
 # Non-blocking: a shared runner's timings say nothing about this code, and the thresholds describe a broken system.
 load:
   extends:
+    - .gate
     - .docker
     - .docker-client
   stage: test
@@ -320,6 +348,7 @@ load:
 # Blocking: the stack as shipped, built and started from .env.example; the task prints the stack's logs on a failure, and .gitlab/ci/web.yml adds the browser it drives when the project holds a web app.
 end-to-end:
   extends:
+    - .gate
     - .docker
     - .docker-client
   stage: test
@@ -337,6 +366,7 @@ end-to-end:
 #endif
 
 compose:
+  extends: .gate
   image: docker:29.9.3-cli@sha256:2357639ad1ea7d0194134bf3292622fd4e562483966ed674e5d7c945b5f3b28d
   stage: test
   timeout: 10 minutes

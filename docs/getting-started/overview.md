@@ -162,8 +162,11 @@ setting, table or test names it.
 | <!--#if (githubCi && !anyWeb && sqlite)--> |
 | `--ci` | `true` | the build and code-scanning workflows; no release, as SQLite is a development database |
 | <!--#endif--> |
-| <!--#if (gitlabCi)--> |
-| `--ci` | `true` | the pipeline that runs the gate, with GitLab's SAST and Secret Detection |
+| <!--#if (gitlabCi && serverDatabase)--> |
+| `--ci` | `true` | the pipeline that runs the gate, with GitLab's SAST and Secret Detection, and the release on a tag |
+| <!--#endif--> |
+| <!--#if (gitlabCi && sqlite)--> |
+| `--ci` | `true` | the pipeline that runs the gate, with GitLab's SAST and Secret Detection; no release, as SQLite is a development database |
 | <!--#endif--> |
 | <!--#if (!githubCi && !gitlabCi)--> |
 | `--ci` | `false` | no workflow |
