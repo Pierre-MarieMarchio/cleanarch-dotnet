@@ -1094,6 +1094,7 @@ Liquid, whose syntax no compiler or editor understands. Its version is pinned in
 |---|---|
 | An `#if` naming an unknown flag, or joining flags without parentheses around the whole condition, is refused; each of `#if`, `#elif` and `#else` keeps only its own lines and the reference names are replaced | `NewFeatureTests.TemplateGuard` |
 | The output of `add feature` does not change when a template changes its form | `NewFeatureTests.WithoutFields` |
+| Every C# file `add feature` and `add field` write, over the configurations the digests cover, parses without a syntax error | `NewFeatureTests.GeneratedCodeParses` |
 
 ## The package
 
