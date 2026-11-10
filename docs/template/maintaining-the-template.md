@@ -1194,12 +1194,13 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | Each of `#if`, `#elif` and `#else` keeps only its own lines, at every depth | `DirectivesTests.ABranch_KeepsItsOwnLines_AtEveryDepth` |
 | A line that does not start with a directive is text, an `#if` in the middle of a line included | `DirectivesTests.ADirective_StandsAtTheStartOfALine_AndAnythingElseIsText` |
 | A directive without its `#if`, after its `#else`, never closed, followed by text, or naming an unknown flag, even in a dead branch, is refused with its line's number and text | `DirectivesTests.ADirective_RefusesAMisplacedOrUnreadableLine_NamingItsNumberAndText` |
-| `Template.Render` runs the passes together: the branches and the reference names, an unknown flag refused with its line, a block written once per field it keeps, joined by its separator and followed by its tail, and one naming an unknown token, or left open, refused | `NewFeatureTests.TemplateGuard` |
+| `Template.Render` runs the passes together: the branches and the reference names, an unknown flag refused with its line, a block written once per field it keeps, joined by its separator and followed by its tail, a block that keeps no field writing nothing, its tail included, and a block naming an unknown token, an unknown trait or an item other than `field`, a block left open, and a `%field.<Token>%` outside any block, each refused, the message naming the offending text | `NewFeatureTests.TemplateGuard` |
+| Each template that holds no `%` token parses as C#, as the compiler reads its `#if` lines, under each combination of the flags it names, and `Errors.cs.txt` is one of them | `NewFeatureTests.TemplateGuard` |
 | A template naming the flag of another generator is refused, and renders under that generator's vocabulary | `NewFeatureTests.TemplateGuard` |
 | A `%Token%` the generation does not set is refused, not written as code | `NewFeatureTests.TemplateGuard` |
 | The table of the flags of `add feature` on this page is its vocabulary, each flag with its meaning, and nothing else | `FeatureFlagsTests.ThePage_ListsEachFlagOfAddFeature_WithItsMeaning_AndNoOther` |
 | The output of `add feature` and `add field` does not change when a template changes its form | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
-| Every C# file `add feature` and `add field` write, over the configurations the digests cover, parses without a syntax error | `NewFeatureTests.GeneratedCodeParses` |
+| Over the configurations the digests cover, every C# file `add feature` writes or edits, and every one `add field` writes or changes, parses without a syntax error; an edited file is parsed as the edit leaves it in the tests' tree, whose shared files are cut down to the code around the anchors, and the message names each group and path that wrote the same broken text | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
 
 ## The package
 
