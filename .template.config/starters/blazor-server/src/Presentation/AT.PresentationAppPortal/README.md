@@ -123,7 +123,7 @@ the command stops:
 - in `docker-compose.yml`, after the mailpit service's last lines:
 
   ```yaml
-        - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+        - "${STACK_PUBLISH_ADDRESS:-127.0.0.1}:${MAILPIT_SMTP_PORT:-1025}:1025"
       networks: [backend]
 
   ```
@@ -155,7 +155,7 @@ the command stops:
         - presentation-app-portal-keys:/data-protection-keys
   <!--#endif-->
       ports:
-        - "127.0.0.1:${PRESENTATION_PRESENTATION_APP_PORTAL_HOST_PORT:-8090}:8080"
+        - "${STACK_PUBLISH_ADDRESS:-127.0.0.1}:${PRESENTATION_PRESENTATION_APP_PORTAL_HOST_PORT:-8090}:8080"
       depends_on:
   <!--#if (api)-->
         api:

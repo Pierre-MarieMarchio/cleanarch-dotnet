@@ -17,6 +17,8 @@ const projectFileName = 'cleanarch.json';
 const portVariable = /^WEB_([A-Z0-9_]+)_HOST_PORT=(\d+)\s*$/;
 const authorityVariable = /^EXTERNAL_AUTH_AUTHORITY=(.*?)\s*$/;
 const unresolvableDomain = '.invalid';
+const hostVariable = 'STACK_HOST';
+const defaultHost = '127.0.0.1';
 
 export function findProjectRoot(from: string): string {
   for (let folder = resolve(from); ; folder = dirname(folder)) {
@@ -93,11 +95,21 @@ export function discoveryDocument({ authority, origin }: StandInProvider): Recor
 export function discoverApps(root: string, environment: Record<string, string | undefined>): WebApp[] {
   const recorded = JSON.parse(readFileSync(join(root, projectFileName), 'utf8')) as { web?: { apps?: { name: string; framework?: string }[] } };
   const ports = readPorts(root, environment);
+  const named = environment[hostVariable];
+  const host = named !== undefined && named !== '' ? named : defaultHost;
   return (recorded.web?.apps ?? []).map(({ name, framework }) => {
     const port = ports.get(squash(name));
     if (port === undefined) {
       throw new Error(`No WEB_*_HOST_PORT in the stack's environment names a port for the web app ${name}.`);
     }
-    return { name, origin: `http://127.0.0.1:${port}`, signsInFromThePage: framework === 'blazor-wasm' };
+    return { name, origin: `http://${host}:${port}`, signsInFromThePage: framework === 'blazor-wasm' };
   });
+}
+
+export function chromiumArguments(apps: readonly WebApp[], environment: Record<string, string | undefined>): string[] {
+  const named = environment[hostVariable];
+  if (named === undefined || named === '' || apps.length === 0) {
+    return [];
+  }
+  return [`--unsafely-treat-insecure-origin-as-secure=${apps.map((app) => app.origin).join(',')}`];
 }

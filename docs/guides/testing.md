@@ -223,6 +223,8 @@ variable set before the command moves the stack and the suite together.
 <!--#if (anyWeb)-->
 It finds every web app by its `WEB_<APP>_HOST_PORT` line.
 <!--#endif-->
+It reaches the stack on `localhost`, or on the host `STACK_HOST` names, for a Docker daemon in
+another container, whose stack publishes its ports on the address `STACK_PUBLISH_ADDRESS` names.
 <!--#if (externalAuth)-->
 The command names an unreachable placeholder provider when `EXTERNAL_AUTH_AUTHORITY` is unset: no test
 signs in, and the API starts.
@@ -247,7 +249,7 @@ It sets the file inspection to run every ten seconds, so a deposit becomes reada
 The project sets `IsTestingPlatformApplication` to `false`, so `dotnet test` over the solution, and
 with it `verify` and `coverage`, leaves it out; it stays in `AppTemplate.slnx`, so it builds and is
 formatted with the rest. `test --no-integration` and `check` build it, with every project that needs Docker, and name it as built and not run; `test --no-integration` runs only the projects that set `IsTestProject` and need no Docker.
-<!--#if (githubCi)-->
+<!--#if (githubCi || gitlabCi)-->
 CI runs the command in the `end-to-end` job, once the Compose manifest is checked, and fails on a red
 test.
 <!--#endif-->
@@ -259,7 +261,9 @@ test.
 After the end-to-end suite, `end-to-end` drives every web app in Chromium, through
 `pnpm --filter "*browser-smoke" smoke` in `src/Web`. The package reads the apps `cleanarch.json` records
 and each one's port from `WEB_<APP>_HOST_PORT`, in the environment and then in `.env.example`, so an app
-added later is driven without an edit. For each app, one test:
+added later is driven without an edit. It opens each app on `127.0.0.1`, or on the host `STACK_HOST`
+names, which Chromium then treats as a secure origin, as it treats the loopback. For each app, one
+test:
 
 - loads `/`, which answers with a success status and renders text;
 - fails on any `securitypolicyviolation` the page raises, any console error and any uncaught exception;

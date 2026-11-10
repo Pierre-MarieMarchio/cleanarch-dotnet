@@ -12,7 +12,7 @@ services:
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?set MSSQL_SA_PASSWORD in .env}
     ports:
       # Loopback only, for a client on this machine; remove it for any non-local use.
-      - "127.0.0.1:${MSSQL_HOST_PORT:-1433}:1433"
+      - "${STACK_PUBLISH_ADDRESS:-127.0.0.1}:${MSSQL_HOST_PORT:-1433}:1433"
     volumes:
       - db-data:/var/opt/mssql
     healthcheck:

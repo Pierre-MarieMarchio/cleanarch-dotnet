@@ -114,9 +114,9 @@ services:
       MP_SMTP_AUTH_ALLOW_INSECURE: "true"
       MP_MAX_MESSAGES: "500"
     ports:
-      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+      - "${STACK_PUBLISH_ADDRESS:-127.0.0.1}:${MAILPIT_UI_PORT:-8025}:8025"
       # SMTP on loopback as well, for the API run on the host with dotnet run.
-      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${STACK_PUBLISH_ADDRESS:-127.0.0.1}:${MAILPIT_SMTP_PORT:-1025}:1025"
     networks: [backend]
 
   #if (presentationBlazorServer)
@@ -144,7 +144,7 @@ services:
       - presentation-app-portal-keys:/data-protection-keys
     #endif
     ports:
-      - "127.0.0.1:${PRESENTATION_PRESENTATION_APP_PORTAL_HOST_PORT:-8090}:8080"
+      - "${STACK_PUBLISH_ADDRESS:-127.0.0.1}:${PRESENTATION_PRESENTATION_APP_PORTAL_HOST_PORT:-8090}:8080"
     depends_on:
       #if (api)
       api:
@@ -187,7 +187,7 @@ services:
       Mcp__Resource: ${MCP_RESOURCE:-http://localhost:8091/mcp}
       #endif
     ports:
-      - "127.0.0.1:${PRESENTATION_PRESENTATION_APP_MCP_HOST_PORT:-8091}:8080"
+      - "${STACK_PUBLISH_ADDRESS:-127.0.0.1}:${PRESENTATION_PRESENTATION_APP_MCP_HOST_PORT:-8091}:8080"
     depends_on:
       #if (api)
       api:
@@ -253,7 +253,7 @@ services:
       #endif
       #endif
     ports:
-      - "127.0.0.1:${API_HOST_PORT:-8080}:8080"
+      - "${STACK_PUBLISH_ADDRESS:-127.0.0.1}:${API_HOST_PORT:-8080}:8080"
     depends_on:
       #if (serverDatabase)
       db:
@@ -345,7 +345,7 @@ services:
       AWS_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID:-app-template-dev}
       AWS_SECRET_ACCESS_KEY: ${STORAGE_SECRET_ACCESS_KEY:-app-template-dev-secret}
     ports:
-      - "127.0.0.1:${OBJECT_STORE_HOST_PORT:-9000}:9000"
+      - "${STACK_PUBLISH_ADDRESS:-127.0.0.1}:${OBJECT_STORE_HOST_PORT:-9000}:9000"
     volumes:
       - objectstore-data:/data
     healthcheck:
@@ -369,7 +369,7 @@ services:
       SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
     ports:
       # Neither 9000, the object store's, nor 9100, reserved for printing on Windows.
-      - "127.0.0.1:9111:9000"   # the web UI — http://localhost:9111, admin/admin on first boot
+      - "${STACK_PUBLISH_ADDRESS:-127.0.0.1}:9111:9000"   # the web UI — http://localhost:9111, admin/admin on first boot
     volumes:
       - sonarqube-data:/opt/sonarqube/data
       - sonarqube-logs:/opt/sonarqube/logs

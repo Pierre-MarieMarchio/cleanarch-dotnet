@@ -2,6 +2,11 @@
 include:
   - template: Jobs/SAST.gitlab-ci.yml
   - template: Jobs/Secret-Detection.gitlab-ci.yml
+  # The web workspace's jobs, from the file a web app brings, so that adding the first one edits nothing here.
+  - local: .gitlab/ci/web.yml
+    rules:
+      - exists:
+          - .gitlab/ci/web.yml
 
 # The included scanners' jobs run in test too.
 stages:
@@ -45,11 +50,8 @@ default:
       - .nuget/packages
     policy: pull
 
-build-test:
-  extends: .dotnet
-  stage: test
-  timeout: 30 minutes
-  # Testcontainers starts the integration tests' databases on this daemon, and reaches their ports through its host name.
+# The Docker-in-Docker service over TLS; the stack publishes its ports on the service's every address and is reached through its host name, as Testcontainers reaches its containers.
+.docker:
   services:
     - name: docker:29.9.3-dind@sha256:08a98015fce594af7c382883bea080ea206de74402a95da9dc52b6428c8cd121
       alias: docker
@@ -58,8 +60,41 @@ build-test:
     DOCKER_TLS_CERTDIR: /certs
     DOCKER_CERT_PATH: /certs/client
     DOCKER_TLS_VERIFY: "1"
+    STACK_PUBLISH_ADDRESS: 0.0.0.0
+    STACK_HOST: docker
     TESTCONTAINERS_HOST_OVERRIDE: docker
-    #if (sonarPipeline)
+
+# The Docker CLI with the Compose plugin and the Buildx plugin its builds need, beside the SDK, for the jobs that start the stack, from Docker's static release, each checked against its SHA-256: bump a version and its checksum together.
+.docker-client:
+  image: mcr.microsoft.com/dotnet/sdk:10.0.403-noble@sha256:212fe4cb74627d5adf9817a4088906ae3edff1bd853bb27565d4b46731efe61e
+  before_script:
+    - |
+      cli=29.9.3
+      cli_sha256=3fb5d1f13014c18cc54945bc177c58a9056a482dada031e17d12cf2e6922c973
+      compose=v5.7.0
+      compose_sha256=7758048ad38e580f22559603312874fec8bb638d021a9e64182385fc17cc12a2
+      buildx=v0.38.2
+      buildx_sha256=7992ec09413b80ff57ba4e081f56fc833d7bac1d5e71143c6c809e7e6065f6d6
+      plugins=/usr/local/lib/docker/cli-plugins
+      curl -sSfL --retry 3 --retry-delay 2 -o /tmp/docker.tgz "https://download.docker.com/linux/static/stable/x86_64/docker-${cli}.tgz"
+      echo "${cli_sha256}  /tmp/docker.tgz" | sha256sum --check --strict -
+      tar -xzf /tmp/docker.tgz -C /usr/local/bin --strip-components 1 docker/docker
+      mkdir -p "$plugins"
+      curl -sSfL --retry 3 --retry-delay 2 -o "$plugins/docker-compose" "https://github.com/docker/compose/releases/download/${compose}/docker-compose-linux-x86_64"
+      echo "${compose_sha256}  $plugins/docker-compose" | sha256sum --check --strict -
+      curl -sSfL --retry 3 --retry-delay 2 -o "$plugins/docker-buildx" "https://github.com/docker/buildx/releases/download/${buildx}/buildx-${buildx}.linux-amd64"
+      echo "${buildx_sha256}  $plugins/docker-buildx" | sha256sum --check --strict -
+      chmod 0755 "$plugins/docker-compose" "$plugins/docker-buildx"
+      docker version
+
+build-test:
+  extends:
+    - .dotnet
+    - .docker
+  stage: test
+  timeout: 30 minutes
+  #if (sonarPipeline)
+  variables:
     SONAR_HOST_URL: https://sonarcloud.io
     SONAR_USER_HOME: $CI_PROJECT_DIR/.sonar
   # The analysis rides on this job's build and tests. It is off while the SONAR_ORGANIZATION and SONAR_PROJECT_KEY CI/CD variables are unset, for a fork's merge request, which gets no CI/CD variable, for Renovate's, whose dependency bumps hold no code to judge, and for a push to a branch other than the default one, which SonarCloud's free plan does not analyse; full history then, for its blame and new-code baseline.
@@ -200,3 +235,129 @@ vulnerable-packages:
         exit 1
       fi
       echo "No known vulnerable packages."
+#if (api)
+
+docker:
+  extends: .docker
+  image: docker:29.9.3-cli@sha256:2357639ad1ea7d0194134bf3292622fd4e562483966ed674e5d7c945b5f3b28d
+  stage: test
+  timeout: 25 minutes
+  variables:
+    IMAGE: app-template-api:ci-$CI_COMMIT_SHA
+  script:
+    # Catches a stale COPY list in the Dockerfile; one platform, never pushed.
+    - docker build --platform linux/amd64 --file src/Presentation/AT.Api/Dockerfile --tag "$IMAGE" .
+    - |
+      user=$(docker image inspect "$IMAGE" --format '{{.Config.User}}')
+      echo "Image USER = '${user}'"
+      if [ -z "$user" ] || [ "$user" = "root" ] || [ "$user" = "0" ]; then
+        echo "Image runs as root: expected a non-root USER (APP_UID)."
+        exit 1
+      fi
+    - |
+      ports=$(docker image inspect "$IMAGE" --format '{{range $p, $_ := .Config.ExposedPorts}}{{$p}} {{end}}')
+      echo "Exposed = '${ports}'"
+      if [ "$(echo $ports | tr -d ' ')" != "8080/tcp" ]; then
+        echo "Unexpected exposed ports: TLS terminates upstream; the container must expose 8080/tcp only."
+        exit 1
+      fi
+
+# Non-blocking: a shared runner's timings say nothing about this code, and the thresholds describe a broken system.
+load:
+  extends:
+    - .docker
+    - .docker-client
+  stage: test
+  timeout: 15 minutes
+  allow_failure: true
+  script:
+    # The stack's logs follow a failure, and the stack and its volumes go whatever the run answered.
+    - |
+      stop_stack() {
+        status=$?
+        if [ "$status" -ne 0 ]; then
+          docker compose logs --tail 200
+        fi
+        docker compose down -v
+        exit "$status"
+      }
+      trap stop_stack EXIT
+    - |
+      cp .env.example .env
+      services="api db mailpit"
+      #if (files)
+      services="$services objectstore"
+      #endif
+      docker compose up -d --build $services
+    # Migrations run at startup, so a running container is not yet an answering API.
+    - |
+      for attempt in $(seq 1 60); do
+        if curl -fsS http://$STACK_HOST:8080/health > /dev/null 2>&1; then
+          echo "API answered on attempt $attempt."
+          break
+        fi
+        if [ "$attempt" -eq 60 ]; then
+          echo "The API never became live; skipping the run."
+          docker compose logs --tail 50 api
+          exit 1
+        fi
+        sleep 2
+      done
+    # The release archive checked against its published SHA-256: bump version and checksum together.
+    - |
+      version=v2.2.0
+      sha256=b5a8003c86f35f5cd5ceef1490312c48e587696c94d998cefc6d7b3b4cb1597d
+      archive="k6-${version}-linux-amd64"
+      curl -sSfL --retry 3 --retry-delay 2 \
+        -o /tmp/k6.tar.gz \
+        "https://github.com/grafana/k6/releases/download/${version}/${archive}.tar.gz"
+      echo "${sha256}  /tmp/k6.tar.gz" | sha256sum --check --strict -
+      tar -xzf /tmp/k6.tar.gz -C /tmp
+      install -m 0755 "/tmp/${archive}/k6" /usr/local/bin/k6
+      k6 version
+    - k6 run -e BASE_URL=http://$STACK_HOST:8080 tests/Load/smoke.js
+
+# Blocking: the stack as shipped, built and started from .env.example; the task prints the stack's logs on a failure, and .gitlab/ci/web.yml adds the browser it drives when the project holds a web app.
+end-to-end:
+  extends:
+    - .docker
+    - .docker-client
+  stage: test
+  needs:
+    - compose
+  timeout: 30 minutes
+  #if (files)
+  # The object store's signed URLs name the host the suite reaches it on.
+  variables:
+    STORAGE_PUBLIC_ENDPOINT: http://docker:9000
+  #endif
+  script:
+    - dotnet tool restore
+    - dotnet cleanarch end-to-end
+#endif
+
+compose:
+  image: docker:29.9.3-cli@sha256:2357639ad1ea7d0194134bf3292622fd4e562483966ed674e5d7c945b5f3b28d
+  stage: test
+  timeout: 10 minutes
+  script:
+    - |
+      cp .env.example .env
+      docker compose config --quiet
+      echo "docker compose config parsed successfully."
+    # Liveness only: a probe on /health/ready would restart the API whenever the database blinked.
+    - |
+      set -euo pipefail
+      cp .env.example .env
+      compose_probe=$(docker compose config | grep -c 'http://127.0.0.1:8080/health ' || true)
+      if [ "$compose_probe" -eq 0 ]; then
+        echo "Compose healthcheck: the api service healthcheck must probe /health (liveness), not /health/ready."
+        exit 1
+      fi
+      #if (api)
+      if ! grep -q 'http://127.0.0.1:8080/health ' src/Presentation/AT.Api/Dockerfile; then
+        echo "Dockerfile HEALTHCHECK: the image HEALTHCHECK must probe /health (liveness), not /health/ready."
+        exit 1
+      fi
+      #endif
+      echo "Both healthchecks target /health."

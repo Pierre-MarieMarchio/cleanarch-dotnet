@@ -195,6 +195,14 @@
       "type": "computed",
       "value": "(ci && githubHost)"
     },
+    "gitlabHost": {
+      "type": "computed",
+      "value": "(codeHost == \"gitlab\")"
+    },
+    "gitlabCi": {
+      "type": "computed",
+      "value": "(ci && gitlabHost)"
+    },
     "agentFiles": {
       "type": "parameter",
       "displayName": "Project generated with --agent-files",
@@ -591,6 +599,14 @@
       "include": [
         "web.yml",
         "web-node-version.yml"
+      ]
+    },
+    {
+      "source": "../variants/code-host-gitlab/.gitlab/ci/",
+      "target": "./.gitlab/ci/",
+      "condition": "(workspace && gitlabCi)",
+      "include": [
+        "web.yml"
       ]
     },
     {
