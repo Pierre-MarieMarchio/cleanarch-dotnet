@@ -1,4 +1,4 @@
-#if rec
+#if record
 using AppTemplate.Application.Features.Placeholders.Model.Policies; //?PlaceholderInputPolicy
 #else
 using AppTemplate.Domain.Features.Placeholders.Model.Entities; //?Placeholder
@@ -76,11 +76,11 @@ internal sealed class PlaceholderRecordConfiguration : IEntityTypeConfiguration<
 #endif
 
         builder.Property(record => record.CreatedAt).IsRequired();
-#if agg
+#if aggregate
         builder.Property(record => record.CreatedBy);
 #endif
         builder.Property(record => record.LastModifiedAt);
-#if agg
+#if aggregate
         builder.Property(record => record.LastModifiedBy);
 #endif
 #if etag

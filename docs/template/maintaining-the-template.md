@@ -926,7 +926,9 @@ of `add feature` and `add field` in five passes, in this order:
    in prose: a template that needs the word `placeholder` for itself cannot have it. They are
    replaced before the blocks, so a field named after one keeps its name.
 3. `TemplateBlocks` repeats each block once per field of the feature.
-4. Each `%Token%` becomes the code the generator computed for it.
+4. Each `%Token%` becomes the code the generator computed for it. A `%Token%` still in the text
+   afterwards, one the generation does not set, is refused with the template's name, as
+   `'%Plural%' is a token this generation does not set`, instead of being written as code.
 5. A using marked `//?<Types>` is pruned when no line after the namespace names one of its types,
    the usings are sorted, and the blank lines are tidied.
 
@@ -945,7 +947,7 @@ A directive is a line whose first non-blank characters are `#if <condition>`, `#
 `#else` or `#endif`; `#else` and `#endif` take nothing after them. An `#if` anywhere else in a line
 is text. Directives nest, and an `#if` in a branch that does not hold is still read, so a typo in a
 dead branch is refused as well. `Condition` reads a condition with this grammar, where a flag is one
-of `Template.KnownFlags`:
+of the vocabulary of the generator that renders the template:
 
 ```text
 or    := and ('||' and)*
@@ -955,19 +957,60 @@ unary := '!' unary | '(' or ')' | flag
 
 `&&` binds tighter than `||`, as in C#, and parentheses group without being required:
 `#if get || list` and `#if (get) && (list)` both read. The `when` of each file in the plan of
-`launcher/CleanArch.Cli/Generators/Shared/FeatureCode.cs`, such as `"agg && !fields"`, is read by
-the same `Condition`.
+`launcher/CleanArch.Cli/Generators/Shared/FeatureCode.cs`, such as `"aggregate && !fields"`, is read
+by the same `Condition`, over the same vocabulary.
 
 `add feature` and `add field` refuse a template that holds one of these, with a message that starts
 with the template's name, such as `FeatureTemplates.Aggregate`, and the line's number, and names
 the offending text:
 
-- a condition naming a flag `Template` does not know, so a generated file cannot carry a real
-  `#if DEBUG`;
+- a condition naming a flag outside the generator's vocabulary, another generator's included, so a
+  generated file cannot carry a real `#if DEBUG`;
 - an empty condition, an operator without its operand, a parenthesis left open or never opened, and
   any other text, such as a single `&` or `|`, or `==`;
 - an `#elif`, `#else` or `#endif` that belongs to no `#if`, an `#elif` or `#else` after the `#else`
   of its `#if`, an `#if` never closed, and text after `#else` or `#endif`.
+
+### The flags of add feature
+
+Each generator that renders templates owns the vocabulary of their conditions: a `FlagSet`, which
+names each flag with its meaning, and which `Template.Render` and `Condition` take from the
+generator. A template names only the flags of its own generator; any other is refused as a typo is.
+The vocabulary of `add feature`, which `add field` renders again, is `FeatureFlags.Vocabulary` in
+`launcher/CleanArch.Cli/Generators/Shared/FeatureFlags.cs`, and `FeatureCode.Flags` sets the flags
+that hold for a generation. Its flags are the words of the options where an option decides one,
+and otherwise say what the feature does:
+
+| Flag | Holds when |
+|---|---|
+| `get` | `get` is among `--operations`: one is read by its id. |
+| `list` | `list` is among `--operations`: a page of them is read. |
+| `create` | `create` is among `--operations`. |
+| `update` | `update` is among `--operations`. |
+| `delete` | `delete` is among `--operations`. |
+| `owner` | `--access owner`: each one belongs to the caller who created it, and the deletion of that account reaches it. |
+| `shared` | `--access shared`: every caller reaches every one. |
+| `record` | `--model record`: a service over a store, without a domain aggregate. |
+| `aggregate` | `--model aggregate`: one use case per operation over a domain aggregate. |
+| `etag` | `--concurrency etag`: a persisted version, an `ETag` and `If-Match`. |
+| `erase` | `--deletion delete`: the rows of a deleted account are removed. |
+| `anonymise` | `--deletion anonymise`: what identifies the owner of a deleted account is rewritten. |
+| `fields` | `--fields` is given: the fields it declares replace `Name` and `Description`. |
+| `prefixedTables` | The database is SQLite, which has no schemas, so a table's name starts with its feature's schema. |
+| `writes` | Create, update or delete is among the operations, so the feature writes through a store or a repository. |
+| `changesOne` | Update or delete is among the operations: each changes one that can be missing, or stale under `etag`. |
+| `takesContent` | Create or update is among the operations: each takes the feature's content and validates it. |
+| `returnsOne` | Get, create or update is among the operations: each answers with one in full. |
+| `readsOne` | Get is among the operations, or a `record` creates or updates and reads back what it wrote: the queries port reads one by its id. |
+| `reads` | The feature has a queries port: it reads one, lists, or is `owner`, whose account deletion lists the owners. |
+| `store` | A `record` that writes or is `owner` stages its changes through a store. |
+| `notFound` | An operation can answer that one is not found: get, update, delete, or a `record`'s create. |
+| `stampsTime` | A `record` creates or updates, so its service reads the time it stamps. |
+| `anonymisedText` | Under `anonymise`, a required text is rewritten to a fixed text: always without `--fields`, else when a field is a non-nullable string. |
+| `trimsText` | Create or update takes a text the service trims: always without `--fields`, else when a field is a string. |
+| `constants` | A limit of the content is declared as a constant: always without `--fields`, else when a field is a string, a text or a decimal, or has a bound. |
+
+The table is the vocabulary, row for row: a flag renamed, added, removed or reworded changes both.
 
 ### Blocks over fields
 
@@ -999,11 +1042,14 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | Guarantee | Test |
 |---|---|
 | A condition reads as C# reads it, `&&` binding tighter than `||`, with or without parentheses | `ConditionTests.ACondition_ReadsAsCSharpDoes_AndBindsAndTighterThanOr` |
-| A condition naming an unknown flag, empty, left dangling, unbalanced, or holding any other text is refused, the message naming the offending text | `ConditionTests.ACondition_RefusesWhatItCannotRead_NamingTheOffendingText` |
+| A condition naming a flag outside its vocabulary, empty, left dangling, unbalanced, or holding any other text is refused, the message naming the offending text | `ConditionTests.ACondition_RefusesWhatItCannotRead_NamingTheOffendingText` |
 | Each of `#if`, `#elif` and `#else` keeps only its own lines, at every depth | `DirectivesTests.ABranch_KeepsItsOwnLines_AtEveryDepth` |
 | A line that does not start with a directive is text, an `#if` in the middle of a line included | `DirectivesTests.ADirective_StandsAtTheStartOfALine_AndAnythingElseIsText` |
 | A directive without its `#if`, after its `#else`, never closed, followed by text, or naming an unknown flag, even in a dead branch, is refused with its line's number and text | `DirectivesTests.ADirective_RefusesAMisplacedOrUnreadableLine_NamingItsNumberAndText` |
 | `Template.Render` runs the passes together: the branches and the reference names, an unknown flag refused with its line, a block written once per field it keeps, joined by its separator and followed by its tail, and one naming an unknown token, or left open, refused | `NewFeatureTests.TemplateGuard` |
+| A template naming the flag of another generator is refused, and renders under that generator's vocabulary | `NewFeatureTests.TemplateGuard` |
+| A `%Token%` the generation does not set is refused, not written as code | `NewFeatureTests.TemplateGuard` |
+| The table of the flags of `add feature` on this page is its vocabulary, each flag with its meaning, and nothing else | `FeatureFlagsTests.ThePage_ListsEachFlagOfAddFeature_WithItsMeaning_AndNoOther` |
 | The output of `add feature` and `add field` does not change when a template changes its form | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
 | Every C# file `add feature` and `add field` write, over the configurations the digests cover, parses without a syntax error | `NewFeatureTests.GeneratedCodeParses` |
 

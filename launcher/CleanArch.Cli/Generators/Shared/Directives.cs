@@ -2,7 +2,7 @@
 
 namespace CleanArch.Cli.Generators.Shared;
 
-internal sealed class Directives(IReadOnlySet<string> flags, IReadOnlySet<string> known)
+internal sealed class Directives(IReadOnlySet<string> flags, FlagSet vocabulary)
 {
     private static readonly Regex _directive = new(
         @"^[ \t]*#(?<keyword>if|elif|else|endif)\b(?<rest>.*)$",
@@ -13,9 +13,9 @@ internal sealed class Directives(IReadOnlySet<string> flags, IReadOnlySet<string
 
     private bool _emitting = true;
 
-    internal static string Apply(string text, IReadOnlySet<string> flags, IReadOnlySet<string> known)
+    internal static string Apply(string text, IReadOnlySet<string> flags, FlagSet vocabulary)
     {
-        var directives = new Directives(flags, known);
+        var directives = new Directives(flags, vocabulary);
         string[] lines = text.Split('\n');
         var kept = new List<string>();
 
@@ -98,7 +98,7 @@ internal sealed class Directives(IReadOnlySet<string> flags, IReadOnlySet<string
     {
         try
         {
-            return Condition.Parse(condition, known).Evaluate(flags);
+            return Condition.Parse(condition, vocabulary).Evaluate(flags);
         }
         catch (InvalidOperationException exception)
         {

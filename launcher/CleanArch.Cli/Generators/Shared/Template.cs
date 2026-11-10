@@ -4,13 +4,6 @@ namespace CleanArch.Cli.Generators.Shared;
 
 internal static class Template
 {
-    internal static readonly IReadOnlySet<string> KnownFlags = new HashSet<string>(StringComparer.Ordinal)
-    {
-        "get", "list", "create", "update", "delete", "owner", "shared", "rec", "agg", "etag",
-        "content", "change", "wq", "dto", "single", "rq", "notfound", "clock", "stage",
-        "purge", "anon", "fields", "anontext", "trim", "policy", "prefixed",
-    };
-
     private static readonly (string Name, string Token)[] _referenceNames =
     [
         ("AppTemplate", "P"), ("Placeholders", "F"), ("Placeholder", "A"), ("placeholder", "L"),
@@ -47,13 +40,18 @@ internal static class Template
         return text;
     }
 
-    internal static string Render(string template, HashSet<string> flags, Dictionary<string, string> tokens, TemplateList? list = null)
+    internal static string Render(string template, FlagSet vocabulary, HashSet<string> flags, Dictionary<string, string> tokens, TemplateList? list = null)
     {
-        string selected = Directives.Apply(template.ReplaceLineEndings("\n"), flags, KnownFlags);
+        string selected = Directives.Apply(template.ReplaceLineEndings("\n"), flags, vocabulary);
         string expanded = TemplateBlocks.Expand(ReplaceReferenceNames(selected, tokens), list);
 
-        return Tidy(PruneUsings(Substitute(expanded, tokens)));
+        return Tidy(PruneUsings(EveryTokenSet(Substitute(expanded, tokens))));
     }
+
+    private static string EveryTokenSet(string text) =>
+        _tokenPattern.Match(text) is { Success: true } unset
+            ? throw new InvalidOperationException($"'{unset.Value}' is a token this generation does not set.")
+            : text;
 
     private static string ReplaceReferenceNames(string text, Dictionary<string, string> tokens) =>
         _referenceName.Replace(text, match =>

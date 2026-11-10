@@ -41,13 +41,13 @@ public interface IPlaceholderStore
 #endif
         CancellationToken cancellationToken = default);
 #endif
-#if purge
+#if erase
 
     Task<int> StageRemovalForOwnerAsync(
         UserId ownerId,
         CancellationToken cancellationToken = default);
 #endif
-#if anon
+#if anonymise
 
     Task<int> StageAnonymisationForOwnerAsync(
         UserId ownerId,

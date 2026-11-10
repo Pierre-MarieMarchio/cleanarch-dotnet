@@ -93,7 +93,7 @@ internal static class FeatureEdits
         bool owner = spec.Access == "owner";
         string consumer = $"{(spec.Deletion == "anonymise" ? "Anonymise" : "Delete")}{a}OnAccountDeletedConsumer";
         string module = $"{ProjectOf(spec, "src/Application", "Application")}/ApplicationModule.cs";
-        bool service = spec.Model == "record" || Flags(spec).Contains("change");
+        bool service = spec.Model == "record" || Flags(spec).Contains("changesOne");
         editor.Step = $"edit 2 ({module})";
         editor.Place(
             module,
@@ -166,12 +166,12 @@ internal static class FeatureEdits
             adapters.Add(($"AddScopedTracker<{a}Tracker, I{a}Tracker>(services);", [$"{a}Tracker", $"I{a}Tracker"]));
             adapters.Add(($"services.TryAddScoped<I{a}Repository, {a}Repository>();", [$"I{a}Repository", $"{a}Repository"]));
         }
-        else if (flags.Contains("stage"))
+        else if (flags.Contains("store"))
         {
             adapters.Add(($"services.TryAddScoped<I{a}Store, {a}Store>();", [$"I{a}Store", $"{a}Store"]));
         }
 
-        if (flags.Contains("rq"))
+        if (flags.Contains("reads"))
         {
             adapters.Add(($"services.TryAddScoped<I{a}Queries, {a}Queries>();", [$"I{a}Queries", $"{a}Queries"]));
         }
@@ -219,7 +219,7 @@ internal static class FeatureEdits
         editor.Step = "the route section of docs/reference/api.md";
         editor.Section("docs/reference/api.md", "## Routes", [.. section, string.Empty], section[2]);
 
-        if (Flags(spec).Contains("notfound"))
+        if (Flags(spec).Contains("notFound"))
         {
             editor.Step = "the error-code row of docs/reference/api.md";
             editor.Row("docs/reference/api.md", "### Resources", FeatureReport.ErrorRow(spec), $"| `{CSharpNames.Lower(spec.Type)}.notFound` |");

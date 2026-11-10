@@ -7,7 +7,12 @@ public sealed class DirectivesTests
 {
     private const string _nested = "top\n#if get\nget\n    #if list\nget list\n    #else\nget alone\n    #endif\n#elif list\nlist\n#elif create\ncreate\n#else\nnone\n#endif\nbottom";
 
-    private static readonly HashSet<string> _known = new(StringComparer.Ordinal) { "get", "list", "create" };
+    private static readonly FlagSet _known = new("a test", new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["get"] = "Get.",
+        ["list"] = "List.",
+        ["create"] = "Create.",
+    });
 
     private static readonly (string[] Flags, string Kept)[] _branches =
     [
@@ -26,9 +31,9 @@ public sealed class DirectivesTests
         ("#if get\n#else\n#elif list\n#endif", "line 3: '#elif list' follows the #else of its #if", "#if get\n#elif list\n#else\n#endif"),
         ("#if get\n#else\n#else\n#endif", "line 3: '#else' follows the #else of its #if", "#if get\n#else\n#endif"),
         ("#if get\n#if list\n#endif", "line 1: '#if get' is never closed by an #endif", "#if get\n#if list\n#endif\n#endif"),
-        ("a\n#if (get && nonsense)\n#endif", "line 2: 'nonsense' is not a known flag", "a\n#if (get && list)\n#endif"),
-        ("#if get\n#elif nonsense\n#endif", "line 2: 'nonsense' is not a known flag", "#if get\n#elif list\n#endif"),
-        ("#if list\n#if nonsense\n#endif\n#endif", "line 2: 'nonsense' is not a known flag", "#if list\n#if create\n#endif\n#endif"),
+        ("a\n#if (get && nonsense)\n#endif", "line 2: 'nonsense' is not a flag of a test", "a\n#if (get && list)\n#endif"),
+        ("#if get\n#elif nonsense\n#endif", "line 2: 'nonsense' is not a flag of a test", "#if get\n#elif list\n#endif"),
+        ("#if list\n#if nonsense\n#endif\n#endif", "line 2: 'nonsense' is not a flag of a test", "#if list\n#if create\n#endif\n#endif"),
         ("#if\n#endif", "line 1: '' ends where a flag", "#if get\n#endif"),
         ("#if get\n#endif get", "line 2: '#endif get' takes nothing after #endif", "#if get\n#endif"),
         ("#if get\n#else list\n#endif", "line 2: '#else list' takes nothing after #else", "#if get\n#else\n#endif"),
