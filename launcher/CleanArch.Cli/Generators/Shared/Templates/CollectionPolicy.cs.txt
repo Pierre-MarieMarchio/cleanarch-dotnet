@@ -6,7 +6,9 @@ namespace AppTemplate.Application.Features.Placeholders.Model.Policies;
 public sealed class PlaceholderCollectionPolicy : ICollectionPolicy
 {
 #if fields
-%FPolicyFields%
+//#each field where sortable separator "\n\n"
+    public const string %field.Name%Field = "%field.Parameter%";
+//#end
 #else
     public const string NameField = "name";
 #endif

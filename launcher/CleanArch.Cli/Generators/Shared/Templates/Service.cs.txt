@@ -203,7 +203,7 @@ internal sealed class PlaceholderService(
 
 #endif
 #if (trim && fields)
-    private static PlaceholderContentDto Trimmed(PlaceholderContentDto content) => content with { %FTrimmed% };
+    private static PlaceholderContentDto Trimmed(PlaceholderContentDto content) => content with { /*#each field where string separator ", "*/%field.Name% = %field.Trimmed%/*#end*/ };
 #endif
 #if (trim && !fields)
     private static PlaceholderContentDto Trimmed(PlaceholderContentDto content) => content with { Name = content.Name.Trim() };

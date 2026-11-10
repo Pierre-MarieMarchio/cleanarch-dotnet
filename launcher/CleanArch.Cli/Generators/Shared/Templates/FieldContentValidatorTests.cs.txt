@@ -13,5 +13,8 @@ public sealed class PlaceholderContentDtoValidatorTests
 
 %FContentValidatorTests%
 
-    private static PlaceholderContentDto AValidContentDto() => %FValidContent%;
+    private static PlaceholderContentDto AValidContentDto() => new(
+//#each field separator ",\n"
+        %field.Sample%
+//#end ");"
 }

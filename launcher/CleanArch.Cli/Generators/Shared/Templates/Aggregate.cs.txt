@@ -7,7 +7,15 @@ namespace AppTemplate.Domain.Features.Placeholders.Model.Entities;
 public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
 {
 #if fields
-%FConstants%
+//#each field where constants separator "\n\n"
+%field.Constants%
+//#end
+#if content
+
+//#each field where decimal separator "\n\n"
+    private const decimal %field.Ceiling% = 1e%field.IntegerDigits%m;
+//#end
+#endif
 #else
     public const int NameMaxLength = 200;
 
@@ -24,7 +32,9 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
         UserId ownerId,
 #endif
 #if fields
-%FCtorParams%
+//#each field separator ",\n"
+        %field.Type% %field.Parameter%
+//#end ") : base(id)"
 #else
         string name,
         string description) : base(id)
@@ -36,7 +46,9 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
         OwnerId = ownerId;
 #endif
 #if fields
-%FAssign%
+//#each field
+        %field.Name% = %field.Parameter%;
+//#end
 #else
         Name = name;
         Description = description;
@@ -48,7 +60,9 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
 
 #endif
 #if fields
-%FProperties%
+//#each field separator "\n\n"
+    public %field.Type% %field.Name% %field.Accessors%
+//#end
 #else
 #if (update || anon)
     public string Name { get; private set; }
@@ -67,7 +81,9 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
         UserId ownerId,
 #endif
 #if fields
-%FCreateParams%
+//#each field separator ",\n"
+        %field.Type% %field.Parameter%
+//#end ") =>"
 #else
         string name,
         string description) =>
@@ -78,7 +94,9 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
             ownerId,
 #endif
 #if fields
-%FCreateArgs%
+//#each field separator ",\n"
+            %field.Required%
+//#end ");"
 #else
             RequireName(name),
             RequireDescription(description));
@@ -91,7 +109,9 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
         UserId ownerId,
 #endif
 #if fields
-%FRehydrateParams%
+//#each field separator ",\n"
+        %field.Type% %field.Parameter%
+//#end ")"
 #else
         string name,
         string description)
@@ -108,7 +128,9 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
             ownerId,
 #endif
 #if fields
-%FRehydrateArgs%
+//#each field separator ",\n"
+            %field.Parameter%
+//#end ");"
 #else
             name,
             description);
@@ -117,9 +139,15 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
 
 #if update
 #if fields
-    public void Update(%FUpdateParams%)
+    public void Update(/*#each field separator ", "*/%field.Type% %field.Parameter%/*#end*/)
     {
-%FUpdateBody%
+//#each field where require
+        %field.Type% valid%field.Name% = %field.Required%;
+//#end
+
+//#each field
+        %field.Name% = %field.Validated%;
+//#end
     }
 #else
     public void Update(string name, string description)
@@ -137,7 +165,9 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
     public void Anonymise()
     {
 #if fields
-%FAnonymise%
+//#each field where anonymised
+        %field.Name% = %field.Anonymised%;
+//#end
 #else
         Name = AnonymisedText;
         Description = string.Empty;
@@ -146,7 +176,9 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
 
 #endif
 #if (content && fields)
-%FRequire%
+//#each field where require separator "\n\n"
+%field.Require%
+//#end
 #endif
 #if (content && !fields)
     private static string RequireName(string name)

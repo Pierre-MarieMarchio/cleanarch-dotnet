@@ -9,7 +9,9 @@ internal sealed class PlaceholderRecord
 
 #endif
 #if fields
-%FRecordProperties%
+//#each field separator "\n\n"
+%field.RecordProperty%
+//#end
 #else
     public string Name { get; set; } = string.Empty;
 

@@ -55,7 +55,7 @@ internal sealed class PlaceholderQueries(AppDbContext context) : IPlaceholderQue
 #if etag
             .Select(record => new Versioned<PlaceholderDto>(
 #if fields
-                new PlaceholderDto(record.Id, %FRecordArgs%, record.CreatedAt, record.LastModifiedAt),
+                new PlaceholderDto(record.Id, /*#each field separator ", "*/record.%field.Name%/*#end*/, record.CreatedAt, record.LastModifiedAt),
 #else
                 new PlaceholderDto(record.Id, record.Name, record.Description, record.CreatedAt, record.LastModifiedAt),
 #endif
@@ -64,7 +64,9 @@ internal sealed class PlaceholderQueries(AppDbContext context) : IPlaceholderQue
             .Select(record => new PlaceholderDto(
                 record.Id,
 #if fields
-%FRecordArgLines%
+//#each field
+                record.%field.Name%,
+//#end
 #else
                 record.Name,
                 record.Description,
@@ -144,7 +146,7 @@ internal sealed class PlaceholderQueries(AppDbContext context) : IPlaceholderQue
 
     private static readonly Expression<Func<PlaceholderRecord, PlaceholderSummaryDto>> _toSummary =
 #if fields
-        record => new PlaceholderSummaryDto(record.Id, %FSummaryArgs%record.CreatedAt, record.LastModifiedAt);
+        record => new PlaceholderSummaryDto(record.Id, /*#each field where summary*/record.%field.Name%, /*#end*/record.CreatedAt, record.LastModifiedAt);
 #else
         record => new PlaceholderSummaryDto(record.Id, record.Name, record.CreatedAt, record.LastModifiedAt);
 #endif
