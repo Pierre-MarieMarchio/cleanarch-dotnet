@@ -13,11 +13,7 @@ internal static class PlaceholderResponseMapping
     {
         ArgumentNullException.ThrowIfNull(placeholder);
 
-#if fields
         return new PlaceholderResponse(placeholder.Id, /*#each field*/placeholder.%field.Name%, /*#end*/placeholder.CreatedAt, placeholder.LastModifiedAt);
-#else
-        return new PlaceholderResponse(placeholder.Id, placeholder.Name, placeholder.Description, placeholder.CreatedAt, placeholder.LastModifiedAt);
-#endif
     }
 
 #endif
@@ -26,11 +22,7 @@ internal static class PlaceholderResponseMapping
     {
         ArgumentNullException.ThrowIfNull(summary);
 
-#if fields
         return new PlaceholderSummaryResponse(summary.Id, /*#each field where summary*/summary.%field.Name%, /*#end*/summary.CreatedAt, summary.LastModifiedAt);
-#else
-        return new PlaceholderSummaryResponse(summary.Id, summary.Name, summary.CreatedAt, summary.LastModifiedAt);
-#endif
     }
 
     public static Result<PagedResponse<PlaceholderSummaryResponse>> ToPageResponse(

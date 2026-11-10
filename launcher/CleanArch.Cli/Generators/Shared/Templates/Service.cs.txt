@@ -202,12 +202,8 @@ internal sealed class PlaceholderService(
     }
 
 #endif
-#if (trimsText && fields)
+#if trimsText
     private static PlaceholderContentDto Trimmed(PlaceholderContentDto content) => content with { /*#each field where string separator ", "*/%field.Name% = %field.Trimmed%/*#end*/ };
-#endif
-#if (trimsText && !fields)
-    private static PlaceholderContentDto Trimmed(PlaceholderContentDto content) => content with { Name = content.Name.Trim() };
-
 #endif
 #if changesOne
     private static Error FailureOf(PlaceholderChangeStatus status, Guid placeholderId) => status switch

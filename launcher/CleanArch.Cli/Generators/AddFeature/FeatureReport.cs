@@ -20,10 +20,7 @@ internal static class FeatureReport
         report.Reaction();
         report.FieldTests(plan);
 
-        if (spec.Fields is { } fields)
-        {
-            ReportFields(output, spec, fields);
-        }
+        ReportFields(output, spec, spec.Fields);
 
         output.WriteLine();
         report.Steps();

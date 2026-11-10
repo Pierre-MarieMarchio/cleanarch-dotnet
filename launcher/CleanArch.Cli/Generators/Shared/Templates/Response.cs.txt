@@ -7,13 +7,8 @@ namespace AppTemplate.Api.Features.Placeholders.Contracts.Responses;
 #endif
 public sealed record PlaceholderResponse(
     Guid Id,
-#if fields
 //#each field
     %field.Type% %field.Name%,
 //#end
-#else
-    string Name,
-    string Description,
-#endif
     DateTimeOffset CreatedAt,
     DateTimeOffset? LastModifiedAt);

@@ -157,7 +157,7 @@ It does not install itself: the tool that runs it is the one this project pins i
 |---|---|
 | <!--#if (canAddFeature)--> |
 | `add feature <Features> <Feature>` | a feature in every layer, its manifest under `.feature-manifest/` and its page, composed; `--access owner` with `--deletion delete` or `anonymise`, or `--access shared`; `--operations`, `--model record` or `aggregate`, `--concurrency none` or `etag`, `--fields` |
-| `add field <Features> "<fields>"` | fields added to a feature `add feature --fields` wrote, each that cannot be null with the default the stored rows receive |
+| `add field <Features> "<fields>"` | fields added to a feature `add feature` wrote, each that cannot be null with the default the stored rows receive |
 | <!--#endif--> |
 | `add use-case <Features> <UseCase>` | one operation on a feature of the rich shape; `--kind command` or `query`, `--input` |
 | `add setting <Features> <Section>` | a feature's options class and validator, registered, with its section in each host's `appsettings.json` and the configuration reference; `--keys` |

@@ -7,20 +7,6 @@ public sealed class PlaceholderContentDtoValidator : AbstractValidator<Placehold
 {
     public PlaceholderContentDtoValidator()
     {
-#if fields
 %FRulesContent%
-#else
-        RuleFor(content => content.Name)
-            .Cascade(CascadeMode.Stop)
-            .NotEmpty().WithMessage("%An% placeholder name is required.")
-            .Must(name => name.Trim().Length <= %Limits%.NameMaxLength)
-            .WithMessage($"%An% placeholder name cannot exceed {%Limits%.NameMaxLength} characters.");
-
-        RuleFor(content => content.Description)
-            .Cascade(CascadeMode.Stop)
-            .NotNull().WithMessage("%An% placeholder description is required; it may be empty.")
-            .MaximumLength(%Limits%.DescriptionMaxLength)
-            .WithMessage($"%An% placeholder description cannot exceed {%Limits%.DescriptionMaxLength} characters.");
-#endif
     }
 }

@@ -30,15 +30,11 @@ public sealed class PlaceholderServiceTests
 
     private static CancellationToken TestToken => TestContext.Current.CancellationToken;
 
-#if (takesContent && fields)
+#if takesContent
     private static PlaceholderContentDto AValidContent => new(
 //#each field separator ",\n"
         %field.Sample%
 //#end ");"
-
-#endif
-#if (takesContent && !fields)
-    private static PlaceholderContentDto AValidContent => new("Groceries", "Milk, eggs");
 
 #endif
     [Fact]
@@ -119,24 +115,8 @@ public sealed class PlaceholderServiceTests
     }
 
 #endif
-#if (create && fields)
+#if create
 %FServiceInvalid%
-
-#endif
-#if (create && !fields)
-    [Theory]
-    [InlineData("", "description")]
-    [InlineData("   ", "description")]
-    [InlineData(null, "description")]
-    [InlineData("name", null)]
-    public async Task CreateAsync_RejectsInvalidContent_AndStagesNothing(string? name, string? description)
-    {
-        var result = await Service().CreateAsync(new PlaceholderContentDto(name!, description!), TestToken);
-
-        result.Error!.Type.ShouldBe(ErrorType.Validation);
-        _store.ReceivedCalls().ShouldBeEmpty();
-        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
 
 #endif
 #if delete

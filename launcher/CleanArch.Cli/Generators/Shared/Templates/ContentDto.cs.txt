@@ -1,10 +1,6 @@
 namespace AppTemplate.Application.Features.Placeholders.Model.Dtos;
 
-#if fields
 public sealed record PlaceholderContentDto(
 //#each field separator ",\n"
     %field.Type% %field.Name%
 //#end ");"
-#else
-public sealed record PlaceholderContentDto(string Name, string Description);
-#endif

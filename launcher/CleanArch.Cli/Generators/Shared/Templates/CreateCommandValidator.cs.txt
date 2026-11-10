@@ -7,20 +7,6 @@ public sealed class CreatePlaceholderCommandValidator : AbstractValidator<Create
 {
     public CreatePlaceholderCommandValidator()
     {
-#if fields
 %FRulesCommand%
-#else
-        RuleFor(command => command.Name)
-            .Cascade(CascadeMode.Stop)
-            .NotEmpty().WithMessage("%An% placeholder name is required.")
-            .Must(name => name.Trim().Length <= Placeholder.NameMaxLength)
-            .WithMessage($"%An% placeholder name cannot exceed {Placeholder.NameMaxLength} characters.");
-
-        RuleFor(command => command.Description)
-            .Cascade(CascadeMode.Stop)
-            .NotNull().WithMessage("%An% placeholder description is required; it may be empty.")
-            .MaximumLength(Placeholder.DescriptionMaxLength)
-            .WithMessage($"%An% placeholder description cannot exceed {Placeholder.DescriptionMaxLength} characters.");
-#endif
     }
 }

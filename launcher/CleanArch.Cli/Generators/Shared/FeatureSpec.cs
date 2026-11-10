@@ -12,7 +12,7 @@ internal sealed record FeatureSpec(
     string Concurrency,
     string? Reaction,
     bool HasApi,
-    IReadOnlyList<Field>? Fields = null,
+    IReadOnlyList<Field> Fields,
     bool TablePrefixes = false)
 {
     internal bool Has(string operation) => Operations.Contains(operation, StringComparer.Ordinal);

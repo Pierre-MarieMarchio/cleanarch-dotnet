@@ -10,15 +10,9 @@ internal sealed class PlaceholderRecord : IAuditable
     public Guid OwnerId { get; set; }
 
 #endif
-#if fields
 //#each field separator "\n\n"
 %field.RecordProperty%
 //#end
-#else
-    public string Name { get; set; } = string.Empty;
-
-    public string Description { get; set; } = string.Empty;
-#endif
 
     public uint Version { get; set; }
 

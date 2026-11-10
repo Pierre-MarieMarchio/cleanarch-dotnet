@@ -183,11 +183,7 @@ internal static class FeatureCode
         tokens["ServiceArgs"] = ServiceArguments(spec, flags);
         CallTokens(tokens, spec);
         DocumentationTokens(tokens, spec, flags);
-
-        if (spec.Fields is { } fields)
-        {
-            CodeTokens(tokens, spec, fields, flags);
-        }
+        CodeTokens(tokens, spec, spec.Fields, flags);
 
         return tokens;
     }
@@ -243,10 +239,9 @@ internal static class FeatureCode
 
         return
         [
-            ("fields", fields is not null),
-            ("anonymisedText", Anonymises(spec) && (fields is null || fields.Any(field => field is { Kind: FieldKind.String, Nullable: false }))),
-            ("trimsText", HasAny(spec, "create", "update") && (fields is null || fields.Any(field => field.Kind == FieldKind.String))),
-            ("constants", fields is null || fields.Any(FieldCode.HasConstants)),
+            ("anonymisedText", Anonymises(spec) && fields.Any(field => field is { Kind: FieldKind.String, Nullable: false })),
+            ("trimsText", HasAny(spec, "create", "update") && fields.Any(field => field.Kind == FieldKind.String)),
+            ("constants", fields.Any(FieldCode.HasConstants)),
         ];
     }
 
@@ -331,9 +326,7 @@ internal static class FeatureCode
         string type = spec.Type;
         string id = $"{CSharpNames.Lower(type)}Id";
         string precondition = HasEtag(spec) ? ", precondition" : string.Empty;
-        string content = spec.Fields is { } fields
-            ? string.Join(", ", fields.Select(field => $"request.{field.Name}"))
-            : "request.Name, request.Description";
+        string content = string.Join(", ", spec.Fields.Select(field => $"request.{field.Name}"));
 
         if (IsRecord(spec))
         {
@@ -356,34 +349,22 @@ internal static class FeatureCode
     private static void DocumentationTokens(Dictionary<string, string> tokens, FeatureSpec spec, HashSet<string> flags)
     {
         var fields = spec.Fields;
-        bool generic = fields is null;
+        bool summarised = fields.Any(field => !FieldCode.InSummary(field));
 
         tokens["Staged"] = flags.Contains("trimsText") ? "Trimmed(content)" : "content";
-        tokens["Replaced"] = generic ? "name and description" : "fields";
-        tokens["Revised"] = generic ? "text" : "fields";
-        tokens["ListTail"] = Omission(fields, ", names only", ", without their texts");
-        tokens["SummaryDoc"] = Omission(fields, ", without its description", ", without its texts");
+        tokens["ListTail"] = summarised ? ", without their texts" : string.Empty;
+        tokens["SummaryDoc"] = summarised ? ", without its texts" : string.Empty;
         tokens["SortDoc"] = string.Join(
             ", ",
-            (fields?.Where(FieldCode.IsSortable).Select(field => CSharpNames.Lower(field.Name)) ?? ["name"])
+            fields.Where(FieldCode.IsSortable).Select(field => CSharpNames.Lower(field.Name))
                 .Append("createdAt")
                 .Select(field => $"<c>{field}</c>"));
         tokens["DateKeys"] = string.Join(
             ", ",
-            (fields ?? [])
+            fields
                 .Where(field => FieldCode.IsKeyset(field) && field.Kind == FieldKind.DateTimeOffset)
                 .Select(field => $"{spec.Type}CollectionPolicy.{field.Name}Field")
                 .Prepend($"{spec.Type}CollectionPolicy.CreatedAtField"));
-    }
-
-    private static string Omission(IReadOnlyList<Field>? fields, string placeholders, string texts)
-    {
-        if (fields is null)
-        {
-            return placeholders;
-        }
-
-        return fields.Any(field => !FieldCode.InSummary(field)) ? texts : string.Empty;
     }
 
     internal static string ManifestPath(FeatureSpec spec) => FeatureManifest.PathOf(spec.Features);
@@ -438,7 +419,7 @@ internal static class FeatureCode
 
         private readonly Dictionary<string, string> _tokens = Tokens(spec);
 
-        private readonly TemplateList? _fields = spec.Fields is { } fields ? FieldBlocks.For(fields) : null;
+        private readonly TemplateList _fields = FieldBlocks.For(spec.Fields);
 
         internal List<Emission> Emissions { get; } = [];
 
@@ -533,8 +514,7 @@ internal static class FeatureCode
             Add(persistence, $"{_feature}/Rows/Tracking/%A%Tracker.cs", FeatureTemplates.Tracker, "aggregate");
             Add(persistence, $"{_feature}/Access/Repositories/%A%Repository.cs", FeatureTemplates.Repository, "aggregate && writes");
             Add(persistence, $"{_feature}/Access/Queries/%A%Queries.cs", FeatureTemplates.Queries, "reads");
-            Add(persistence, $"{_feature}/Access/Queries/%A%SortMap.cs", FeatureTemplates.SortMap, "list && !fields");
-            Add(persistence, $"{_feature}/Access/Queries/%A%SortMap.cs", FeatureTemplates.FieldSortMap, "list && fields");
+            Add(persistence, $"{_feature}/Access/Queries/%A%SortMap.cs", FeatureTemplates.FieldSortMap, "list");
         }
 
         internal void Api()
@@ -556,49 +536,26 @@ internal static class FeatureCode
             string domainTests = ProjectOf(spec, "tests/Domain", "Domain.UnitTests");
             string persistenceTests = ProjectOf(spec, "tests/Infrastructure", "Infrastructure.Persistence.UnitTests");
 
-            AddTest(applicationTests, $"{_feature}/Model/Dtos/%A%ContentDtoValidatorTests.cs", FeatureTemplates.ContentValidatorTests, "record && takesContent && !fields");
-            AddTest(applicationTests, $"{_feature}/Model/Dtos/%A%ContentDtoValidatorTests.cs", FeatureTemplates.FieldContentValidatorTests, "record && takesContent && fields");
+            AddTest(applicationTests, $"{_feature}/Model/Dtos/%A%ContentDtoValidatorTests.cs", FeatureTemplates.FieldContentValidatorTests, "record && takesContent");
             AddTest(applicationTests, $"{_feature}/Services/%A%ServiceTests.cs", FeatureTemplates.ServiceTests, "record");
-            CommandValidatorTests(applicationTests);
-            AddTest(domainTests, $"{_feature}/Model/Entities/%A%Tests.cs", FeatureTemplates.AggregateTests, "aggregate && !fields");
-            AddTest(domainTests, $"{_feature}/Model/Entities/%A%Tests.cs", FeatureTemplates.FieldAggregateTests, "aggregate && fields");
+            CommandValidatorTests(applicationTests, "Create");
+            CommandValidatorTests(applicationTests, "Update");
+            AddTest(domainTests, $"{_feature}/Model/Entities/%A%Tests.cs", FeatureTemplates.FieldAggregateTests, "aggregate");
             AddTest(persistenceTests, $"{_feature}/Rows/Configurations/%A%RecordConfigurationTests.cs", FeatureTemplates.ConfigurationTests);
-            AddTest(persistenceTests, $"{_feature}/%A%MapperFidelityTests.cs", FeatureTemplates.MapperFidelityTests, "aggregate && !fields");
-            AddTest(persistenceTests, $"{_feature}/%A%MapperFidelityTests.cs", FeatureTemplates.FieldMapperFidelityTests, "aggregate && fields");
+            AddTest(persistenceTests, $"{_feature}/%A%MapperFidelityTests.cs", FeatureTemplates.FieldMapperFidelityTests, "aggregate");
         }
 
         internal void FieldTests()
         {
-            if (spec.HasApi && spec.Fields is not null && spec.Has("create"))
+            if (spec.HasApi && spec.Has("create"))
             {
                 AddTest(IntegrationTests(spec), $"{_feature}/%A%FieldTests.cs", FeatureTemplates.FieldApiTests);
             }
         }
 
-        private void CommandValidatorTests(string applicationTests)
+        private void CommandValidatorTests(string applicationTests, string operation)
         {
-            if (spec.Fields is { } fields)
-            {
-                FieldCommandValidatorTests(applicationTests, fields, "Create");
-                FieldCommandValidatorTests(applicationTests, fields, "Update");
-            }
-
-            AddTest(
-                applicationTests,
-                $"{_commands}/Create%A%/Create%A%CommandValidatorTests.cs",
-                FeatureTemplates.CommandValidatorTests,
-                "aggregate && create && !fields",
-                new() { ["Op"] = "Create", ["CommandNew"] = "new Create%A%Command(name!, description!)" });
-            AddTest(
-                applicationTests,
-                $"{_commands}/Update%A%/Update%A%CommandValidatorTests.cs",
-                FeatureTemplates.CommandValidatorTests,
-                "aggregate && update && !fields",
-                new() { ["Op"] = "Update", ["CommandNew"] = "new Update%A%Command(Guid.CreateVersion7(), name!, description!)" });
-        }
-
-        private void FieldCommandValidatorTests(string applicationTests, IReadOnlyList<Field> fields, string operation)
-        {
+            var fields = spec.Fields;
             var samples = fields.Select(field => FieldCode.Sample(field, 1));
 
             AddTest(
