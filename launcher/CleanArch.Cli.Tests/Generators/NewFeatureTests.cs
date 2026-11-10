@@ -2110,16 +2110,16 @@ public sealed partial class NewFeatureTests
     private static void TemplateGuardCases(Action<bool, string> expect)
     {
         var get = new HashSet<string>(StringComparer.Ordinal) { "get" };
-        var names = new Dictionary<string, string>(StringComparer.Ordinal) { ["P"] = "Acme", ["F"] = "Notes", ["A"] = "Note", ["L"] = "note" };
+        var names = new Dictionary<string, string>(StringComparer.Ordinal) { ["P"] = "Acme", ["F"] = "People", ["A"] = "Person", ["L"] = "person" };
         const string compilable = "namespace AppTemplate.Placeholders;\n\n#if (get && !list)\n    class Placeholder;\n#elif list\nclass placeholderList;\n#else\nclass None;\n#endif\n";
 
-        expect(Refuses(() => Template.Evaluate("get&nonsense", get)), "A condition naming a flag that does not exist evaluated instead of failing, so a typo would silently drop a block.");
-        expect(Refuses(() => Template.Render("namespace N;\n#if (get && nonsense)\n#endif", get, names)), "An #if naming a flag that does not exist evaluated instead of failing, so a typo would silently drop a block.");
-        expect(Template.Render(compilable, get, names) == "namespace Acme.Notes;\n\n    class Note;\n", "An #if holding kept a line other than its own, or a reference name was not replaced.");
-        expect(Template.Render(compilable, ["list"], names) == "namespace Acme.Notes;\n\nclass noteList;\n", "An #elif holding kept a line other than its own.");
-        expect(Template.Render(compilable, [], names) == "namespace Acme.Notes;\n\nclass None;\n", "An #else did not take over when no condition held.");
-        expect(Refuses(() => Template.Render("namespace N;\n#if get || list\n#endif", get, names)), "An #if joining flags without parentheses around the whole condition was rendered, though the engine then reads only its first flag.");
-        expect(Template.Render("namespace N;\n#if (list || get)\nclass Kept;\n#endif\n", get, names) == "namespace N;\nclass Kept;\n", "An #if joining flags with || did not hold when only its second flag did.");
+        expect(
+            Refuses(() => Template.Render("namespace N;\n#if (get && nonsense)\n#endif", get, names), "line 2: 'nonsense' is not a known flag"),
+            "An #if naming a flag the generators do not know was rendered, or refused without naming its line and the flag.");
+        expect(Template.Render(compilable, get, names) == "namespace Acme.People;\n\n    class Person;\n", "An #if holding kept a line other than its own, or a reference name was not replaced, Placeholders included.");
+        expect(Template.Render(compilable, ["list"], names) == "namespace Acme.People;\n\nclass personList;\n", "An #elif holding kept a line other than its own.");
+        expect(Template.Render(compilable, [], names) == "namespace Acme.People;\n\nclass None;\n", "An #else did not take over when no condition held.");
+        expect(Template.Render("namespace N;\n#if list || get\nclass Kept;\n#endif\n", get, names) == "namespace N;\nclass Kept;\n", "An #if joining flags with || did not hold when only its second flag did.");
         expect(
             !Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(FeatureTemplates.Errors).GetDiagnostics().Any(),
             "The Errors template is no longer valid C#, which its compilable form promises.");
@@ -2136,10 +2136,14 @@ public sealed partial class NewFeatureTests
         expect(
             Template.Render("namespace N;\nM(/*#each field separator \", \"*/%field.Name%/*#end*/);\n", [], names, fields) == "namespace N;\nM(Title, Size, Notes);\n",
             "An inline block did not join its items on the line it stands in.");
-        expect(Refuses(() => Template.Render("namespace N;\n//#each field\n%field.Colour%\n//#end\n", [], names, fields)), "A block naming a token a field does not have was rendered, so a typo would write the token itself.");
-        expect(Refuses(() => Template.Render("namespace N;\n//#each field\n%field.Name%\n", [], names, fields)), "A block that never closes was rendered, its marker and tokens written as code.");
+        expect(
+            Refuses(() => Template.Render("namespace N;\n//#each field\n%field.Colour%\n//#end\n", [], names, fields), "'%field.Colour%' is not a token of a field"),
+            "A block naming a token a field does not have was rendered, so a typo would write the token itself.");
+        expect(
+            Refuses(() => Template.Render("namespace N;\n//#each field\n%field.Name%\n", [], names, fields), "'//#each' stands outside a block"),
+            "A block that never closes was rendered, its marker and tokens written as code.");
 
-        static bool Refuses(Action render)
+        static bool Refuses(Action render, string expected)
         {
             try
             {
@@ -2147,9 +2151,9 @@ public sealed partial class NewFeatureTests
 
                 return false;
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException exception)
             {
-                return true;
+                return exception.Message.Contains(expected, StringComparison.Ordinal);
             }
         }
     }

@@ -916,43 +916,79 @@ model with the subset of each field profile. A change to a shared unit is made t
 
 ### The template engine
 
-`Template.Render`, in `launcher/CleanArch.Cli/Generators/Shared/Template.cs`, renders a generator's
-template in two passes. The first is `Microsoft.TemplateEngine.Core`, the engine behind `dotnet new`,
-run in the tool's process: it keeps the lines of the `#if`, `#elif` and `#else` branches the
-generation's flags select, and replaces the reference names `AppTemplate`, `Placeholders`,
-`Placeholder` and `placeholder` by the project, feature, aggregate and lowered aggregate names. The
-second is the tool's own: its `%if%` directives, its `%Token%` substitution, the pruning of unused
-usings, and the tidying of blank lines. The BOM and the line endings are fixed afterwards, by
-`TextEdits`, so a generated file is the same bytes as before.
+`Template.Render`, in `launcher/CleanArch.Cli/Generators/Shared/Template.cs`, renders the templates
+of `add feature` and `add field` in five passes, in this order:
 
-A template written with `#if` and the reference names is C# that a compiler reads, where one written
-with `%if%` and `%Token%` is not. This is why the engine is this one and not a subprocess of
-`dotnet new`, whose start would cost every generation, nor a template language such as Scriban or
-Liquid, whose syntax no compiler or editor understands. Its version is pinned in
-`launcher/Directory.Packages.props` to the 10.0.1xx band of the SDK that `global.json` pins.
+1. `Directives` keeps the lines of the `#if`, `#elif` and `#else` branches the generation's flags
+   select, and drops the directive lines.
+2. The reference names `AppTemplate`, `Placeholders`, `Placeholder` and `placeholder` become the
+   project, feature, aggregate and lowered aggregate names, wherever they appear, inside a word or
+   in prose: a template that needs the word `placeholder` for itself cannot have it. They are
+   replaced before the blocks, so a field named after one keeps its name.
+3. `TemplateBlocks` repeats each block once per field of the feature.
+4. Each `%Token%` becomes the code the generator computed for it.
+5. A using marked `//?<Types>` is pruned when no line after the namespace names one of its types,
+   the usings are sorted, and the blank lines are tidied.
 
-- A condition that joins flags with `&&` or `||` is written with parentheses around the whole of it,
-  `#if (a || b)`: the engine reads only the first flag of one without, so `Template` refuses it.
-- A symbol an `#if` names must be one of the flags `Template` knows: the engine reads an unknown one
-  as false without a word, so `Template` refuses it first. A generated file therefore cannot carry
-  a real `#if DEBUG`.
-- The reference names are replaced wherever they appear in a template, prose included: a template
-  that needs the word `placeholder` for itself cannot have it.
-- A template still written with `%if%` and `%Token%` passes through the first pass unchanged, so
-  one template moves to the new form at a time, its output held by the digests of
-  `NewFeatureTests.WithoutFields`.
+The BOM and the line endings are fixed afterwards, by `TextEdits`. The directives and the
+conditions read lines and flags and nothing of C#.
 
-Between the two passes, `TemplateBlocks` repeats a block once per field of the feature, so the
-loops, separators and indentation of the code written per field stay in the template, where a
-project can change them. A block on lines of its own opens with `//#each field`, closes with
-`//#end`, and writes its lines once per field; the same block inside a line is written
-`/*#each field*/` and `/*#end*/`. `where <trait>` keeps the fields that have a trait,
-`separator "<text>"` joins the fields with the text, `\n` standing for a line break, where a line
-block otherwise joins them with a line break and an inline one with nothing, and a quoted text after
-`#end` follows the last field. Inside a block, `%field.<Token>%` is a value of the field. The tokens
-and the traits are those of `FieldBlocks`; a block naming another, or one left open, is
-refused. A token may write a `%Token%` of the feature, such as `%Limits%`, which the second pass
-replaces.
+A `%Token%` carries code the generator computes, in the middle of a line, where a directive cannot
+stand. A template without a token, written with `#if`, the reference names and C# alone, is C# that
+a compiler and an editor read, as `Errors.cs.txt` is; a template that carries a token is not. This
+is why the syntax is the C# preprocessor's and not a template language such as Scriban or Liquid,
+whose syntax no compiler or editor understands.
+
+### Directives and conditions
+
+A directive is a line whose first non-blank characters are `#if <condition>`, `#elif <condition>`,
+`#else` or `#endif`; `#else` and `#endif` take nothing after them. An `#if` anywhere else in a line
+is text. Directives nest, and an `#if` in a branch that does not hold is still read, so a typo in a
+dead branch is refused as well. `Condition` reads a condition with this grammar, where a flag is one
+of `Template.KnownFlags`:
+
+```text
+or    := and ('||' and)*
+and   := unary ('&&' unary)*
+unary := '!' unary | '(' or ')' | flag
+```
+
+`&&` binds tighter than `||`, as in C#, and parentheses group without being required:
+`#if get || list` and `#if (get) && (list)` both read. The `when` of each file in the plan of
+`launcher/CleanArch.Cli/Generators/Shared/FeatureCode.cs`, such as `"agg && !fields"`, is read by
+the same `Condition`.
+
+`add feature` and `add field` refuse a template that holds one of these, with a message that starts
+with the template's name, such as `FeatureTemplates.Aggregate`, and the line's number, and names
+the offending text:
+
+- a condition naming a flag `Template` does not know, so a generated file cannot carry a real
+  `#if DEBUG`;
+- an empty condition, an operator without its operand, a parenthesis left open or never opened, and
+  any other text, such as a single `&` or `|`, or `==`;
+- an `#elif`, `#else` or `#endif` that belongs to no `#if`, an `#elif` or `#else` after the `#else`
+  of its `#if`, an `#if` never closed, and text after `#else` or `#endif`.
+
+### Blocks over fields
+
+A block repeats its body once per field of the feature, so the loops, separators and indentation
+of the code written per field are in the template. A block on lines of its own reads:
+
+```text
+//#each field [where <trait>] [separator "<text>"]
+        <body>
+//#end ["<tail>"]
+```
+
+The same block inside a line is written `/*#each field ...*/<body>/*#end*/`. `where <trait>` keeps
+the fields that have the trait, `separator "<text>"` joins the fields with the text, `\n` standing
+for a line break, where a line block otherwise joins them with a line break and an inline one with
+nothing, and a quoted tail after `#end` follows the last field. A selection with no field writes
+nothing, its tail included. Inside a block, `%field.<Token>%` is a value of the field; the tokens
+and the traits are those of `FieldBlocks`, and a block naming another, or one left open, is refused.
+Blocks do not nest, and since the directives are read first, an `#if` inside a block is decided once
+per generation, not once per field. A field token may write a `%Token%` of the feature, such as
+`%Limits%`, which the fourth pass replaces.
 
 ```text
 //#each field separator ",\n"
@@ -962,8 +998,13 @@ replaces.
 
 | Guarantee | Test |
 |---|---|
-| An `#if` naming an unknown flag, or joining flags without parentheses around the whole condition, is refused; each of `#if`, `#elif` and `#else` keeps only its own lines and the reference names are replaced; a block writes its lines once per field it keeps, joined by its separator and followed by its tail, and one naming an unknown token, or left open, is refused | `NewFeatureTests.TemplateGuard` |
-| The output of `add feature` does not change when a template changes its form | `NewFeatureTests.WithoutFields` |
+| A condition reads as C# reads it, `&&` binding tighter than `||`, with or without parentheses | `ConditionTests.ACondition_ReadsAsCSharpDoes_AndBindsAndTighterThanOr` |
+| A condition naming an unknown flag, empty, left dangling, unbalanced, or holding any other text is refused, the message naming the offending text | `ConditionTests.ACondition_RefusesWhatItCannotRead_NamingTheOffendingText` |
+| Each of `#if`, `#elif` and `#else` keeps only its own lines, at every depth | `DirectivesTests.ABranch_KeepsItsOwnLines_AtEveryDepth` |
+| A line that does not start with a directive is text, an `#if` in the middle of a line included | `DirectivesTests.ADirective_StandsAtTheStartOfALine_AndAnythingElseIsText` |
+| A directive without its `#if`, after its `#else`, never closed, followed by text, or naming an unknown flag, even in a dead branch, is refused with its line's number and text | `DirectivesTests.ADirective_RefusesAMisplacedOrUnreadableLine_NamingItsNumberAndText` |
+| `Template.Render` runs the passes together: the branches and the reference names, an unknown flag refused with its line, a block written once per field it keeps, joined by its separator and followed by its tail, and one naming an unknown token, or left open, refused | `NewFeatureTests.TemplateGuard` |
+| The output of `add feature` and `add field` does not change when a template changes its form | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
 | Every C# file `add feature` and `add field` write, over the configurations the digests cover, parses without a syntax error | `NewFeatureTests.GeneratedCodeParses` |
 
 ## The package

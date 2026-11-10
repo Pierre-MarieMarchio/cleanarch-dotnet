@@ -29,7 +29,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
-    <PackageReference Include="Microsoft.TemplateEngine.Core" />
     <PackageReference Include="System.CommandLine" />
   </ItemGroup>
 
