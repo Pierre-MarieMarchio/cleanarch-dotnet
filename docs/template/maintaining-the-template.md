@@ -1168,37 +1168,10 @@ generator. A template names only the flags of its own generator; any other is re
 The vocabulary of `add feature`, which `add field` renders again, is `FeatureFlags.Vocabulary` in
 `launcher/CleanArch.Cli/Generators/Shared/FeatureFlags.cs`, and `FeatureCode.Flags` sets the flags
 that hold for a generation. Its flags are the words of the options where an option decides one,
-and otherwise say what the feature does:
-
-| Flag | Holds when |
-|---|---|
-| `get` | `get` is among `--operations`: one is read by its id. |
-| `list` | `list` is among `--operations`: a page of them is read. |
-| `create` | `create` is among `--operations`. |
-| `update` | `update` is among `--operations`. |
-| `delete` | `delete` is among `--operations`. |
-| `owner` | `--access owner`: each one belongs to the caller who created it, and the deletion of that account reaches it. |
-| `shared` | `--access shared`: every caller reaches every one. |
-| `record` | `--model record`: a service over a store, without a domain aggregate. |
-| `aggregate` | `--model aggregate`: one use case per operation over a domain aggregate. |
-| `etag` | `--concurrency etag`: a persisted version, an `ETag` and `If-Match`. |
-| `erase` | `--deletion delete`: the rows of a deleted account are removed. |
-| `anonymise` | `--deletion anonymise`: what identifies the owner of a deleted account is rewritten. |
-| `prefixedTables` | The database is SQLite, which has no schemas, so a table's name starts with its feature's schema. |
-| `writes` | Create, update or delete is among the operations, so the feature writes through a store or a repository. |
-| `changesOne` | Update or delete is among the operations: each changes one that can be missing, or stale under `etag`. |
-| `takesContent` | Create or update is among the operations: each takes the feature's content and validates it. |
-| `returnsOne` | Get, create or update is among the operations: each answers with one in full. |
-| `readsOne` | Get is among the operations, or a `record` creates or updates and reads back what it wrote: the queries port reads one by its id. |
-| `reads` | The feature has a queries port: it reads one, lists, or is `owner`, whose account deletion lists the owners. |
-| `store` | A `record` that writes or is `owner` stages its changes through a store. |
-| `notFound` | An operation can answer that one is not found: get, update, delete, or a `record`'s create. |
-| `stampsTime` | A `record` creates or updates, so its service reads the time it stamps. |
-| `anonymisedText` | Under `anonymise`, a required text is rewritten to a fixed text: a field is a non-nullable string. |
-| `trimsText` | Create or update takes a text the service trims: a field is a string. |
-| `constants` | A limit of the content is declared as a constant: a field is a string, a text or a decimal, or has a bound. |
-
-The table is the vocabulary, row for row: a flag renamed, added, removed or reworded changes both.
+and otherwise say what the feature does. A project's team writes conditions with them, so the table
+of each flag with its meaning is in the project's guide,
+[the flags of add feature](../guides/changing-generated-code.md#the-flags-of-add-feature): a flag
+renamed, added, removed or reworded changes both.
 
 ### Blocks over fields
 
@@ -1238,7 +1211,7 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | Each template that holds no `%` token parses as C#, as the compiler reads its `#if` lines, under each combination of the flags it names, and `PlaceholderErrors.cs.txt` is one of them | `NewFeatureTests.TemplateGuard` |
 | A template naming the flag of another generator is refused, and renders under that generator's vocabulary | `NewFeatureTests.TemplateGuard` |
 | A `%Token%` the generation does not set is refused, not written as code | `NewFeatureTests.TemplateGuard` |
-| The table of the flags of `add feature` on this page is its vocabulary, each flag with its meaning, and nothing else | `FeatureFlagsTests.ThePage_ListsEachFlagOfAddFeature_WithItsMeaning_AndNoOther` |
+| The table of the flags of `add feature` in the guide to code templates is its vocabulary, each flag with its meaning, and nothing else | `FeatureFlagsTests.TheGuideToCodeTemplates_ListsEachFlagOfAddFeature_WithItsMeaning_AndNoOther` |
 | The output of `add feature` and `add field` does not change when a template changes its form | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
 | A project's override of a template writes its own file, and changes no other | `NewFeatureTests.OverrideWinsForItsFileOnly` |
 | After `templates copy add-feature`, a BOM and CRLF line endings given to one copy, `add feature` writes the bytes it writes without the copies, lists the copies it wrote from, warns of none, and the manifest records each with the digest of the tool's text | `NewFeatureTests.ACopyOfTheTemplatesWritesTheSameBytes` |

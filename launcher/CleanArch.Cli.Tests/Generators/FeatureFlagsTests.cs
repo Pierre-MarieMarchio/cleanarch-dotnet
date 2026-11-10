@@ -7,12 +7,12 @@ namespace CleanArch.Cli.Tests.Generators;
 
 public sealed class FeatureFlagsTests
 {
-    private const string _page = "docs/template/maintaining-the-template.md";
+    private const string _page = "docs/guides/changing-generated-code.md";
 
     private const string _section = "### The flags of add feature";
 
     [Fact]
-    public void ThePage_ListsEachFlagOfAddFeature_WithItsMeaning_AndNoOther()
+    public void TheGuideToCodeTemplates_ListsEachFlagOfAddFeature_WithItsMeaning_AndNoOther()
     {
         string section = MarkdownSection.Of(Path.Combine(Repository.Root, _page), _section)
             .ShouldNotBeNull($"{_page} has no section '{_section}', where the flags of add feature are listed.");

@@ -61,7 +61,7 @@ where it left them, or its copies break with no change of its own.
 
 `ConditionTests` holds the grammar and `DirectivesTests` the directives, each refusal naming the
 offending text and line.
-`FeatureFlagsTests.ThePage_ListsEachFlagOfAddFeature_WithItsMeaning_AndNoOther` holds the
+`FeatureFlagsTests.TheGuideToCodeTemplates_ListsEachFlagOfAddFeature_WithItsMeaning_AndNoOther` holds the
 vocabulary of `add feature` to its table, flag for flag. `NewFeatureTests.TemplateGuard` holds the
 passes together, a leftover `%Token%` and another generator's flag refused, and
 `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields` and

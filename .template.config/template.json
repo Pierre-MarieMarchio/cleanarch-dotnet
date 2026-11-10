@@ -1932,6 +1932,12 @@
           ]
         },
         {
+          "condition": "(!canAddFeature)",
+          "exclude": [
+            "docs/guides/changing-generated-code.md"
+          ]
+        },
+        {
           "condition": "(!anyFeature)",
           "exclude": [
             "src/Application/AT.Application.Core/Common/Ports/IUserAccountDirectory.cs",

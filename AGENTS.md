@@ -76,10 +76,10 @@ dotnet cleanarch add event <Features> <Event> --consumer <Features>:<Reaction>
 dotnet cleanarch remove feature <Features>   # reports; --apply removes it, once committed
 ```
 
-- Run it with `--dry-run` first; it writes everything or nothing, and refuses while a model change
-  waits for a migration.
+- `--dry-run` first: it writes everything or nothing, and refuses while a model change awaits a migration.
 - Without `--fields`, the fields are `Name` and `Description`: placeholders to rewrite.
 - `add use-case` and `add event` need the rich shape; promote a simple feature first.
+- To change the code it writes: `templates copy`, [the guide](docs/guides/changing-generated-code.md).
 <!--#endif-->
 <!--#if (!canAddFeature)-->
 This project authenticates nobody, so `add feature` refuses it: write a feature by hand from
@@ -116,8 +116,8 @@ it once it has the rich shape, and `--dry-run` shows what it would write.
 - Silence a diagnostic with `#pragma`, `<NoWarn>`, a lowered severity or a skipped test: fix the
   code, or ask. [The gate](docs/guides/build-and-ci.md#the-gate) lists the silences kept.
 <!--#if (canAddFeature)-->
-- Edit by hand what a command writes: `.feature-manifest/`, `cleanarch.json`, a folder's
-  `docs/<folder>/index.md`; nor rewrite a migration a database has applied.
+- Edit by hand what a command writes: `.feature-manifest/`, `code-templates/manifest.json`,
+  `cleanarch.json`, `docs/<folder>/index.md`; nor rewrite a migration a database has applied.
 <!--#endif-->
 <!--#if (!canAddFeature)-->
 - Edit by hand what a command writes: `cleanarch.json`, a folder's `docs/<folder>/index.md`; nor
