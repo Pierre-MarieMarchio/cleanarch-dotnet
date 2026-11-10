@@ -2,20 +2,20 @@ using AppTemplate.Application.Core.Common.Events; //?UserAccountDeleted
 using AppTemplate.Application.Core.Common.Ports; //?IDeletedAccountDataPolicy|IUserAccountDirectory|IUnitOfWork
 using AppTemplate.Domain.Core.Common.Primitives;
 using AppTemplate.Application.Features.Placeholders.Ports.PlaceholderQueries;
-#if rec
+#if record
 using AppTemplate.Application.Features.Placeholders.Ports.PlaceholderStore;
 #endif
-#if agg
+#if aggregate
 using AppTemplate.Domain.Features.Placeholders.Repositories;
 #endif
 
 namespace AppTemplate.Application.Features.Placeholders.Services.Consumers;
 
 internal sealed class %Verb%PlaceholderOnAccountDeletedConsumer(
-#if rec
+#if record
     IPlaceholderStore store,
 #endif
-#if agg
+#if aggregate
     IPlaceholderRepository repository,
 #endif
     IPlaceholderQueries queries,
@@ -38,8 +38,8 @@ internal sealed class %Verb%PlaceholderOnAccountDeletedConsumer(
             return false;
         }
 
-#if purge
-#if rec
+#if erase
+#if record
         int staged = await store.StageRemovalForOwnerAsync(owner, cancellationToken);
 
         if (staged == 0)
@@ -47,7 +47,7 @@ internal sealed class %Verb%PlaceholderOnAccountDeletedConsumer(
             return false;
         }
 #endif
-#if agg
+#if aggregate
         var owned = await repository.GetForOwnerAsync(owner, cancellationToken);
 
         if (owned.Count == 0)
@@ -61,8 +61,8 @@ internal sealed class %Verb%PlaceholderOnAccountDeletedConsumer(
         }
 #endif
 #endif
-#if anon
-#if rec
+#if anonymise
+#if record
         int staged = await store.StageAnonymisationForOwnerAsync(owner, cancellationToken);
 
         if (staged == 0)
@@ -70,7 +70,7 @@ internal sealed class %Verb%PlaceholderOnAccountDeletedConsumer(
             return false;
         }
 #endif
-#if agg
+#if aggregate
         var owned = await repository.GetForOwnerAsync(owner, cancellationToken);
 
         if (owned.Count == 0)

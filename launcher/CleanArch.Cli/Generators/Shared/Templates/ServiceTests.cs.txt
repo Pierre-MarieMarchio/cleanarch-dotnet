@@ -20,24 +20,24 @@ public sealed class PlaceholderServiceTests
 {
     private static readonly UserId _callerId = UserId.Create(Guid.CreateVersion7());
 
-#if rq
+#if reads
     private readonly IPlaceholderQueries _queries = Substitute.For<IPlaceholderQueries>();
 #endif
-#if wq
+#if writes
     private readonly IPlaceholderStore _store = Substitute.For<IPlaceholderStore>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
 #endif
 
     private static CancellationToken TestToken => TestContext.Current.CancellationToken;
 
-#if (content && fields)
+#if (takesContent && fields)
     private static PlaceholderContentDto AValidContent => new(
 //#each field separator ",\n"
         %field.Sample%
 //#end ");"
 
 #endif
-#if (content && !fields)
+#if (takesContent && !fields)
     private static PlaceholderContentDto AValidContent => new("Groceries", "Milk, eggs");
 
 #endif
@@ -96,10 +96,10 @@ public sealed class PlaceholderServiceTests
         await service.DeleteAsync(placeholderId%NullPrecondition%, TestToken);
 #endif
 
-#if rq
+#if reads
         _queries.ReceivedCalls().ShouldBeEmpty();
 #endif
-#if wq
+#if writes
         _store.ReceivedCalls().ShouldBeEmpty();
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
 #endif

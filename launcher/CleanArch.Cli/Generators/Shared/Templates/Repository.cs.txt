@@ -14,7 +14,7 @@ internal sealed class PlaceholderRepository(
     IPlaceholderMapper mapper,
     IPlaceholderTracker tracker) : IPlaceholderRepository
 {
-#if change
+#if changesOne
 #if owner
     public async Task<Placeholder?> GetAsync(UserId ownerId, Guid id, CancellationToken cancellationToken)
     {
@@ -97,7 +97,7 @@ internal sealed class PlaceholderRepository(
     }
 
 #endif
-#if (change || owner)
+#if (changesOne || owner)
     private Placeholder LoadOrTrack(PlaceholderRecord record)
     {
         var aggregate = mapper.ToAggregate(record);

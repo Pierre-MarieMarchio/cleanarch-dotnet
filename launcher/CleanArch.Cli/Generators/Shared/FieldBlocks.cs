@@ -13,7 +13,7 @@ internal static class FieldBlocks
                 ["Name"] = field => field.Name,
                 ["Type"] = FieldCode.Type,
                 ["Parameter"] = FieldCode.Parameter,
-                ["Accessors"] = field => flags.Contains("update") || (flags.Contains("anon") && FieldCode.IsAnonymised(field)) ? "{ get; private set; }" : "{ get; }",
+                ["Accessors"] = field => flags.Contains("update") || (flags.Contains("anonymise") && FieldCode.IsAnonymised(field)) ? "{ get; private set; }" : "{ get; }",
                 ["Constants"] = field => FieldCode.Joined(FieldCode.ConstantsOf(field), "\n\n"),
                 ["Ceiling"] = FieldCode.Ceiling,
                 ["IntegerDigits"] = field => FieldCode.IntegerDigits(field).ToString(CultureInfo.InvariantCulture),

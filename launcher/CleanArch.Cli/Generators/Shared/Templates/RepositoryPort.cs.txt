@@ -5,7 +5,7 @@ namespace AppTemplate.Domain.Features.Placeholders.Repositories;
 
 public interface IPlaceholderRepository
 {
-#if change
+#if changesOne
 #if owner
     Task<Placeholder?> GetAsync(UserId ownerId, Guid id, CancellationToken cancellationToken);
 #else

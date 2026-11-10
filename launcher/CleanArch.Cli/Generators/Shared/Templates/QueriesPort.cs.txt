@@ -17,7 +17,7 @@ public interface IPlaceholderQueries
         CancellationToken cancellationToken = default);
 
 #endif
-#if single
+#if readsOne
     Task<%ReadDto%?> GetAsync(
 #if owner
         UserId ownerId,

@@ -159,7 +159,7 @@ internal static class FeatureCode
         var flags = new HashSet<string>(spec.Operations, StringComparer.Ordinal)
         {
             spec.Access,
-            IsRecord(spec) ? "rec" : "agg",
+            IsRecord(spec) ? "record" : "aggregate",
         };
 
         foreach (var (flag, _) in OptionFlags(spec).Concat(OperationFlags(spec)).Concat(FieldFlags(spec)).Where(candidate => candidate.Holds))
@@ -213,27 +213,27 @@ internal static class FeatureCode
     private static (string Flag, bool Holds)[] OptionFlags(FeatureSpec spec) =>
     [
         ("etag", HasEtag(spec)),
-        ("purge", spec.Deletion == "delete"),
-        ("anon", Anonymises(spec)),
-        ("prefixed", spec.TablePrefixes),
+        ("erase", spec.Deletion == "delete"),
+        ("anonymise", Anonymises(spec)),
+        ("prefixedTables", spec.TablePrefixes),
     ];
 
     private static (string Flag, bool Holds)[] OperationFlags(FeatureSpec spec)
     {
         bool record = IsRecord(spec);
-        bool single = spec.Has("get") || (record && HasAny(spec, "create", "update"));
+        bool readsOne = spec.Has("get") || (record && HasAny(spec, "create", "update"));
 
         return
         [
-            ("wq", HasAny(spec, "create", "update", "delete")),
-            ("change", HasAny(spec, "update", "delete")),
-            ("content", HasAny(spec, "create", "update")),
-            ("dto", HasAny(spec, "get", "create", "update")),
-            ("single", single),
-            ("rq", single || spec.Has("list") || IsOwner(spec)),
-            ("stage", record && (HasAny(spec, "create", "update", "delete") || IsOwner(spec))),
-            ("notfound", HasAny(spec, "get", "update", "delete") || (record && spec.Has("create"))),
-            ("clock", record && HasAny(spec, "create", "update")),
+            ("writes", HasAny(spec, "create", "update", "delete")),
+            ("changesOne", HasAny(spec, "update", "delete")),
+            ("takesContent", HasAny(spec, "create", "update")),
+            ("returnsOne", HasAny(spec, "get", "create", "update")),
+            ("readsOne", readsOne),
+            ("reads", readsOne || spec.Has("list") || IsOwner(spec)),
+            ("store", record && (HasAny(spec, "create", "update", "delete") || IsOwner(spec))),
+            ("notFound", HasAny(spec, "get", "update", "delete") || (record && spec.Has("create"))),
+            ("stampsTime", record && HasAny(spec, "create", "update")),
         ];
     }
 
@@ -244,9 +244,9 @@ internal static class FeatureCode
         return
         [
             ("fields", fields is not null),
-            ("anontext", Anonymises(spec) && (fields is null || fields.Any(field => field is { Kind: FieldKind.String, Nullable: false }))),
-            ("trim", HasAny(spec, "create", "update") && (fields is null || fields.Any(field => field.Kind == FieldKind.String))),
-            ("policy", fields is null || fields.Any(FieldCode.HasConstants)),
+            ("anonymisedText", Anonymises(spec) && (fields is null || fields.Any(field => field is { Kind: FieldKind.String, Nullable: false }))),
+            ("trimsText", HasAny(spec, "create", "update") && (fields is null || fields.Any(field => field.Kind == FieldKind.String))),
+            ("constants", fields is null || fields.Any(FieldCode.HasConstants)),
         ];
     }
 
@@ -319,10 +319,10 @@ internal static class FeatureCode
         string.Join(
             ", ",
             [
-                .. flags.Contains("rq") ? ["_queries"] : Array.Empty<string>(),
-                .. flags.Contains("wq") ? ["_store", "_unitOfWork"] : Array.Empty<string>(),
-                .. flags.Contains("clock") ? ["TheClock.Start()"] : Array.Empty<string>(),
-                .. flags.Contains("content") ? [$"new {spec.Type}ContentDtoValidator()"] : Array.Empty<string>(),
+                .. flags.Contains("reads") ? ["_queries"] : Array.Empty<string>(),
+                .. flags.Contains("writes") ? ["_store", "_unitOfWork"] : Array.Empty<string>(),
+                .. flags.Contains("stampsTime") ? ["TheClock.Start()"] : Array.Empty<string>(),
+                .. flags.Contains("takesContent") ? [$"new {spec.Type}ContentDtoValidator()"] : Array.Empty<string>(),
                 "currentUser",
             ]);
 
@@ -358,7 +358,7 @@ internal static class FeatureCode
         var fields = spec.Fields;
         bool generic = fields is null;
 
-        tokens["Staged"] = flags.Contains("trim") ? "Trimmed(content)" : "content";
+        tokens["Staged"] = flags.Contains("trimsText") ? "Trimmed(content)" : "content";
         tokens["Replaced"] = generic ? "name and description" : "fields";
         tokens["Revised"] = generic ? "text" : "fields";
         tokens["ListTail"] = Omission(fields, ", names only", ", without their texts");
@@ -476,46 +476,46 @@ internal static class FeatureCode
         {
             string domain = ProjectOf(spec, "src/Domain", "Domain");
 
-            Add(domain, $"{_feature}/Model/Entities/%A%.cs", FeatureTemplates.Aggregate, "agg");
-            Add(domain, $"{_feature}/Repositories/I%A%Repository.cs", FeatureTemplates.RepositoryPort, "agg && wq");
+            Add(domain, $"{_feature}/Model/Entities/%A%.cs", FeatureTemplates.Aggregate, "aggregate");
+            Add(domain, $"{_feature}/Repositories/I%A%Repository.cs", FeatureTemplates.RepositoryPort, "aggregate && writes");
         }
 
         internal void Application()
         {
             string application = ProjectOf(spec, "src/Application", "Application");
 
-            Add(application, $"{_feature}/Model/Dtos/%A%ContentDto.cs", FeatureTemplates.ContentDto, "rec && content");
-            Add(application, $"{_feature}/Model/Dtos/%A%Dto.cs", FeatureTemplates.Dto, "dto");
+            Add(application, $"{_feature}/Model/Dtos/%A%ContentDto.cs", FeatureTemplates.ContentDto, "record && takesContent");
+            Add(application, $"{_feature}/Model/Dtos/%A%Dto.cs", FeatureTemplates.Dto, "returnsOne");
             Add(application, $"{_feature}/Model/Dtos/%A%SummaryDto.cs", FeatureTemplates.SummaryDto, "list");
-            Add(application, $"{_feature}/Model/Dtos/%A%ListQueryDto.cs", FeatureTemplates.ListQuery, "rec && list");
-            Add(application, $"{_feature}/Model/Errors/%A%Errors.cs", FeatureTemplates.Errors, "notfound");
+            Add(application, $"{_feature}/Model/Dtos/%A%ListQueryDto.cs", FeatureTemplates.ListQuery, "record && list");
+            Add(application, $"{_feature}/Model/Errors/%A%Errors.cs", FeatureTemplates.Errors, "notFound");
             Add(application, $"{_feature}/Model/Policies/%A%CollectionPolicy.cs", FeatureTemplates.CollectionPolicy, "list");
-            Add(application, $"{_feature}/Model/Policies/%A%InputPolicy.cs", FeatureTemplates.InputPolicy, "rec && policy");
-            Add(application, $"{_feature}/Ports/%A%Queries/I%A%Queries.cs", FeatureTemplates.QueriesPort, "rq");
+            Add(application, $"{_feature}/Model/Policies/%A%InputPolicy.cs", FeatureTemplates.InputPolicy, "record && constants");
+            Add(application, $"{_feature}/Ports/%A%Queries/I%A%Queries.cs", FeatureTemplates.QueriesPort, "reads");
             Add(application, $"{_feature}/Ports/%A%Queries/%A%Filter.cs", FeatureTemplates.Filter, "list");
-            Add(application, $"{_feature}/Ports/%A%Store/I%A%Store.cs", FeatureTemplates.StorePort, "rec && stage");
-            Add(application, $"{_feature}/Ports/%A%Store/%A%ChangeStatus.cs", FeatureTemplates.ChangeStatus, "rec && change");
-            Add(application, $"{_feature}/Services/I%A%Service.cs", FeatureTemplates.ServicePort, "rec");
-            Add(application, $"{_feature}/Services/%A%Service.cs", FeatureTemplates.Service, "rec");
-            Add(application, $"{_feature}/Model/Dtos/%A%ContentDtoValidator.cs", FeatureTemplates.ContentValidator, "rec && content");
-            Add(application, $"{_feature}/Model/Mapping/%A%DtoMapping.cs", FeatureTemplates.DtoMapping, "agg && content");
-            Add(application, $"{_feature}/Services/I%A%Service.cs", FeatureTemplates.AccessServicePort, "agg && change");
-            Add(application, $"{_feature}/Services/%A%Service.cs", FeatureTemplates.AccessService, "agg && change");
+            Add(application, $"{_feature}/Ports/%A%Store/I%A%Store.cs", FeatureTemplates.StorePort, "record && store");
+            Add(application, $"{_feature}/Ports/%A%Store/%A%ChangeStatus.cs", FeatureTemplates.ChangeStatus, "record && changesOne");
+            Add(application, $"{_feature}/Services/I%A%Service.cs", FeatureTemplates.ServicePort, "record");
+            Add(application, $"{_feature}/Services/%A%Service.cs", FeatureTemplates.Service, "record");
+            Add(application, $"{_feature}/Model/Dtos/%A%ContentDtoValidator.cs", FeatureTemplates.ContentValidator, "record && takesContent");
+            Add(application, $"{_feature}/Model/Mapping/%A%DtoMapping.cs", FeatureTemplates.DtoMapping, "aggregate && takesContent");
+            Add(application, $"{_feature}/Services/I%A%Service.cs", FeatureTemplates.AccessServicePort, "aggregate && changesOne");
+            Add(application, $"{_feature}/Services/%A%Service.cs", FeatureTemplates.AccessService, "aggregate && changesOne");
         }
 
         internal void UseCases()
         {
             string application = ProjectOf(spec, "src/Application", "Application");
 
-            Add(application, $"{_queries}/Get%A%/Get%A%.cs", FeatureTemplates.GetUseCase, "agg && get");
-            Add(application, $"{_queries}/Get%A%/Get%A%QueryValidator.cs", FeatureTemplates.GetQueryValidator, "agg && get");
-            Add(application, $"{_queries}/Get%F%/Get%F%.cs", FeatureTemplates.ListUseCase, "agg && list");
-            Add(application, $"{_commands}/Create%A%/Create%A%.cs", FeatureTemplates.CreateUseCase, "agg && create");
-            Add(application, $"{_commands}/Create%A%/Create%A%CommandValidator.cs", FeatureTemplates.CreateCommandValidator, "agg && create");
-            Add(application, $"{_commands}/Update%A%/Update%A%.cs", FeatureTemplates.UpdateUseCase, "agg && update");
-            Add(application, $"{_commands}/Update%A%/Update%A%CommandValidator.cs", FeatureTemplates.UpdateCommandValidator, "agg && update");
-            Add(application, $"{_commands}/Delete%A%/Delete%A%.cs", FeatureTemplates.DeleteUseCase, "agg && delete");
-            Add(application, $"{_commands}/Delete%A%/Delete%A%CommandValidator.cs", FeatureTemplates.DeleteCommandValidator, "agg && delete");
+            Add(application, $"{_queries}/Get%A%/Get%A%.cs", FeatureTemplates.GetUseCase, "aggregate && get");
+            Add(application, $"{_queries}/Get%A%/Get%A%QueryValidator.cs", FeatureTemplates.GetQueryValidator, "aggregate && get");
+            Add(application, $"{_queries}/Get%F%/Get%F%.cs", FeatureTemplates.ListUseCase, "aggregate && list");
+            Add(application, $"{_commands}/Create%A%/Create%A%.cs", FeatureTemplates.CreateUseCase, "aggregate && create");
+            Add(application, $"{_commands}/Create%A%/Create%A%CommandValidator.cs", FeatureTemplates.CreateCommandValidator, "aggregate && create");
+            Add(application, $"{_commands}/Update%A%/Update%A%.cs", FeatureTemplates.UpdateUseCase, "aggregate && update");
+            Add(application, $"{_commands}/Update%A%/Update%A%CommandValidator.cs", FeatureTemplates.UpdateCommandValidator, "aggregate && update");
+            Add(application, $"{_commands}/Delete%A%/Delete%A%.cs", FeatureTemplates.DeleteUseCase, "aggregate && delete");
+            Add(application, $"{_commands}/Delete%A%/Delete%A%CommandValidator.cs", FeatureTemplates.DeleteCommandValidator, "aggregate && delete");
             Add(application, $"{_feature}/Services/Consumers/%Verb%%A%OnAccountDeletedConsumer.cs", FeatureTemplates.AccountDeletedConsumer, "owner");
         }
 
@@ -523,16 +523,16 @@ internal static class FeatureCode
         {
             string persistence = PersistenceProject(spec);
 
-            Add(persistence, $"{_feature}/Rows/Models/%A%Record.cs", FeatureTemplates.RecordPlain, "rec");
-            Add(persistence, $"{_feature}/Rows/Models/%A%Record.cs", FeatureTemplates.RecordAudited, "agg");
+            Add(persistence, $"{_feature}/Rows/Models/%A%Record.cs", FeatureTemplates.RecordPlain, "record");
+            Add(persistence, $"{_feature}/Rows/Models/%A%Record.cs", FeatureTemplates.RecordAudited, "aggregate");
             Add(persistence, $"{_feature}/Rows/Configurations/%A%RecordConfiguration.cs", FeatureTemplates.Configuration);
-            Add(persistence, $"{_feature}/Access/Stores/%A%Store.cs", FeatureTemplates.Store, "rec && stage");
-            Add(persistence, $"{_feature}/Rows/Mapping/I%A%Mapper.cs", FeatureTemplates.MapperPort, "agg");
-            Add(persistence, $"{_feature}/Rows/Mapping/%A%Mapper.cs", FeatureTemplates.Mapper, "agg");
-            Add(persistence, $"{_feature}/Rows/Tracking/I%A%Tracker.cs", FeatureTemplates.TrackerPort, "agg");
-            Add(persistence, $"{_feature}/Rows/Tracking/%A%Tracker.cs", FeatureTemplates.Tracker, "agg");
-            Add(persistence, $"{_feature}/Access/Repositories/%A%Repository.cs", FeatureTemplates.Repository, "agg && wq");
-            Add(persistence, $"{_feature}/Access/Queries/%A%Queries.cs", FeatureTemplates.Queries, "rq");
+            Add(persistence, $"{_feature}/Access/Stores/%A%Store.cs", FeatureTemplates.Store, "record && store");
+            Add(persistence, $"{_feature}/Rows/Mapping/I%A%Mapper.cs", FeatureTemplates.MapperPort, "aggregate");
+            Add(persistence, $"{_feature}/Rows/Mapping/%A%Mapper.cs", FeatureTemplates.Mapper, "aggregate");
+            Add(persistence, $"{_feature}/Rows/Tracking/I%A%Tracker.cs", FeatureTemplates.TrackerPort, "aggregate");
+            Add(persistence, $"{_feature}/Rows/Tracking/%A%Tracker.cs", FeatureTemplates.Tracker, "aggregate");
+            Add(persistence, $"{_feature}/Access/Repositories/%A%Repository.cs", FeatureTemplates.Repository, "aggregate && writes");
+            Add(persistence, $"{_feature}/Access/Queries/%A%Queries.cs", FeatureTemplates.Queries, "reads");
             Add(persistence, $"{_feature}/Access/Queries/%A%SortMap.cs", FeatureTemplates.SortMap, "list && !fields");
             Add(persistence, $"{_feature}/Access/Queries/%A%SortMap.cs", FeatureTemplates.FieldSortMap, "list && fields");
         }
@@ -544,10 +544,10 @@ internal static class FeatureCode
             Add(api, $"{_feature}/Contracts/Requests/Create%A%Request.cs", FeatureTemplates.CreateRequest, "create");
             Add(api, $"{_feature}/Contracts/Requests/Update%A%Request.cs", FeatureTemplates.UpdateRequest, "update");
             Add(api, $"{_feature}/Contracts/Requests/Get%F%Request.cs", FeatureTemplates.ListRequest, "list");
-            Add(api, $"{_feature}/Contracts/Responses/%A%Response.cs", FeatureTemplates.Response, "dto");
+            Add(api, $"{_feature}/Contracts/Responses/%A%Response.cs", FeatureTemplates.Response, "returnsOne");
             Add(api, $"{_feature}/Contracts/Responses/%A%SummaryResponse.cs", FeatureTemplates.SummaryResponse, "list");
             Add(api, $"{_feature}/Controllers/%F%Controller.cs", FeatureTemplates.Controller);
-            Add(api, $"{_feature}/Contracts/Mapping/%A%ResponseMapping.cs", FeatureTemplates.ResponseMapping, "dto || list");
+            Add(api, $"{_feature}/Contracts/Mapping/%A%ResponseMapping.cs", FeatureTemplates.ResponseMapping, "returnsOne || list");
         }
 
         internal void UnitTests()
@@ -556,15 +556,15 @@ internal static class FeatureCode
             string domainTests = ProjectOf(spec, "tests/Domain", "Domain.UnitTests");
             string persistenceTests = ProjectOf(spec, "tests/Infrastructure", "Infrastructure.Persistence.UnitTests");
 
-            AddTest(applicationTests, $"{_feature}/Model/Dtos/%A%ContentDtoValidatorTests.cs", FeatureTemplates.ContentValidatorTests, "rec && content && !fields");
-            AddTest(applicationTests, $"{_feature}/Model/Dtos/%A%ContentDtoValidatorTests.cs", FeatureTemplates.FieldContentValidatorTests, "rec && content && fields");
-            AddTest(applicationTests, $"{_feature}/Services/%A%ServiceTests.cs", FeatureTemplates.ServiceTests, "rec");
+            AddTest(applicationTests, $"{_feature}/Model/Dtos/%A%ContentDtoValidatorTests.cs", FeatureTemplates.ContentValidatorTests, "record && takesContent && !fields");
+            AddTest(applicationTests, $"{_feature}/Model/Dtos/%A%ContentDtoValidatorTests.cs", FeatureTemplates.FieldContentValidatorTests, "record && takesContent && fields");
+            AddTest(applicationTests, $"{_feature}/Services/%A%ServiceTests.cs", FeatureTemplates.ServiceTests, "record");
             CommandValidatorTests(applicationTests);
-            AddTest(domainTests, $"{_feature}/Model/Entities/%A%Tests.cs", FeatureTemplates.AggregateTests, "agg && !fields");
-            AddTest(domainTests, $"{_feature}/Model/Entities/%A%Tests.cs", FeatureTemplates.FieldAggregateTests, "agg && fields");
+            AddTest(domainTests, $"{_feature}/Model/Entities/%A%Tests.cs", FeatureTemplates.AggregateTests, "aggregate && !fields");
+            AddTest(domainTests, $"{_feature}/Model/Entities/%A%Tests.cs", FeatureTemplates.FieldAggregateTests, "aggregate && fields");
             AddTest(persistenceTests, $"{_feature}/Rows/Configurations/%A%RecordConfigurationTests.cs", FeatureTemplates.ConfigurationTests);
-            AddTest(persistenceTests, $"{_feature}/%A%MapperFidelityTests.cs", FeatureTemplates.MapperFidelityTests, "agg && !fields");
-            AddTest(persistenceTests, $"{_feature}/%A%MapperFidelityTests.cs", FeatureTemplates.FieldMapperFidelityTests, "agg && fields");
+            AddTest(persistenceTests, $"{_feature}/%A%MapperFidelityTests.cs", FeatureTemplates.MapperFidelityTests, "aggregate && !fields");
+            AddTest(persistenceTests, $"{_feature}/%A%MapperFidelityTests.cs", FeatureTemplates.FieldMapperFidelityTests, "aggregate && fields");
         }
 
         internal void FieldTests()
@@ -587,13 +587,13 @@ internal static class FeatureCode
                 applicationTests,
                 $"{_commands}/Create%A%/Create%A%CommandValidatorTests.cs",
                 FeatureTemplates.CommandValidatorTests,
-                "agg && create && !fields",
+                "aggregate && create && !fields",
                 new() { ["Op"] = "Create", ["CommandNew"] = "new Create%A%Command(name!, description!)" });
             AddTest(
                 applicationTests,
                 $"{_commands}/Update%A%/Update%A%CommandValidatorTests.cs",
                 FeatureTemplates.CommandValidatorTests,
-                "agg && update && !fields",
+                "aggregate && update && !fields",
                 new() { ["Op"] = "Update", ["CommandNew"] = "new Update%A%Command(Guid.CreateVersion7(), name!, description!)" });
         }
 
@@ -605,7 +605,7 @@ internal static class FeatureCode
                 applicationTests,
                 $"{_commands}/{operation}%A%/{operation}%A%CommandValidatorTests.cs",
                 FeatureTemplates.FieldCommandValidatorTests,
-                $"agg && {operation.ToLowerInvariant()}",
+                $"aggregate && {operation.ToLowerInvariant()}",
                 new()
                 {
                     ["Op"] = operation,
@@ -622,7 +622,7 @@ internal static class FeatureCode
             Dictionary<string, string>? extra = null,
             [CallerArgumentExpression(nameof(template))] string name = "")
         {
-            if (when.Length > 0 && !Condition.Parse(when, Template.KnownFlags).Evaluate(_flags))
+            if (when.Length > 0 && !Condition.Parse(when, FeatureFlags.Vocabulary).Evaluate(_flags))
             {
                 return;
             }
@@ -638,7 +638,7 @@ internal static class FeatureCode
         {
             try
             {
-                return Template.Render(template, _flags, tokens, _fields);
+                return Template.Render(template, FeatureFlags.Vocabulary, _flags, tokens, _fields);
             }
             catch (InvalidOperationException exception)
             {
