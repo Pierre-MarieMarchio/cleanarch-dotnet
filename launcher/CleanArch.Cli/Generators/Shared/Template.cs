@@ -1,5 +1,12 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.TemplateEngine.Core;
+using Microsoft.TemplateEngine.Core.Contracts;
+using Microsoft.TemplateEngine.Core.Expressions.Cpp;
+using Microsoft.TemplateEngine.Core.Operations;
+using Microsoft.TemplateEngine.Core.Util;
 
 namespace CleanArch.Cli.Generators.Shared;
 
@@ -11,6 +18,28 @@ internal static class Template
         "content", "change", "wq", "dto", "single", "rq", "notfound", "clock", "stage",
         "purge", "anon", "fields", "anontext", "trim", "policy", "prefixed",
     };
+
+    private static readonly (string Name, string Token)[] _referenceNames =
+    [
+        ("AppTemplate", "P"), ("Placeholders", "F"), ("Placeholder", "A"), ("placeholder", "L"),
+    ];
+
+    private static readonly ConditionalTokens _preprocessor = new()
+    {
+        IfTokens = new[] { "#if" }.TokenConfigs(),
+        ElseIfTokens = new[] { "#elif" }.TokenConfigs(),
+        ElseTokens = new[] { "#else" }.TokenConfigs(),
+        EndIfTokens = new[] { "#endif" }.TokenConfigs(),
+    };
+
+    private static readonly Regex _preprocessorCondition = new(
+        @"^[ \t]*#(?:if|elif)\b(?<condition>.*)$",
+        RegexOptions.Multiline,
+        TimeSpan.FromSeconds(2));
+
+    private static readonly Regex _symbol = new(@"\b[A-Za-z_]\w*\b", RegexOptions.None, TimeSpan.FromSeconds(2));
+
+    private static readonly UTF8Encoding _utf8 = new(encoderShouldEmitUTF8Identifier: false);
 
     private static readonly Regex _tokenPattern = new("%([A-Za-z]+)%", RegexOptions.None, TimeSpan.FromSeconds(2));
 
@@ -64,7 +93,7 @@ internal static class Template
         var frames = new Stack<(bool Parent, bool Condition)>();
         bool emitting = true;
 
-        foreach (string line in template.ReplaceLineEndings("\n").Split('\n'))
+        foreach (string line in RenderCompilableForm(template.ReplaceLineEndings("\n"), flags, tokens).Split('\n'))
         {
             var directive = _directivePattern.Match(line);
 
@@ -103,6 +132,45 @@ internal static class Template
         }
 
         return Tidy(PruneUsings(Substitute(string.Join('\n', kept), tokens)));
+    }
+
+    private static string RenderCompilableForm(string template, HashSet<string> flags, Dictionary<string, string> tokens)
+    {
+        var unknown = _preprocessorCondition.Matches(template)
+            .SelectMany(directive => _symbol.Matches(directive.Groups["condition"].Value))
+            .FirstOrDefault(symbol => symbol.Value is not ("true" or "false") && !_knownFlags.Contains(symbol.Value));
+
+        if (unknown is not null)
+        {
+            throw new InvalidOperationException($"'{unknown.Value}' is not a flag a template may name.");
+        }
+
+        var variables = new VariableCollection();
+
+        foreach (string flag in _knownFlags)
+        {
+            variables[flag] = flags.Contains(flag);
+        }
+
+        var operations = new List<IOperationProvider>
+        {
+            new Conditional(_preprocessor, wholeLine: true, trimWhitespace: true, CppStyleEvaluatorDefinition.Evaluate, id: null, initialState: true),
+        };
+
+        foreach (var (name, token) in _referenceNames)
+        {
+            if (tokens.TryGetValue(token, out string? value))
+            {
+                operations.Add(new Replacement(name.TokenConfig(), value, id: null, initialState: true));
+            }
+        }
+
+        using var source = new MemoryStream(_utf8.GetBytes(template));
+        using var target = new MemoryStream();
+
+        Processor.Create(new EngineConfig(NullLogger.Instance, variables), operations).Run(source, target);
+
+        return _utf8.GetString(target.ToArray());
     }
 
     private static string PruneUsings(string text)

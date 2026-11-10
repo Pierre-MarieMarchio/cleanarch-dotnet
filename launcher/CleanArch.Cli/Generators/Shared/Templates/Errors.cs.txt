@@ -1,10 +1,10 @@
-using %P%.Application.Core.Common.Results;
+using AppTemplate.Application.Core.Common.Results;
 
-namespace %P%.Application.Features.%F%.Model.Errors;
+namespace AppTemplate.Application.Features.Placeholders.Model.Errors;
 
-public static class %A%Errors
+public static class PlaceholderErrors
 {
-    public static Error %A%NotFound(Guid %L%Id) => Error.NotFound(
-        "%L%.notFound",
-        $"No %L% with id '{%L%Id}' was found.");
+    public static Error PlaceholderNotFound(Guid placeholderId) => Error.NotFound(
+        "placeholder.notFound",
+        $"No placeholder with id '{placeholderId}' was found.");
 }
