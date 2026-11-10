@@ -32,7 +32,7 @@ internal static class CheckDocPaths
         SearchValues.Create("*$<>|(){}\"'");
 
     private static readonly HashSet<string> _skippedDirectoryNames =
-        new(["bin", "obj", ".git", ".vs"], StringComparer.Ordinal);
+        new(["bin", "obj", ".git", ".vs", "code-templates"], StringComparer.Ordinal);
 
     private sealed record Scan(
         IReadOnlyList<string> Problems,
@@ -82,28 +82,14 @@ internal static class CheckDocPaths
         return index > 0 && index < name.Length - 1 ? name[index..] : string.Empty;
     }
 
-    private static bool UnderExemptDirectory(string fullPath) =>
-        Segments(fullPath).Any(_exemptDirectoryNames.Contains);
+    private static bool UnderExemptDirectory(string repo, string fullPath) =>
+        Segments(Relative(repo, fullPath)).Any(_exemptDirectoryNames.Contains);
 
-    private static string[] Segments(string fullPath) =>
-        fullPath.Split(
-            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
-            StringSplitOptions.RemoveEmptyEntries);
+    private static bool UnderSkippedDirectory(string repo, string fullPath) =>
+        Segments(Relative(repo, fullPath)).Any(_skippedDirectoryNames.Contains);
 
-    private static bool UnderSkippedDirectory(string fullPath)
-    {
-        foreach (var part in fullPath.Split(
-                     [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
-                     StringSplitOptions.RemoveEmptyEntries))
-        {
-            if (_skippedDirectoryNames.Contains(part))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
+    private static string[] Segments(string relativePath) =>
+        relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
     private static void Walk(DirectoryInfo directory, List<FileSystemInfo> collected)
     {
@@ -213,8 +199,8 @@ internal static class CheckDocPaths
                             && entry.Exists
                             && Suffix(entry.Name) == ".md"
                             && !_exemptFileNames.Contains(entry.Name)
-                            && !UnderExemptDirectory(entry.FullName)
-                            && !UnderSkippedDirectory(entry.FullName))
+                            && !UnderExemptDirectory(repo, entry.FullName)
+                            && !UnderSkippedDirectory(repo, entry.FullName))
             .Select(entry => entry.FullName)
             .ToList();
 
@@ -227,7 +213,7 @@ internal static class CheckDocPaths
             .Where(entry => entry is FileInfo
                             && entry.Exists
                             && _commentingSuffixes.Contains(Suffix(entry.Name))
-                            && !UnderSkippedDirectory(entry.FullName))
+                            && !UnderSkippedDirectory(repo, entry.FullName))
             .Select(entry => entry.FullName)
             .ToList();
 
@@ -245,7 +231,7 @@ internal static class CheckDocPaths
 
         foreach (var entry in entries)
         {
-            if (!UnderSkippedDirectory(entry.FullName))
+            if (!UnderSkippedDirectory(repo, entry.FullName))
             {
                 namesInTree.Add(entry.Name);
             }
