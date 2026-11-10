@@ -57,6 +57,9 @@ internal static class GitLabPipelineGate
             image, its own, one it extends or default:'s, is not the .NET SDK image
           - a local file a script names (script, project, settings) or a cache key file that is
             absent from disk
+          - a job whose script signs keylessly, cosign sign or attest without --key, with no
+            SIGSTORE_ID_TOKEN for aud sigstore in its id_tokens:, and a job that takes that token
+            and signs nothing with it
         A job is a top-level key that is neither a keyword nor hidden by a leading dot; the
         pipeline's paths are read from <root>, the project's root or the checkout's.
 
@@ -101,6 +104,12 @@ internal static class GitLabPipelineGate
         RegexOptions.Compiled);
 
     private static readonly Regex _dotnetCommand = new(@"^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*dotnet(?:\.exe)?(?:\s|$)", RegexOptions.Compiled);
+
+    private static readonly Regex _keylessSigning = new(@"(?:^|[\s;&|(])cosign\s+(?:sign|attest)\b(?!.*\s--key[\s=])", RegexOptions.Compiled);
+
+    private const string _sigstoreToken = "SIGSTORE_ID_TOKEN";
+
+    private const string _sigstoreAudience = "sigstore";
 
     private static readonly UTF8Encoding _utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
 
@@ -274,6 +283,25 @@ internal static class GitLabPipelineGate
                     + $"give it the {_sdkImage}<version> image the Dockerfiles build with, pinned by digest");
             }
 
+            var signs = lines.Any(line => _keylessSigning.IsMatch(line));
+            var token = Get(chain.Select(link => Get(link, "id_tokens")).FirstOrDefault(found => !IsNull(found)), _sigstoreToken);
+            var audience = Get(token, "aud");
+            var forSigstore = audience switch
+            {
+                YamlScalarNode scalar => scalar.Value == _sigstoreAudience,
+                YamlSequenceNode list => list.Children.Any(item => ScalarText(item) == _sigstoreAudience),
+                _ => false,
+            };
+
+            if (signs && !forSigstore)
+            {
+                problems.Add($"{name}: job '{jobName}' signs with cosign keylessly without id_tokens: {_sigstoreToken} for aud {_sigstoreAudience}, so Fulcio has no identity to certify");
+            }
+            else if (!signs && token is not null)
+            {
+                problems.Add($"{name}: job '{jobName}' takes a {_sigstoreToken} and signs nothing with it; only the job that signs takes one");
+            }
+
             foreach (var (line, match) in lines.SelectMany(line => _fileRef.Matches(line).Select(match => (line, match))))
             {
                 var reference = match.Groups[1].Value;
@@ -402,6 +430,14 @@ internal static class GitLabPipelineGate
           script:
             - docker info
             - echo "dotnet runs elsewhere"
+        sign:
+          image: {{_dind}}
+          timeout: 6 minutes
+          id_tokens:
+            SIGSTORE_ID_TOKEN:
+              aud: sigstore
+          script:
+            - cosign sign --yes "$IMAGE@$DIGEST"
 
         """;
 
@@ -454,6 +490,10 @@ internal static class GitLabPipelineGate
         ("a local script absent from disk", _cleanFixture.Replace("tools/Present.cs", "tools/Absent.cs")),
         ("a Dockerfile absent from disk", _cleanFixture.Replace("    - docker info\n", "    - docker build --file src/Absent/Dockerfile .\n")),
         ("a cache key file absent from disk", _cleanFixture.Replace("        - global.json\n", "        - Directory.Packages.props\n")),
+        ("keyless signing without id_tokens:", _cleanFixture.Replace("  id_tokens:\n    SIGSTORE_ID_TOKEN:\n      aud: sigstore\n", "")),
+        ("keyless signing with a token for another audience", _cleanFixture.Replace("      aud: sigstore\n", "      aud: https://vault.example.com\n")),
+        ("keyless attesting without id_tokens:", _cleanFixture.Replace("  id_tokens:\n    SIGSTORE_ID_TOKEN:\n      aud: sigstore\n", "").Replace("cosign sign --yes", "cosign attest --yes --predicate p.json")),
+        ("a Sigstore token in a job that signs nothing", _cleanFixture.Replace("    - cosign sign --yes \"$IMAGE@$DIGEST\"\n", "    - docker info\n")),
         ("no jobs", "stages:\n  - test\n.hidden:\n  script:\n    - echo hidden\n"),
         ("a job that is not a mapping", _cleanFixture + "odd: 3\n"),
         ("a top level that is not a mapping", "- one\n- two\n"),
@@ -475,6 +515,9 @@ internal static class GitLabPipelineGate
         ("a !reference to a script an included file defines", _cleanFixture.Replace("    - docker info\n", "    - !reference [.extra, script]\n")),
         ("a job an included file completes, with no timeout of its own there", _cleanFixture),
         ("dotnet on the SDK image default: names", _cleanFixture.Replace("default:\n", $"default:\n  image: {_sdk}\n").Replace("test:\n  extends: .dotnet\n", "test:\n")),
+        ("signing with a key, without id_tokens:", _cleanFixture.Replace("  id_tokens:\n    SIGSTORE_ID_TOKEN:\n      aud: sigstore\n", "").Replace("cosign sign --yes", "cosign sign --key env://COSIGN_KEY --yes")),
+        ("a token for every audience listed", _cleanFixture.Replace("      aud: sigstore\n", "      aud:\n        - sigstore\n        - https://vault.example.com\n")),
+        ("a token another job declares for the signing job", _cleanFixture.Replace("  id_tokens:\n    SIGSTORE_ID_TOKEN:\n      aud: sigstore\n", "  extends: .signing\n") + ".signing:\n  id_tokens:\n    SIGSTORE_ID_TOKEN:\n      aud: sigstore\n"),
         ("dotnet only in a comment and a container's command line", _cleanFixture.Replace("    - echo \"dotnet runs elsewhere\"", "    - docker run --rm sdk dotnet --info\n    - '# dotnet test runs in the test job'")),
         ("a timeout the job inherits through extends:", _cleanFixture.Replace("test:\n  extends: .dotnet\n  timeout: 10 minutes\n", "test:\n  extends: .dotnet\n").Replace(".dotnet:\n", ".dotnet:\n  timeout: 10 minutes\n")),
     ];

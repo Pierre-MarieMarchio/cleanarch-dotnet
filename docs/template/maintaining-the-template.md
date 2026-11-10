@@ -429,24 +429,50 @@ the overlay's source leaves it out under `(!anyWeb)`, as `template.json` does `w
 templates define `gitlabHost` and `gitlabCi` as the project template does, so offering the value adds
 the choice alone.
 
+`.template.config/variants/code-host-gitlab/.gitlab/ci/release.yml` is the counterpart of
+`release.yml`, present where it is: the overlay's source leaves it out under `(!serverDatabase)`, and
+the root file includes it under the same marker, with a workflow rule that lets a `v*.*.*` tag run.
+Its jobs run on a tag alone, pushed or picked in Run pipeline, which stands for the workflow's `tag`
+input; every job of the gate extends the hidden `.gate`, whose rules keep it off a tag, as `ci.yml`
+runs on none, so a release runs the gate once, in `verify`. `migration-bundle` keeps the bundles as
+artifacts for the 90 days `retention-days` keeps them, and `container-image` fans out over a
+`parallel: matrix:` of `COMPONENT` and `DOCKERFILE`, as the workflow's matrix does, which the worker's
+join edits as it edits `release.yml`. It builds on the Docker-in-Docker service with the binfmt,
+BuildKit and SBOM scanner images `release.yml` pins, pushes to `$CI_REGISTRY_IMAGE/<component>` with
+the tags and labels `docker/metadata-action` computes (but the licence, which GitLab does not expose),
+and stands for `attest-build-provenance` with a keyless `cosign sign` of the index digest, which
+carries BuildKit's SBOM and provenance, through Sigstore and the job's `SIGSTORE_ID_TOKEN`. The
+workflow's GitHub Actions cache has no counterpart: a release builds without one rather than push a
+cache image beside the release's.
+
 `AGitLabProject_RunsEveryCommandOfTheGitHubGate`, in `TemplatePackagingTests`, reads the `dotnet`
 commands of the three gate jobs of `ci.yml`, past its `templateMaintenance` blocks, and fails until
 the GitLab job of the same name runs each one, so the two gates cannot drift.
-`AGitLabProject_RunsEveryCommandOfTheGitHubStackAndWebJobs` does the same for `docker`, `load`,
-`end-to-end` and `compose` of `ci.yml` and every job of `web.yml`: each command of a `run:` step whose
+`AGitLabProject_RunsEveryCommandOfTheGitHubStackWebAndReleaseJobs` does the same for `docker`, `load`,
+`end-to-end` and `compose` of `ci.yml`, every job of `web.yml` and every job of `release.yml`: each command of a `run:` step whose
 program it pairs, its literal assignments, such as k6's version and checksum, `continue-on-error` and
-`needs`, and, for an action, what it stands for: the SDK image for `setup-dotnet`, the Node.js of
-`.node-version` for `setup-node`, corepack for `pnpm/action-setup`, the cached folder for
-`actions/cache` and the `docker build` that `build-push-action` runs; an action it does not know
-fails it. `GitLabPipelinePinningTests` holds the images, services and includes of a GitLab project's
-pipeline and of every file under its `.gitlab/ci` folder, its local includes to a file or an
-`exists:` guard, and its SDK image to the Dockerfiles', reading the overlay in this checkout;
-`tools/CheckGitLabCi.cs` checks the rest, the included files merged into the root file as GitLab
-merges them. This repository's CI never runs the pipeline: its schema, that gate and a local runner
+`needs`, a matrix's entries, and, for an action, what it stands for: the SDK image for `setup-dotnet`,
+the Node.js of `.node-version` for `setup-node`, corepack for `pnpm/action-setup`, the cached folder
+for `actions/cache`, the `docker build` that `build-push-action` runs, or the `docker buildx build`
+with its platforms, SBOM and provenance when it pushes, the binfmt image for `setup-qemu-action`, the
+BuildKit image of a builder that pushes for `setup-buildx-action`, a registry login for
+`login-action`, each tag and label for `metadata-action`, the artifact's name, paths and retention
+for `upload-artifact`, and a checked cosign and its `sign` under a Sigstore ID token for
+`attest-build-provenance`; an action it does not know fails it.
+`AGitLabProject_RunsOnATag_WhatTheGitHubWorkflowsRunOnOne` reads the tags each workflow's `on:` names
+and fails until the root file's workflow rules let each one run, as a regular expression, and a run
+from Run pipeline for a workflow with `workflow_dispatch`, until every job paired with `release.yml`
+runs on a tag alone, and until every job paired with `ci.yml` or `web.yml` runs on none, its own
+`rules:` read before those it extends, as GitLab reads them. `GitLabPipelinePinningTests` holds the
+images, services and includes of a GitLab project's pipeline and of every file under its `.gitlab/ci`
+folder, an image a script runs with `docker run` or names in an `image=` or `generator=` option among
+them, its local includes to a file or an `exists:` guard, and its SDK image to the Dockerfiles',
+reading the overlay in this checkout; `tools/CheckGitLabCi.cs` checks the rest, the included files
+merged into the root file as GitLab merges them, and that the job that signs keylessly with cosign,
+and it alone, takes a `SIGSTORE_ID_TOKEN` for the `sigstore` audience. This repository's CI never runs the pipeline: its schema, that gate and a local runner
 stand in until a first run on GitLab.com. Still missing before `gitlab` is a choice: the app host's `LocalStackTests` under `--aspire true`,
 which fail in `build-test` because the app host reaches the containers it starts through the Docker
 host's loopback, which a Docker-in-Docker service keeps to itself, so its health checks time out;
-the release job,
 Renovate in place of Dependabot, the
 steps of `docs/getting-started/existing-repository.md` that move the pipeline to the git root, and
 the choice itself.

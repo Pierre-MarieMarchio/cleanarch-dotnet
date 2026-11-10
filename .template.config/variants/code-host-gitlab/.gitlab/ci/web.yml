@@ -15,6 +15,7 @@
 
 web:
   extends:
+    - .gate
     - .dotnet
     - .node
   stage: test
@@ -38,7 +39,9 @@ web:
 
 # Every folder under src/Web/apps holding a Dockerfile and a package.json is an app with its own image, built here one after the other, since a pipeline cannot fan a job out over the folders it finds; one still holding scaffold.json waits for web-scaffold.
 web-image:
-  extends: .docker
+  extends:
+    - .gate
+    - .docker
   image: docker:29.9.3-cli@sha256:2357639ad1ea7d0194134bf3292622fd4e562483966ed674e5d7c945b5f3b28d
   stage: test
   timeout: 40 minutes
