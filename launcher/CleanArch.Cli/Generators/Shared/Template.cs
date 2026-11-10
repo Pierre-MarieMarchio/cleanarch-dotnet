@@ -6,7 +6,7 @@ internal static class Template
 {
     private static readonly (string Name, string Token)[] _referenceNames =
     [
-        ("AppTemplate", "P"), ("Placeholders", "F"), ("Placeholder", "A"), ("placeholder", "L"),
+        (ProjectFolders.ReferenceProduct, "P"), ("Placeholders", "F"), ("Placeholder", "A"), ("placeholder", "L"),
     ];
 
     private static readonly Regex _referenceName = new(
@@ -48,14 +48,14 @@ internal static class Template
         return Tidy(PruneUsings(EveryTokenSet(Substitute(expanded, tokens))));
     }
 
+    internal static string ReplaceReferenceNames(string text, Dictionary<string, string> tokens) =>
+        _referenceName.Replace(text, match =>
+            tokens.TryGetValue(_referenceNames.Single(reference => reference.Name == match.Value).Token, out string? value) ? value : match.Value);
+
     private static string EveryTokenSet(string text) =>
         _tokenPattern.Match(text) is { Success: true } unset
             ? throw new InvalidOperationException($"'{unset.Value}' is a token this generation does not set.")
             : text;
-
-    private static string ReplaceReferenceNames(string text, Dictionary<string, string> tokens) =>
-        _referenceName.Replace(text, match =>
-            tokens.TryGetValue(_referenceNames.Single(reference => reference.Name == match.Value).Token, out string? value) ? value : match.Value);
 
     private static string PruneUsings(string text)
     {

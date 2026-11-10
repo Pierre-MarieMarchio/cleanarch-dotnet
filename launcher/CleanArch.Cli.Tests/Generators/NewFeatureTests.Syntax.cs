@@ -12,16 +12,10 @@ public sealed partial class NewFeatureTests
 
     private static IEnumerable<string> TokenFreeTemplatesThatDoNotParse(Action<string> tokenFree)
     {
-        var assembly = typeof(FeatureTemplates).Assembly;
-        string folder = typeof(FeatureTemplates).Namespace + ".Templates.";
         string[] vocabulary = [.. FeatureFlags.Vocabulary.Meanings.Keys];
 
-        foreach (string resource in assembly.GetManifestResourceNames().Where(name => name.StartsWith(folder, StringComparison.Ordinal) && name.EndsWith(".cs.txt", StringComparison.Ordinal)).Order(StringComparer.Ordinal))
+        foreach (var (name, template) in ToolTemplates.Of(FeatureCode.TemplateFolder).OrderBy(entry => entry.Key, StringComparer.Ordinal))
         {
-            using var reader = new StreamReader(assembly.GetManifestResourceStream(resource)!);
-            string template = reader.ReadToEnd();
-            string name = resource[folder.Length..];
-
             if (Regex.IsMatch(template, @"%[A-Za-z.]+%", RegexOptions.None, TimeSpan.FromSeconds(2)))
             {
                 continue;

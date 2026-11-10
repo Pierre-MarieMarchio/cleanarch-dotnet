@@ -618,7 +618,7 @@ public sealed partial class NewFeatureTests
     {
         var syntax = new GeneratedSyntax();
 
-        foreach (var (group, digest) in WithFieldsDigests(scratch, expect, syntax))
+        foreach (var (group, digest) in WithFieldsDigests(scratch, expect, syntax.In))
         {
             string recorded = _withFieldsDigests.Single(entry => entry.Group == group).Digest;
 
@@ -632,12 +632,12 @@ public sealed partial class NewFeatureTests
         syntax.Hold("add feature with --fields", expect);
     }
 
-    private static IEnumerable<(string Group, string Digest)> WithFieldsDigests(string scratch, Action<bool, string> expect, GeneratedSyntax syntax)
+    private static IEnumerable<(string Group, string Digest)> WithFieldsDigests(string scratch, Action<bool, string> expect, Func<string, Action<string, string>> seenIn)
     {
         foreach (var (group, options, reaction, api, database) in _digestGroups)
         {
             string root = DigestTree(scratch, reaction, api, database, integration: true);
-            var seen = syntax.In(group);
+            var seen = seenIn(group);
             bool fieldTests = false;
             using var digest = Digest(out var feed);
 
