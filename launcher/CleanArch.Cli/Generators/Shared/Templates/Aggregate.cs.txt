@@ -60,9 +60,19 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
 
 #endif
 #if fields
+#if update
 //#each field separator "\n\n"
-    public %field.Type% %field.Name% %field.Accessors%
+    public %field.Type% %field.Name% { get; private set; }
 //#end
+#elif anonymise
+//#each field separator "\n\n"
+    public %field.Type% %field.Name% %field.AnonymisedAccessors%
+//#end
+#else
+//#each field separator "\n\n"
+    public %field.Type% %field.Name% { get; }
+//#end
+#endif
 #else
 #if (update || anonymise)
     public string Name { get; private set; }
@@ -142,7 +152,7 @@ public sealed class Placeholder : AuditableAggregateRoot<Guid>%Implements%
     public void Update(/*#each field separator ", "*/%field.Type% %field.Parameter%/*#end*/)
     {
 //#each field where require
-        %field.Type% valid%field.Name% = %field.Required%;
+        %field.Type% %field.Validated% = %field.Required%;
 //#end
 
 //#each field

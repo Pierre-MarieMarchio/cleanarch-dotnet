@@ -4,7 +4,7 @@ namespace CleanArch.Cli.Generators.Shared;
 
 internal static class FieldBlocks
 {
-    internal static TemplateList For(IReadOnlyList<Field> fields, HashSet<string> flags) =>
+    internal static TemplateList For(IReadOnlyList<Field> fields) =>
         new(
             "field",
             fields,
@@ -13,22 +13,21 @@ internal static class FieldBlocks
                 ["Name"] = field => field.Name,
                 ["Type"] = FieldCode.Type,
                 ["Parameter"] = FieldCode.Parameter,
-                ["Accessors"] = field => flags.Contains("update") || (flags.Contains("anonymise") && FieldCode.IsAnonymised(field)) ? "{ get; private set; }" : "{ get; }",
+                ["AnonymisedAccessors"] = field => FieldCode.IsAnonymised(field) ? "{ get; private set; }" : "{ get; }",
                 ["Constants"] = field => FieldCode.Joined(FieldCode.ConstantsOf(field), "\n\n"),
                 ["Ceiling"] = FieldCode.Ceiling,
                 ["IntegerDigits"] = field => FieldCode.IntegerDigits(field).ToString(CultureInfo.InvariantCulture),
-                ["Required"] = field => FieldCode.HasRequire(field) ? $"Require{field.Name}({FieldCode.Parameter(field)})" : FieldCode.Parameter(field),
+                ["Required"] = field => FieldCode.HasRequire(field) ? $"{FieldCode.RequireMethod(field)}({FieldCode.Parameter(field)})" : FieldCode.Parameter(field),
                 ["Validated"] = field => FieldCode.HasRequire(field) ? "valid" + field.Name : FieldCode.Parameter(field),
                 ["Anonymised"] = field => FieldCode.Anonymised(field) ?? string.Empty,
                 ["Sample"] = field => FieldCode.Sample(field, 1),
                 ["Require"] = FieldCode.Require,
                 ["WireDocumentation"] = FieldCode.WireDocumentation,
                 ["WireParameter"] = FieldCode.WireParameter,
-                ["Trimmed"] = field => FieldCode.Trimmed(field, "content"),
-                ["Stored"] = field => FieldCode.Store(field, "content"),
+                ["Trimmed"] = FieldCode.Trimmed,
+                ["Stored"] = FieldCode.Stored,
                 ["RecordProperty"] = FieldCode.RecordProperty,
-                ["Configuration"] = field => FieldCode.Configuration(field, "%Limits%"),
-                ["SortIndex"] = field => FieldCode.SortIndex("%F%", field, flags.Contains("owner")),
+                ["Configuration"] = FieldCode.Configuration,
                 ["CursorKey"] = FieldCode.CursorKey,
                 ["KeysetMethod"] = FieldCode.KeysetMethod,
             },

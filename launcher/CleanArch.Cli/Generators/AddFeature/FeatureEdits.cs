@@ -30,10 +30,18 @@ internal static class FeatureEdits
     internal static readonly Regex _fileNamespace = new(@"^namespace\s+([A-Za-z0-9_.]+);", RegexOptions.Multiline, TimeSpan.FromSeconds(2));
 
     internal static string NamespaceOf(List<Emission> plan, string type) =>
-        plan.FirstOrDefault(emission => emission.Path.EndsWith($"/{type}.cs", StringComparison.Ordinal)) is { } declaring
-            && _fileNamespace.Match(declaring.Content) is { Success: true } match
-                ? match.Groups[1].Value
-                : throw new InvalidOperationException($"No file of the plan declares {type}, which an edit names.");
+        Declaring(plan, type) is { } declaring && _fileNamespace.Match(declaring.Content) is { Success: true } match
+            ? match.Groups[1].Value
+            : throw new InvalidOperationException($"No file of the plan declares {type}, which an edit names.");
+
+    private static Emission? Declaring(List<Emission> plan, string type) =>
+        plan.FirstOrDefault(emission => emission.Path.EndsWith($"/{type}.cs", StringComparison.Ordinal));
+
+    private static bool Declares(List<Emission> plan, string type) => Declaring(plan, type) is not null;
+
+    private static string? AccountDeletedConsumer(List<Emission> plan, string type) =>
+        plan.Select(emission => System.IO.Path.GetFileNameWithoutExtension(emission.Path))
+            .FirstOrDefault(name => name.EndsWith($"{type}OnAccountDeletedConsumer", StringComparison.Ordinal));
 
     internal static TextEdits.Editor Edits(string root, FeatureSpec spec, List<Emission> plan)
     {
@@ -90,10 +98,9 @@ internal static class FeatureEdits
         string p = spec.Prefix;
         string f = spec.Features;
         string a = spec.Type;
-        bool owner = spec.Access == "owner";
-        string consumer = $"{(spec.Deletion == "anonymise" ? "Anonymise" : "Delete")}{a}OnAccountDeletedConsumer";
+        string? consumer = AccountDeletedConsumer(plan, a);
         string module = $"{ProjectOf(spec, "src/Application", "Application")}/ApplicationModule.cs";
-        bool service = spec.Model == "record" || Flags(spec).Contains("changesOne");
+        bool service = Declares(plan, $"I{a}Service");
         editor.Step = $"edit 2 ({module})";
         editor.Place(
             module,
@@ -106,7 +113,7 @@ internal static class FeatureEdits
                 string.Empty,
                 $"        services.AddFeature(\"{f}\");",
                 .. service ? [$"        services.AddScoped<I{a}Service, {a}Service>();"] : Array.Empty<string>(),
-                .. owner
+                .. consumer is not null
                     ? [
                         string.Empty,
                         $"        services.AddDomainEventConsumer<UserAccountDeleted, {consumer}>();",
@@ -125,7 +132,7 @@ internal static class FeatureEdits
             editor.Using(module, NamespaceOf(plan, $"I{a}Service"));
         }
 
-        if (owner)
+        if (consumer is not null)
         {
             editor.Using(module, NamespaceOf(plan, consumer));
             editor.Using(module, $"{p}.Application.Core");
@@ -138,7 +145,7 @@ internal static class FeatureEdits
     {
         string f = spec.Features;
         string persistenceModule = $"{PersistenceProject(spec)}/PersistenceModule.cs";
-        var adapters = Adapters(spec);
+        var adapters = Adapters(spec, plan);
         editor.Step = $"edit 3 ({persistenceModule})";
         editor.Place(persistenceModule, ["AddIdempotencyFeature(services, configuration);"], before: true, [$"        Add{f}Feature(services);"], $"Add{f}Feature(services);");
         editor.Place(
@@ -154,29 +161,19 @@ internal static class FeatureEdits
         }
     }
 
-    private static List<(string Line, string[] Types)> Adapters(FeatureSpec spec)
+    private static List<(string Line, string[] Types)> Adapters(FeatureSpec spec, List<Emission> plan)
     {
         string a = spec.Type;
-        var flags = Flags(spec);
-        var adapters = new List<(string Line, string[] Types)>();
+        (string Line, string[] Types)[] adapters =
+        [
+            ($"services.TryAddSingleton<I{a}Mapper, {a}Mapper>();", [$"I{a}Mapper", $"{a}Mapper"]),
+            ($"AddScopedTracker<{a}Tracker, I{a}Tracker>(services);", [$"{a}Tracker", $"I{a}Tracker"]),
+            ($"services.TryAddScoped<I{a}Repository, {a}Repository>();", [$"I{a}Repository", $"{a}Repository"]),
+            ($"services.TryAddScoped<I{a}Store, {a}Store>();", [$"I{a}Store", $"{a}Store"]),
+            ($"services.TryAddScoped<I{a}Queries, {a}Queries>();", [$"I{a}Queries", $"{a}Queries"]),
+        ];
 
-        if (spec.Model != "record")
-        {
-            adapters.Add(($"services.TryAddSingleton<I{a}Mapper, {a}Mapper>();", [$"I{a}Mapper", $"{a}Mapper"]));
-            adapters.Add(($"AddScopedTracker<{a}Tracker, I{a}Tracker>(services);", [$"{a}Tracker", $"I{a}Tracker"]));
-            adapters.Add(($"services.TryAddScoped<I{a}Repository, {a}Repository>();", [$"I{a}Repository", $"{a}Repository"]));
-        }
-        else if (flags.Contains("store"))
-        {
-            adapters.Add(($"services.TryAddScoped<I{a}Store, {a}Store>();", [$"I{a}Store", $"{a}Store"]));
-        }
-
-        if (flags.Contains("reads"))
-        {
-            adapters.Add(($"services.TryAddScoped<I{a}Queries, {a}Queries>();", [$"I{a}Queries", $"{a}Queries"]));
-        }
-
-        return adapters;
+        return [.. adapters.Where(adapter => adapter.Types.Any(type => Declares(plan, type)))];
     }
 
     private static void EditHosts(TextEdits.Editor editor, FeatureSpec spec, string[] hosts, string composition)

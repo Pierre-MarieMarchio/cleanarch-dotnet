@@ -34,7 +34,7 @@ internal static class PlaceholderSortMap
         return term.Field switch
         {
 //#each field where keyset
-            %A%CollectionPolicy.%field.Name%Field => Apply%field.Name%Keyset(source, term.Direction, cursor),
+            PlaceholderCollectionPolicy.%field.Name%Field => Apply%field.Name%Keyset(source, term.Direction, cursor),
 //#end
             PlaceholderCollectionPolicy.CreatedAtField => ApplyCreatedAtKeyset(source, term.Direction, cursor),
             _ => throw new InvalidOperationException(
@@ -49,7 +49,7 @@ internal static class PlaceholderSortMap
         return field switch
         {
 //#each field where keyset
-            %A%CollectionPolicy.%field.Name%Field => %field.CursorKey%,
+            PlaceholderCollectionPolicy.%field.Name%Field => %field.CursorKey%,
 //#end
             PlaceholderCollectionPolicy.CreatedAtField => summary.CreatedAt.ToString("O", CultureInfo.InvariantCulture),
             _ => throw new InvalidOperationException(
@@ -61,7 +61,7 @@ internal static class PlaceholderSortMap
         term.Field switch
         {
 //#each field where sortable
-            %A%CollectionPolicy.%field.Name%Field => term.Direction == SortDirection.Ascending
+            PlaceholderCollectionPolicy.%field.Name%Field => term.Direction == SortDirection.Ascending
                 ? source.OrderBy(record => record.%field.Name%)
                 : source.OrderByDescending(record => record.%field.Name%),
 //#end
@@ -76,7 +76,7 @@ internal static class PlaceholderSortMap
         term.Field switch
         {
 //#each field where sortable
-            %A%CollectionPolicy.%field.Name%Field => term.Direction == SortDirection.Ascending
+            PlaceholderCollectionPolicy.%field.Name%Field => term.Direction == SortDirection.Ascending
                 ? source.ThenBy(record => record.%field.Name%)
                 : source.ThenByDescending(record => record.%field.Name%),
 //#end
