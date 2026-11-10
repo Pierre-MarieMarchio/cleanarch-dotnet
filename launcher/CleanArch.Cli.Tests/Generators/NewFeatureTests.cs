@@ -976,6 +976,19 @@ public sealed partial class NewFeatureTests
             expect(text.Contains(needle, StringComparison.Ordinal) == should, $"[{label}] {where} should {(should ? "contain" : "not contain")} '{needle}'.");
         }
 
+        string applicationModule = File.ReadAllText(System.IO.Path.Combine(root, "src/Application/A.Application/ApplicationModule.cs"));
+        string persistenceModule = File.ReadAllText(System.IO.Path.Combine(root, "src/Infrastructure/A.Infrastructure.Persistence/PersistenceModule.cs"));
+
+        Contains(applicationModule, $"services.AddScoped<I{type}Service, {type}Service>();", Wrote($"Services/I{type}Service.cs"), "the application module, as the service written");
+        Contains(applicationModule, $"services.AddScoped<IDeletedAccountDataPolicy, {verb}{type}OnAccountDeletedConsumer>();", Wrote($"Services/Consumers/{verb}{type}OnAccountDeletedConsumer.cs"), "the application module, as the consumer written");
+
+        foreach (string adapter in new[] { "Mapper", "Repository", "Store", "Queries" })
+        {
+            Contains(persistenceModule, $"<I{type}{adapter}, {type}{adapter}>();", Wrote($"{type}{adapter}.cs"), $"the persistence module, as the {adapter.ToLowerInvariant()} written");
+        }
+
+        Contains(persistenceModule, $"AddScopedTracker<{type}Tracker, I{type}Tracker>(services);", Wrote($"Tracking/{type}Tracker.cs"), "the persistence module, as the tracker written");
+
         Contains(controller, "[HttpGet]", Has("list"), "the controller");
         Contains(controller, "[HttpGet(\"{", Has("get"), "the controller");
         Contains(controller, "[HttpHead(", Has("get"), "the controller");
@@ -2141,7 +2154,7 @@ public sealed partial class NewFeatureTests
             "A template naming a token the generation does not set was rendered, the token written as code.");
         expect(Render("namespace N;\nclass %A%;\n", get) == "namespace N;\nclass Person;\n", "A token the generation sets was refused, or not replaced.");
 
-        var fields = FieldBlocks.For(FieldGrammar.Parse("Title:string(120), Size:int, Notes:text?", FieldProfile.Feature, [])!, []);
+        var fields = FieldBlocks.For(FieldGrammar.Parse("Title:string(120), Size:int, Notes:text?", FieldProfile.Feature, [])!);
         const string arguments = "namespace N;\n    M(\n//#each field separator \",\\n\"\n        %field.Type% %field.Parameter%\n//#end \");\"\n";
 
         expect(
