@@ -408,7 +408,14 @@ lets a later feature band of the same major version run, and each Dockerfile pin
 builds with.
 The toolchain, the pinning and Dependabot are rows of [the stack](../architecture/README.md#the-stack).
 <!--#endif-->
-<!--#if (!githubHost)-->
+<!--#if (gitlabHost)-->
+Every dependency but the SDK is at an exact version, and Renovate proposes updates weekly from
+`.gitlab/renovate.jsonc`, in the bands Dependabot uses on GitHub; nothing is ignored. The SDK is a
+floor: `global.json` names the lowest version and lets a later feature band of the same major version
+run, and each Dockerfile pins the SDK image it builds with.
+The toolchain, the pinning and Renovate are rows of [the stack](../architecture/README.md#the-stack).
+<!--#endif-->
+<!--#if (!githubHost && !gitlabHost)-->
 Every dependency but the SDK is at an exact version. The SDK is a floor: `global.json` names the
 lowest version and lets a later feature band of the same major version run, and each Dockerfile pins
 the SDK image it builds with.
@@ -425,7 +432,10 @@ The toolchain and the pinning are rows of [the stack](../architecture/README.md#
 | <!--#if (githubHost)--> |
 | Container images and actions | their digest or commit SHA, beside the tag |
 | <!--#endif--> |
-| <!--#if (!githubHost)--> |
+| <!--#if (gitlabCi)--> |
+| Container images, and a tool a pipeline job downloads | their digest, beside the tag; the tool's version and its SHA-256 |
+| <!--#endif--> |
+| <!--#if (!githubHost && !gitlabCi)--> |
 | Container images | their digest, beside the tag |
 | <!--#endif--> |
 | <!--#if (anyWeb)--> |
@@ -450,10 +460,50 @@ A patch or a minor arrives in Dependabot's pull request on the images; write its
 A new major arrives from Dependabot too, and stays red, held by `NodeVersionTests`, until it is done
 by hand: `src/Web/.node-version`, `engines.node`, `@types/node` and every `FROM node:` move together.
 <!--#endif-->
-<!--#if (anyWeb && !githubHost)-->
+<!--#if (anyWeb && gitlabHost)-->
+Renovate's `node` group moves the web images' `node`, `src/Web/.node-version` and `@types/node` in
+one merge request within the major, and in another across it, which stays red, held by
+`NodeVersionTests`, until `engines.node` follows by hand. pnpm's own version, in `packageManager`,
+and the `overrides` of `src/Web/pnpm-workspace.yaml` are moved by hand.
+<!--#endif-->
+<!--#if (anyWeb && gitlabCi)-->
+`GitLabPipelinePinningTests` holds that merge request red too until `.gitlab/ci/web.yml` installs the
+same Node.js: set `node` and `node_sha256` there from the release's `SHASUMS256.txt`, since no bot
+computes a checksum.
+<!--#endif-->
+<!--#if (anyWeb && !githubHost && !gitlabHost)-->
 No bot proposes a newer Node.js: a patch, a minor or a major is taken by hand, and
 `src/Web/.node-version`, `engines.node`, `@types/node` and every `FROM node:` move together, or
 `NodeVersionTests` fails.
+<!--#endif-->
+<!--#if (gitlabHost)-->
+
+### Turning Renovate on
+
+Renovate runs outside the project and reads `.gitlab/renovate.jsonc` from the default branch; until
+it runs, nothing is proposed. On GitLab.com, install the Mend-hosted Renovate app from the Mend
+Developer Platform and give it this project: Mend holds the token and keeps Renovate current. On a
+self-managed instance, a project of its own includes the template of Renovate's runner project on
+GitLab.com and runs it on a pipeline schedule, with a bot's access token holding the `api`,
+`read_user` and `write_repository` scopes in its `RENOVATE_TOKEN` variable and this project's path in
+`RENOVATE_EXTRA_FLAGS`, as that template's README says; pin the template's `ref`, and its
+`CI_RENOVATE_IMAGE` by digest. This project's pipeline runs no Renovate job, so the bot's token
+reaches no job of its own.
+
+Renovate opens merge requests on Monday from 06:00 to 10:00, Paris time, a window wide enough for a
+run that starts late, within Dependabot's limits added up, since it counts every open merge request
+against one limit. It keeps a digest written beside a tag and moves the two together, groups what
+Dependabot groups, shows no dashboard and merges nothing by itself. The SDK band of `global.json` is
+raised by hand, as on GitHub.
+<!--#endif-->
+<!--#if (gitlabCi)-->
+The .NET SDK image moves in every Dockerfile and the pipeline in one merge request, which
+`RenovateConfigurationTests` holds, since one SDK runs the gate and builds the images. An image or a
+tool that a pipeline script names is bumped by hand, beside the comment that says so.
+<!--#endif-->
+<!--#if (gitlabHost)-->
+Renovate proposes no fix for an advisory on GitLab, since its vulnerability alerts read GitHub's:
+`NuGetAudit` fails the build on one, as the next section says.
 <!--#endif-->
 
 ### An advisory fails the build

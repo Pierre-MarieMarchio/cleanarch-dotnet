@@ -101,7 +101,10 @@ any other.
 | <!--#if (githubCi)--> |
 | Every dependency at an exact version: packages, container images by digest, workflow actions by commit; Dependabot proposes updates in bands and ignores none | A tag or a range moves under you; an ignored dependency is one nobody revisits | [Supply chain](../guides/build-and-ci.md#supply-chain) | — |
 | <!--#endif--> |
-| <!--#if (!githubHost)--> |
+| <!--#if (gitlabHost)--> |
+| Every dependency at an exact version: packages, container images by digest; Renovate proposes updates in Dependabot's bands and ignores none | A tag or a range moves under you; an ignored dependency is one nobody revisits | [Supply chain](../guides/build-and-ci.md#supply-chain) | — |
+| <!--#endif--> |
+| <!--#if (!githubHost && !gitlabHost)--> |
 | Every dependency at an exact version: packages, container images by digest; no bot proposes updates, which the team takes | A tag or a range moves under you | [Supply chain](../guides/build-and-ci.md#supply-chain) | — |
 | <!--#endif--> |
 | <!--#if (api)--> |

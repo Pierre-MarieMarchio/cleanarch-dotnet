@@ -397,7 +397,10 @@ the port its `compose.yml` holds (`--port` states it, and is refused when it dif
 the app for a framework app. A placeholder needs `pnpm install` instead; commit the app with the
 lockfile.
 <!--#if (gitlabCi)-->
-CI finds apps by folder.
+CI and Renovate find apps by folder.
+<!--#endif-->
+<!--#if (gitlabHost && !ci)-->
+Renovate finds apps by folder.
 <!--#endif-->
 `--rendering ssr` with `--framework angular` or `react-router` renders the app on its own Node
 server instead, as [images and headers](#images-and-headers) describes; the other frameworks are
