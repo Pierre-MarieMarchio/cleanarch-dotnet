@@ -8,6 +8,8 @@ internal static class ProjectFolders
 
     internal const string Presentation = "src/Presentation";
 
+    internal const string ReferenceProduct = "AppTemplate";
+
     internal static string FolderOf(string product, string part) => ProjectFacts.FolderOf(product, part);
 
     internal static string Initials(string product) => FolderOf(product, string.Empty)[..^1];
