@@ -90,11 +90,18 @@ Two facts decide the subdirectory shape:
    `.config/dotnet-tools.json`, `coverage.minimum`, `global.json`) with the subdirectory.
 
 <!--#endif-->
-<!--#if (githubHost)-->
+<!--#if (githubCi)-->
 4. Merge `.github/dependabot.yml` into the host's, at the git root, each `directory` prefixed with
    the subdirectory. Dependabot reads that one file only.
 
 5. Keep Compose in the subdirectory. Its build contexts are relative to the compose file, so nothing
+   needs re-pointing; copy `.env.example` to `.env` beside it.
+<!--#endif-->
+<!--#if (githubHost && !ci)-->
+3. Merge `.github/dependabot.yml` into the host's, at the git root, each `directory` prefixed with
+   the subdirectory. Dependabot reads that one file only.
+
+4. Keep Compose in the subdirectory. Its build contexts are relative to the compose file, so nothing
    needs re-pointing; copy `.env.example` to `.env` beside it.
 <!--#endif-->
 <!--#if (gitlabCi)-->
@@ -129,13 +136,22 @@ Two facts decide the subdirectory shape:
    `coverage.minimum`, `global.json`) with the subdirectory.
 
 <!--#endif-->
-<!--#if (gitlabHost)-->
+<!--#if (gitlabCi)-->
 4. Move `.gitlab/merge_request_templates` and `.gitlab/issue_templates` to the git root, beside the
    host's own, which GitLab reads from there only. Merge `.gitlab/renovate.jsonc` into the host's
    Renovate configuration, at the git root, each `matchFileNames` entry prefixed with the
    subdirectory. Renovate reads that one file only.
 
 5. Keep Compose in the subdirectory. Its build contexts are relative to the compose file, so nothing
+   needs re-pointing; copy `.env.example` to `.env` beside it.
+<!--#endif-->
+<!--#if (gitlabHost && !ci)-->
+3. Move `.gitlab/merge_request_templates` and `.gitlab/issue_templates` to the git root, beside the
+   host's own, which GitLab reads from there only. Merge `.gitlab/renovate.jsonc` into the host's
+   Renovate configuration, at the git root, each `matchFileNames` entry prefixed with the
+   subdirectory. Renovate reads that one file only.
+
+4. Keep Compose in the subdirectory. Its build contexts are relative to the compose file, so nothing
    needs re-pointing; copy `.env.example` to `.env` beside it.
 <!--#endif-->
 <!--#if (!anyCodeHost)-->
