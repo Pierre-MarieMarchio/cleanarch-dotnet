@@ -156,6 +156,16 @@ public sealed partial class NewFeatureTests
         return root;
     }
 
+    private static string ExternallyAuthenticatedTree(string scratch)
+    {
+        string root = NewTree(scratch, reaction: false);
+
+        Directory.Delete(System.IO.Path.Combine(root, "src/Presentation/A.Api/Features/Auth"), recursive: true);
+        Put(root, "src/Presentation/A.Api/Features/ExternalIdentity/Composition/ExternalAuthenticationComposition.cs", "        services.AddExternalIdentityPersistence(configuration);\n");
+
+        return root;
+    }
+
     private static void Put(string root, string relative, string content)
     {
         string full = System.IO.Path.Combine(root, relative);
@@ -1337,11 +1347,7 @@ public sealed partial class NewFeatureTests
         expect(!File.Exists(System.IO.Path.Combine(other, "src/Application/A.Application.Core/Common/Ports/IDeletedAccountDataPolicy.cs")), "A shared feature brought the reaction with it.");
         expect(shared.Output.Contains("Six edits", StringComparison.Ordinal), "A shared feature was told to edit more than six places.");
 
-        string external = NewTree(scratch, reaction: false);
-
-        Directory.Delete(System.IO.Path.Combine(external, "src/Presentation/A.Api/Features/Auth"), recursive: true);
-        Put(external, "src/Presentation/A.Api/Features/ExternalIdentity/Composition/ExternalAuthenticationComposition.cs", "        services.AddExternalIdentityPersistence(configuration);\n");
-
+        string external = ExternallyAuthenticatedTree(scratch);
         var externalTree = Snapshot(external);
         var mapped = Invoke(external, "Widgets", "Widget", "--access", "owner", "--deletion", "delete");
 
@@ -2005,7 +2011,7 @@ public sealed partial class NewFeatureTests
     {
         var syntax = new GeneratedSyntax();
 
-        foreach (var (group, digest) in WithoutFieldsDigests(scratch, syntax))
+        foreach (var (group, digest) in WithoutFieldsDigests(scratch, syntax.In))
         {
             string recorded = _withoutFieldsDigests.Single(entry => entry.Group == group).Digest;
 
@@ -2102,12 +2108,12 @@ public sealed partial class NewFeatureTests
         return api ? root : WithoutTheApi(root, "A.Worker");
     }
 
-    private static IEnumerable<(string Group, string Digest)> WithoutFieldsDigests(string scratch, GeneratedSyntax syntax)
+    private static IEnumerable<(string Group, string Digest)> WithoutFieldsDigests(string scratch, Func<string, Action<string, string>> seenIn)
     {
         foreach (var (group, options, reaction, api, database) in _digestGroups)
         {
             string root = DigestTree(scratch, reaction, api, database, integration: false);
-            var seen = syntax.In(group);
+            var seen = seenIn(group);
             using var digest = Digest(out var feed);
 
             foreach (string[] subset in _operationSubsets)
@@ -2128,6 +2134,8 @@ public sealed partial class NewFeatureTests
         }
     }
 
+    private const string _errorsTemplate = "src/Application/AT.Application/Features/Placeholders/Model/Errors/PlaceholderErrors.cs";
+
     private static void TemplateGuardCases(Action<bool, string> expect)
     {
         var get = new HashSet<string>(StringComparer.Ordinal) { "get" };
@@ -2145,7 +2153,7 @@ public sealed partial class NewFeatureTests
         var tokenFree = new List<string>();
         string[] unparsed = [.. TokenFreeTemplatesThatDoNotParse(tokenFree.Add)];
 
-        expect(tokenFree.Contains("Errors.cs.txt"), $"Errors.cs.txt, written without a token, is not among the templates read as such: {string.Join(", ", tokenFree)}");
+        expect(tokenFree.Contains(_errorsTemplate), $"{_errorsTemplate}, written without a token, is not among the templates read as such: {string.Join(", ", tokenFree)}");
         expect(unparsed.Length == 0, $"A template without a token is not C# a compiler reads, under each combination of the flags it names: {string.Join(" | ", unparsed)}");
 
         var setting = new FlagSet("dotnet cleanarch add setting", new Dictionary<string, string>(StringComparer.Ordinal) { ["secret"] = "A key holds a secret." });
@@ -2292,17 +2300,15 @@ public sealed partial class NewFeatureTests
         TimeSpan.FromSeconds(2));
 
     private static readonly Lazy<HashSet<string>> _templatePrivateMethods = new(() =>
-        [.. typeof(FeatureTemplates)
-            .GetProperties(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
-            .Where(property => property.PropertyType == typeof(string))
-            .SelectMany(property => _privateMethodDeclaration.Matches((string)property.GetValue(null)!))
+        [.. ToolTemplates.Of(TemplateFolder).Values
+            .SelectMany(template => _privateMethodDeclaration.Matches(template))
             .Select(match => match.Groups[1].Value.Replace("%", string.Empty, StringComparison.Ordinal))]);
 
     private static IEnumerable<string> PrivateMethodProblems(string relative, string text)
     {
         if (_templatePrivateMethods.Value.Count == 0)
         {
-            yield return "No feature template declares a private method, so the dead-code rule compares nothing: read the templates where FeatureTemplates keeps them.";
+            yield return "No feature template declares a private method, so the dead-code rule compares nothing: read the templates where ToolTemplates keeps them.";
         }
 
         var declared = _privateMethodDeclaration.Matches(text)

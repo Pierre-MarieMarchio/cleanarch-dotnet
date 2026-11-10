@@ -1064,6 +1064,16 @@ model with the subset of each field profile. A change to a shared unit is made t
 
 ### The template engine
 
+The templates of `add feature` and `add field` are the files of the reference feature: each lies
+under `launcher/CleanArch.Cli/code-templates/add-feature` at the path `add feature` writes it at in
+a project named `AppTemplate`, whose project folders are `AT.<Part>`, for the feature `Placeholders`
+of the type `Placeholder`, with `.txt` appended; a file written into each host lies at the path of
+`AT.Api`. One file of a feature comes from one template, and a template writes one file. The tool
+embeds the folder under its own name, `ToolTemplates.Of` reads a generator's templates by that path,
+and the plan in `launcher/CleanArch.Cli/Generators/Shared/FeatureCode.cs` names each template by it:
+`FeatureCode.PathOf` derives the file's path in the project, the project's folder for `AT.<Part>`
+and the generation's names for the reference names, and never the reverse.
+
 `Template.Render`, in `launcher/CleanArch.Cli/Generators/Shared/Template.cs`, renders the templates
 of `add feature` and `add field` in five passes, in this order:
 
@@ -1085,7 +1095,7 @@ conditions read lines and flags and nothing of C#.
 
 A `%Token%` carries code the generator computes, in the middle of a line, where a directive cannot
 stand. A template without a token, written with `#if`, the reference names and C# alone, is C# that
-a compiler and an editor read, as `Errors.cs.txt` is; a template that carries a token is not. This
+a compiler and an editor read, as `PlaceholderErrors.cs.txt` is; a template that carries a token is not. This
 is why the syntax is the C# preprocessor's and not a template language such as Scriban or Liquid,
 whose syntax no compiler or editor understands.
 
@@ -1109,7 +1119,7 @@ unary := '!' unary | '(' or ')' | flag
 by the same `Condition`, over the same vocabulary.
 
 `add feature` and `add field` refuse a template that holds one of these, with a message that starts
-with the template's name, such as `FeatureTemplates.Aggregate`, and the line's number, and names
+with the template's path, `code-templates/add-feature/<reference path>.txt`, and the line's number, and names
 the offending text:
 
 - a condition naming a flag outside the generator's vocabulary, another generator's included, so a
@@ -1194,11 +1204,12 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | A line that does not start with a directive is text, an `#if` in the middle of a line included | `DirectivesTests.ADirective_StandsAtTheStartOfALine_AndAnythingElseIsText` |
 | A directive without its `#if`, after its `#else`, never closed, followed by text, or naming an unknown flag, even in a dead branch, is refused with its line's number and text | `DirectivesTests.ADirective_RefusesAMisplacedOrUnreadableLine_NamingItsNumberAndText` |
 | `Template.Render` runs the passes together: the branches and the reference names, an unknown flag refused with its line, a block written once per field it keeps, joined by its separator and followed by its tail, a block that keeps no field writing nothing, its tail included, and a block naming an unknown token, an unknown trait or an item other than `field`, a block left open, and a `%field.<Token>%` outside any block, each refused, the message naming the offending text | `NewFeatureTests.TemplateGuard` |
-| Each template that holds no `%` token parses as C#, as the compiler reads its `#if` lines, under each combination of the flags it names, and `Errors.cs.txt` is one of them | `NewFeatureTests.TemplateGuard` |
+| Each template that holds no `%` token parses as C#, as the compiler reads its `#if` lines, under each combination of the flags it names, and `PlaceholderErrors.cs.txt` is one of them | `NewFeatureTests.TemplateGuard` |
 | A template naming the flag of another generator is refused, and renders under that generator's vocabulary | `NewFeatureTests.TemplateGuard` |
 | A `%Token%` the generation does not set is refused, not written as code | `NewFeatureTests.TemplateGuard` |
 | The table of the flags of `add feature` on this page is its vocabulary, each flag with its meaning, and nothing else | `FeatureFlagsTests.ThePage_ListsEachFlagOfAddFeature_WithItsMeaning_AndNoOther` |
 | The output of `add feature` and `add field` does not change when a template changes its form | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
+| Every template the tool embeds for `add feature` is written by one of the configurations the digests with `--fields` cover, or by an owner feature in a tree whose callers sign in with an external provider | `NewFeatureTests.EveryTemplateIsWritten` |
 | Over the configurations the digests cover, every C# file `add feature` writes or edits, and every one `add field` writes or changes, parses without a syntax error; an edited file is parsed as the edit leaves it in the tests' tree, whose shared files are cut down to the code around the anchors, and the message names each group and path that wrote the same broken text | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
 
 ## The package
@@ -1295,7 +1306,7 @@ which holds five more projects. Generation and the template package leave the fo
 | Project | What it is |
 |---|---|
 | `launcher/CleanArch.Tooling` | the library both tools share, never packed on its own: running a process and its verbatim output, the terminal, the templates' manifests with the evaluation of their refusals, and the questions asked from them; its tests are in `launcher/CleanArch.Tooling.Tests` |
-| `launcher/CleanArch.Cli` | the .NET tool `dotnet cleanarch`, packed as `CleanArch.Cli` at the same `templateVersion`, which finds a project by the project file at its root: `BuiltInCommands.cs` lists every command, and the ones that stay the tool's each have a folder, `launcher/CleanArch.Cli/Eject` with the source it ships and `launcher/CleanArch.Cli/UpgradeReport` reading template packages through `CleanArch.Tooling`; `launcher/CleanArch.Cli/Joins` holds the join steps `add` runs, which are not commands. `launcher/CleanArch.Cli/Generators` holds one folder per generator, its command, request, plan, edits, report and templates, over `launcher/CleanArch.Cli/Generators/Shared`, the pipeline every generator runs and the code they share, which references no generator; its tests are in `launcher/CleanArch.Cli.Tests`, whose `launcher/CleanArch.Cli.Tests/Architecture` holds the launcher's boundaries: no command or generator references another, `Kernel` and `Shared` reference none, `CleanArch.Cli.Commands` references System.CommandLine alone, and only the two process launchers call `Process.Start` |
+| `launcher/CleanArch.Cli` | the .NET tool `dotnet cleanarch`, packed as `CleanArch.Cli` at the same `templateVersion`, which finds a project by the project file at its root: `BuiltInCommands.cs` lists every command, and the ones that stay the tool's each have a folder, `launcher/CleanArch.Cli/Eject` with the source it ships and `launcher/CleanArch.Cli/UpgradeReport` reading template packages through `CleanArch.Tooling`; `launcher/CleanArch.Cli/Joins` holds the join steps `add` runs, which are not commands. `launcher/CleanArch.Cli/Generators` holds one folder per generator, its command, request, plan, edits and report, and the templates of `add use-case` in `launcher/CleanArch.Cli/Generators/AddUseCase/Templates`, while `launcher/CleanArch.Cli/code-templates/add-feature` holds those of `add feature` and `add field` at their path in the reference feature, over `launcher/CleanArch.Cli/Generators/Shared`, the pipeline every generator runs and the code they share, which references no generator; its tests are in `launcher/CleanArch.Cli.Tests`, whose `launcher/CleanArch.Cli.Tests/Architecture` holds the launcher's boundaries: no command or generator references another, `Kernel` and `Shared` reference none, `CleanArch.Cli.Commands` references System.CommandLine alone, and only the two process launchers call `Process.Start` |
 | `launcher/CleanArch.Cli.Commands` | the commands `eject` can copy into a project, never packed on its own: it references System.CommandLine alone, since an ejected command is a file-based app that declares nothing else. Each command has a folder and a namespace of its own and references no other; `launcher/CleanArch.Cli.Commands/Hosting` holds the root command, the registration and the context, and `launcher/CleanArch.Cli.Commands/Kernel` what the commands share, the process launcher the context carries and every external call among it, the documentation index and the scaffold steps `bootstrap` runs, referencing neither the commands nor `Hosting`. `CleanArch.Cli` composes them with the ones that stay the tool's, and ships the source of every folder, which eject merges into one namespace |
 
 [Template decision 0003](decisions/0003-a-project-runs-its-tasks-from-a-pinned-dotnet-tool.md) says
