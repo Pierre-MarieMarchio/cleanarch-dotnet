@@ -28,6 +28,9 @@ fails, and a `cleanarch.json` it cannot read is named with the reason.
 | `dotnet cleanarch bootstrap` | sets the project up once, right after generation, as [below](#bootstrap) says |
 | `dotnet cleanarch adopt` | writes `cleanarch.json` for a project generated before the tool, as [below](#ejecting-a-command) says |
 | `dotnet cleanarch eject <command>` | copies a built-in command's source into `tools/`, as [below](#ejecting-a-command) says |
+| <!--#if (canAddFeature)--> |
+| `dotnet cleanarch templates copy <generator>` | copies a generator's code templates into `code-templates/`, as [below](#code-templates) says |
+| <!--#endif--> |
 
 ## The rules every command keeps
 
@@ -37,9 +40,15 @@ fails, and a `cleanarch.json` it cannot read is named with the reason.
   has them, `migrations add` and `database update` as `dotnet ef` has them.
 - A command that keeps a file in step takes `--check`, which fails where it would write and writes
   nothing: `format`, `migrations add` and `openapi`.
+<!--#if (canAddFeature)-->
+- A command that creates files takes `--dry-run`, which prints what it would write and writes and
+  runs nothing: each `add` command, `templates copy`, `eject` and `adopt`. A command that deletes
+  reports by default and writes only with `--apply`: `remove feature`.
+<!--#else-->
 - A command that creates files takes `--dry-run`, which prints what it would write and writes and
   runs nothing: each `add` command, `eject` and `adopt`. A command that deletes reports by default and
   writes only with `--apply`: `remove feature`.
+<!--#endif-->
 - `help` lists only what `cleanarch.json` makes true. A command that does not apply to this project
   is hidden from it, and running it prints the reason and fails.
 
@@ -203,15 +212,38 @@ A file named in PascalCase stays a script run with `dotnet run`, and a
 file named `help` is no command: `help` stays the tool's, since it says which commands are this
 project's own.
 
+<!--#if (canAddFeature)-->
+## Code templates
+
+`dotnet cleanarch templates copy add-feature [<template>...]` copies the templates `add feature` and
+`add field` write a feature's files from into `code-templates/add-feature/`, each at the path of the
+file it writes in the reference feature, with `.txt` after it; a `<template>` names one by that path
+or by its end after a `/`, such as its file name, and none copies them all. Both generators then
+write from this project's copy, and a copy left unchanged writes what the tool does. A template
+already there is never overwritten, and a run where every one named exists is refused: move one
+aside to copy it again. `--dry-run` lists what it would copy and writes nothing; it takes no
+`--check`, since it creates files once rather than keeping them in step.
+
+`code-templates/manifest.json` records each copy's path, the tool's version and the digest of the
+tool's text when it was copied: it is the tool's to write, while the `.txt` copies are the team's to
+edit. A manifest the tool cannot read refuses the copy until it is repaired or moved aside.
+
+<!--#endif-->
 ## Ejecting a command
 
 `dotnet cleanarch eject <command>` copies a built-in command's source into `tools/<command>.cs`, a
 file-based app this project then owns and runs in place of the built-in one; that command stops
 following the tool's releases. `--dry-run` says what it would write and writes nothing.
 
+<!--#if (canAddFeature)-->
+`help`, `eject`, `adopt`, `add`, `remove` and `templates` stay the tool's: `help` says which commands
+are this project's own, `eject` makes them, `adopt` runs before the tool knows the project, and `add`,
+`remove` and `templates` run on libraries and templates a file-based app does not carry.
+<!--#else-->
 `help`, `eject`, `adopt`, `add` and `remove` stay the tool's: `help` says which commands are this
 project's own, `eject` makes them, `adopt` runs before the tool knows the project, and `add` and
-`remove` run on libraries a file-based app does not carry. A command `cleanarch.json` refuses has
+`remove` run on libraries a file-based app does not carry.
+<!--#endif--> A command `cleanarch.json` refuses has
 nothing to eject, and a `tools/<command>.cs` already there is never overwritten.
 
 `dotnet cleanarch adopt` writes `cleanarch.json` for a project generated before the tool, from its

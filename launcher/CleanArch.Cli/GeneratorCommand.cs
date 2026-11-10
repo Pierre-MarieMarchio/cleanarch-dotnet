@@ -40,16 +40,19 @@ internal static class GeneratorCommand
 
     public static void RefuseWithoutAuthentication(CommandContext context, Command command)
     {
-        if (context.Project?.File.Options.Auth == "none")
+        if (context.Project is { } project && AuthenticationRefusal(project, command.Name) is { } refusal)
         {
-            CleanArchCommand.Refuse(
-                command,
-                $"This project has no add {command.Name} command: its {ProjectLocator.FileName} records auth none, so it authenticates nobody, "
-                + "and every feature add feature writes (--access owner or shared), and so every feature add field extends, needs an "
-                + "authenticated caller. Add an authentication scheme and an ICurrentUser that reads it before scaffolding a feature, "
-                + "or write a public feature by hand.");
+            CleanArchCommand.Refuse(command, refusal);
         }
     }
+
+    public static string? AuthenticationRefusal(LocatedProject project, string command) =>
+        project.File.Options.Auth == "none"
+            ? $"This project has no add {command} command: its {ProjectLocator.FileName} records auth none, so it authenticates nobody, "
+                + "and every feature add feature writes (--access owner or shared), and so every feature add field extends, needs an "
+                + "authenticated caller. Add an authentication scheme and an ICurrentUser that reads it before scaffolding a feature, "
+                + "or write a public feature by hand."
+            : null;
 
     public static IExecutor Executor(ParseResult parseResult) =>
         new ProjectExecutor(

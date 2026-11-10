@@ -1,4 +1,5 @@
 ﻿using CleanArch.Cli.Adopt;
+using CleanArch.Cli.CodeTemplates;
 using CleanArch.Cli.Commands.Bootstrap;
 using CleanArch.Cli.Commands.Build;
 using CleanArch.Cli.Commands.Check;
@@ -48,5 +49,6 @@ internal static class BuiltInCommands
         AdoptCommand.Registration,
         UpgradeReportCommand.Registration,
         EjectCommand.Registration,
+        TemplatesCommand.Registration,
     ];
 }

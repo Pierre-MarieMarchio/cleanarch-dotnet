@@ -30,6 +30,11 @@ public sealed class SliceIsolationTests
             + "Move what two slices need into what they share.");
     }
 
+    [Fact]
+    public void NoGenerator_ReachesTheCommandThatCopiesItsTemplates() =>
+        Offenders(Assembly.Load("CleanArch.Cli"), "CleanArch.Cli", "Generators", ["CodeTemplates"]).ShouldBeEmpty(
+            "templates copy reads the generators' templates, never the reverse, so that a generator writes the same files whether or not the command exists.");
+
     private static IEnumerable<string> Offenders(Assembly assembly, string root, string subject, IEnumerable<string> forbidden)
     {
         PredicateList subjects = Types.InAssembly(assembly).That().ResideInNamespaceMatching($@"^{Regex.Escape($"{root}.{subject}")}(\.|$)");

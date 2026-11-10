@@ -53,6 +53,8 @@ dotnet cleanarch add field Widgets "Code:string(20)='none'"                  # f
 dotnet cleanarch add use-case Invoices ApproveInvoice --kind command         # one operation on a rich feature
 dotnet cleanarch add setting Invoices InvoiceLimits --keys "MaxItems:int(1..100)=10"
 dotnet cleanarch add event Invoices InvoicePaidDomainEvent --unconsumed "Nothing reacts to it yet"
+dotnet cleanarch templates copy add-feature      # copy the templates of add feature and add field into code-templates/
+dotnet cleanarch templates copy add-feature PlaceholdersController.cs --dry-run # list what it would copy, and write nothing
 dotnet cleanarch remove feature Widgets          # report what removing it involves, writing nothing
 dotnet cleanarch remove feature Widgets --apply  # remove it, as its manifest records it
 dotnet cleanarch adopt       # write cleanarch.json for a project generated before the tool
@@ -138,6 +140,13 @@ build and the migration. `remove feature`
 only reports unless given `--apply`. `add feature` and `add field` do not apply where the
 project file records `auth: none`, since every feature they write needs an authenticated
 caller, and are refused with that reason.
+
+`templates copy add-feature [<template>...]` copies the templates `add feature` and `add field`
+write from into the project's `code-templates/add-feature/`, each at the path of the file it writes
+in the reference feature with `.txt` after it, and records each copy's source, the tool's version
+and digest, in `code-templates/manifest.json`. The `.txt` copies are the team's to edit, and both
+generators then write from them. It never overwrites a copy, so it takes `--dry-run` and no `--check`,
+and it is refused where `add feature` is.
 
 `adopt` is for a project generated before the tool, which has no project file yet: it finds the
 folder that holds one solution beside the task launcher a project of that time carried, reads the options, the web workspace and
