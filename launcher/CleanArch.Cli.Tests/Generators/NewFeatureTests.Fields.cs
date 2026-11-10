@@ -610,7 +610,7 @@ public sealed partial class NewFeatureTests
         }
     }
 
-    private static IEnumerable<(string Group, string Digest)> WithFieldsDigests(string scratch, Action<bool, string> expect)
+    private static IEnumerable<(string Group, string Digest)> WithFieldsDigests(string scratch, Action<bool, string> expect, Action<string, string>? seen = null)
     {
         foreach (var (group, options, reaction, api, database) in _digestGroups)
         {
@@ -637,7 +637,7 @@ public sealed partial class NewFeatureTests
 
                         feed($"{fields} | {string.Join(',', subset)} {concurrency}");
 
-                        var plan = FeedPlan(feed, root, spec);
+                        var plan = FeedPlan(feed, root, spec, seen);
 
                         fieldTests |= plan.Any(emission => emission.Path.EndsWith("/Widgets/WidgetFieldTests.cs", StringComparison.Ordinal));
                     }
@@ -681,7 +681,7 @@ public sealed partial class NewFeatureTests
         }
     }
 
-    private static IEnumerable<(string Group, string Digest)> FieldAdditionDigests(string scratch, Action<bool, string> expect)
+    private static IEnumerable<(string Group, string Digest)> FieldAdditionDigests(string scratch, Action<bool, string> expect, Action<string, string>? seen = null)
     {
         (string Group, string[] Options, bool Api, string Database)[] features =
         [
@@ -719,7 +719,14 @@ public sealed partial class NewFeatureTests
                 foreach (var (path, hash) in Snapshot(root).Where(entry => !before.TryGetValue(entry.Key, out string? earlier) || earlier != entry.Value).OrderBy(entry => entry.Key, StringComparer.Ordinal))
                 {
                     feed(path);
-                    feed(hash == "<directory>" ? hash : File.ReadAllText(System.IO.Path.Combine(root, path)));
+                    string written = hash == "<directory>" ? hash : File.ReadAllText(System.IO.Path.Combine(root, path));
+
+                    feed(written);
+
+                    if (path.EndsWith(".cs", StringComparison.Ordinal))
+                    {
+                        seen?.Invoke(path, written);
+                    }
                 }
             }
 

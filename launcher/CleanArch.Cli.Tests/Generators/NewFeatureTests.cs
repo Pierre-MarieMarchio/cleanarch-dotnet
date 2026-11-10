@@ -2040,7 +2040,7 @@ public sealed partial class NewFeatureTests
             GeneratorRun.Project(root),
             problems);
 
-    private static List<Emission> FeedPlan(Action<string> feed, string root, FeatureSpec spec)
+    private static List<Emission> FeedPlan(Action<string> feed, string root, FeatureSpec spec, Action<string, string>? seen = null)
     {
         var plan = Plan(spec, root, out var skipped);
         var editor = Edits(root, spec, plan);
@@ -2054,6 +2054,7 @@ public sealed partial class NewFeatureTests
         {
             feed(emission.Path);
             feed(emission.Content);
+            seen?.Invoke(emission.Path, emission.Content);
         }
 
         feed(manifest.Content);
@@ -2081,7 +2082,7 @@ public sealed partial class NewFeatureTests
         return api ? root : WithoutTheApi(root, "A.Worker");
     }
 
-    private static IEnumerable<(string Group, string Digest)> WithoutFieldsDigests(string scratch)
+    private static IEnumerable<(string Group, string Digest)> WithoutFieldsDigests(string scratch, Action<string, string>? seen = null)
     {
         foreach (var (group, options, reaction, api, database) in _digestGroups)
         {
@@ -2098,7 +2099,7 @@ public sealed partial class NewFeatureTests
                     }
 
                     feed($"{string.Join(',', subset)} {concurrency}");
-                    FeedPlan(feed, root, spec);
+                    FeedPlan(feed, root, spec, seen);
                 }
             }
 
