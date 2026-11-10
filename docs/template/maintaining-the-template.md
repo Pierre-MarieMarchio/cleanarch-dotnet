@@ -909,7 +909,8 @@ generator does not own, placed beside a line or computed on the whole text, and 
 file or none; `FeatureManifest.cs`, a feature's manifest read in either schema version, its files,
 hashes, edits and the fields `add field` added merged, and written; `CSharpNames.cs`, a name in
 PascalCase and the C# keywords it must not become once lowered; and `FieldGrammar.cs`, the field
-model with the subset of each field profile. A change to a shared unit is made there once.
+model with the subset of each field profile; `TemplateOverrides.cs`, which text renders each template
+of one generator in one project. A change to a shared unit is made there once.
 
 `add setting --keys` reads its own grammar: a key is a bounded configuration value with a default,
 `duration` and `secret` among its types, which no field has; its names follow `CSharpNames`.
@@ -925,6 +926,20 @@ embeds the folder under its own name, `ToolTemplates.Of` reads a generator's tem
 and the plan in `launcher/CleanArch.Cli/Generators/Shared/FeatureCode.cs` names each template by it:
 `FeatureCode.PathOf` derives the file's path in the project, the project's folder for `AT.<Part>`
 and the generation's names for the reference names, and never the reverse.
+
+A project overrides a template with a file at the same path under its own `code-templates` folder,
+`code-templates/add-feature/<reference path>.txt` at its root. `TemplateOverrides.Read` reads that
+folder once per run, its files ending in `.txt` and not starting with a dot, and `Render` renders the
+project's text where there is one and the tool's otherwise: an override replaces text, and never
+chooses a path, a flag or code to run. Its BOM, its line endings and one final line break are
+dropped as `ToolTemplates.Normalize` drops the tool's, so an unchanged copy writes the same bytes.
+A file naming no template of the generator, a file that cannot be read, and an override the engine
+refuses are each a problem that starts with the override's path, and the generator refuses and
+writes nothing; the same refusal from the tool's own text is a defect of the tool, and throws. The
+manifest of a feature written from an override records it under `templates`, each path with the
+SHA-256 of its normalised text, and the report lists it under `Written from this project's code
+templates:`; a feature written from the tool's text alone has neither, so its manifest and report
+are those of a project without overrides.
 
 `Template.Render`, in `launcher/CleanArch.Cli/Generators/Shared/Template.cs`, renders the templates
 of `add feature` and `add field` in five passes, in this order:
@@ -1061,6 +1076,12 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | A `%Token%` the generation does not set is refused, not written as code | `NewFeatureTests.TemplateGuard` |
 | The table of the flags of `add feature` on this page is its vocabulary, each flag with its meaning, and nothing else | `FeatureFlagsTests.ThePage_ListsEachFlagOfAddFeature_WithItsMeaning_AndNoOther` |
 | The output of `add feature` and `add field` does not change when a template changes its form | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
+| A project's override of a template writes its own file, and changes no other | `NewFeatureTests.OverrideWinsForItsFileOnly` |
+| A copy of every template, unchanged, a BOM and CRLF line endings among them, writes the bytes the tool's text writes, and the manifest records it with the digest of the tool's text | `NewFeatureTests.AnUnchangedCopyWritesTheSameBytes` |
+| A file under `code-templates/add-feature` naming no template is refused, and nothing is written | `NewFeatureTests.AnOverrideNamingNoTemplateIsRefused` |
+| An override with an unknown flag, an unknown field token, an unknown token or an `#if` never closed is refused, the message starting with its path and naming the line where the engine names one, and nothing is written | `NewFeatureTests.ABrokenOverrideIsRefusedNamingIt` |
+| The manifest records each override used, by path and digest, in path order, and a feature written without one records no `templates` | `NewFeatureTests.TheManifestRecordsEachOverride` |
+| A dot file under `code-templates/add-feature` is not read as a template | `NewFeatureTests.DotFilesAreIgnored` |
 | Every template the tool embeds for `add feature` is written by one of the configurations the digests with `--fields` cover, or by an owner feature in a tree whose callers sign in with an external provider | `NewFeatureTests.EveryTemplateIsWritten` |
 | Over the configurations the digests cover, every C# file `add feature` writes or edits, and every one `add field` writes or changes, parses without a syntax error; an edited file is parsed as the edit leaves it in the tests' tree, whose shared files are cut down to the code around the anchors, and the message names each group and path that wrote the same broken text | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
 
