@@ -1,17 +1,17 @@
-namespace %P%.Api.Features.%F%.Contracts.Responses;
+namespace AppTemplate.Api.Features.Placeholders.Contracts.Responses;
 
-%if etag%
-/// <summary>The wire shape of one %L%, whose version travels in the <c>ETag</c> header.</summary>
-%else%
-/// <summary>The wire shape of one %L%.</summary>
-%end%
-public sealed record %A%Response(
+#if etag
+/// <summary>The wire shape of one placeholder, whose version travels in the <c>ETag</c> header.</summary>
+#else
+/// <summary>The wire shape of one placeholder.</summary>
+#endif
+public sealed record PlaceholderResponse(
     Guid Id,
-%if fields%
+#if fields
 %FDtoParams%
-%else%
+#else
     string Name,
     string Description,
-%end%
+#endif
     DateTimeOffset CreatedAt,
     DateTimeOffset? LastModifiedAt);

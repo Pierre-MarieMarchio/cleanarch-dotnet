@@ -1,6 +1,6 @@
-using %P%.Application.Auth.Features.Accounts.Ports.Accounts;
-using %P%.Application.Core.Common.Ports;
-using %P%.Domain.Core.Common.Primitives;
+using AppTemplate.Application.Auth.Features.Accounts.Ports.Accounts;
+using AppTemplate.Application.Core.Common.Ports;
+using AppTemplate.Domain.Core.Common.Primitives;
 
 namespace %H%.Features.Auth.Composition;
 

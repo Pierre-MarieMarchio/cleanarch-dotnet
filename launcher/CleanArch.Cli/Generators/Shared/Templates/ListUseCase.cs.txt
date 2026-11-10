@@ -1,28 +1,28 @@
-using %P%.Application.Core.Common.Collections;
-using %P%.Application.Core.Common.Ports;
-using %P%.Application.Core.Common.Results;
-using %P%.Application.Features.%F%.Model.Dtos;
-using %P%.Application.Features.%F%.Model.Policies;
-using %P%.Application.Features.%F%.Ports.%A%Queries;
+using AppTemplate.Application.Core.Common.Collections;
+using AppTemplate.Application.Core.Common.Ports;
+using AppTemplate.Application.Core.Common.Results;
+using AppTemplate.Application.Features.Placeholders.Model.Dtos;
+using AppTemplate.Application.Features.Placeholders.Model.Policies;
+using AppTemplate.Application.Features.Placeholders.Ports.PlaceholderQueries;
 using Mediator;
 
-namespace %P%.Application.Features.%F%.UseCases.Queries.Get%F%;
+namespace AppTemplate.Application.Features.Placeholders.UseCases.Queries.GetPlaceholders;
 
-public sealed record Get%F%Query(
+public sealed record GetPlaceholdersQuery(
     string? Paging,
     int? Page,
     int? PageSize,
     string? Cursor,
-    string? Sort) : ICollectionQuery, IQuery<Result<PagedResult<%A%SummaryDto>>>
+    string? Sort) : ICollectionQuery, IQuery<Result<PagedResult<PlaceholderSummaryDto>>>
 {
-    public static Get%F%Query Offset(int? page, int? pageSize) => new(null, page, pageSize, null, null);
+    public static GetPlaceholdersQuery Offset(int? page, int? pageSize) => new(null, page, pageSize, null, null);
 }
 
-public sealed class Get%F%QueryHandler(I%A%Queries queries, ICurrentUser currentUser)
-    : IQueryHandler<Get%F%Query, Result<PagedResult<%A%SummaryDto>>>
+public sealed class GetPlaceholdersQueryHandler(IPlaceholderQueries queries, ICurrentUser currentUser)
+    : IQueryHandler<GetPlaceholdersQuery, Result<PagedResult<PlaceholderSummaryDto>>>
 {
-    public async ValueTask<Result<PagedResult<%A%SummaryDto>>> Handle(
-        Get%F%Query query,
+    public async ValueTask<Result<PagedResult<PlaceholderSummaryDto>>> Handle(
+        GetPlaceholdersQuery query,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -31,18 +31,18 @@ public sealed class Get%F%QueryHandler(I%A%Queries queries, ICurrentUser current
 
         if (userId.IsFailure)
         {
-            return userId.To<PagedResult<%A%SummaryDto>>();
+            return userId.To<PagedResult<PlaceholderSummaryDto>>();
         }
 
         var bound = CollectionBinding.Bind(
             query,
-            %A%CollectionPolicy.Instance,
-            () => Result.Success(%A%Filter.None),
+            PlaceholderCollectionPolicy.Instance,
+            () => Result.Success(PlaceholderFilter.None),
             %DateKeys%);
 
         if (bound.IsFailure)
         {
-            return bound.To<PagedResult<%A%SummaryDto>>();
+            return bound.To<PagedResult<PlaceholderSummaryDto>>();
         }
 
         return await queries.%ListQuery%(%SvcOwner%bound.Value, cancellationToken);

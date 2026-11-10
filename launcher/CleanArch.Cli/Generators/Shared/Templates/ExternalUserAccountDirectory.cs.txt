@@ -1,6 +1,6 @@
-using %P%.Application.Core.Common.Ports;
-using %P%.Application.Features.ExternalIdentity.Services;
-using %P%.Domain.Core.Common.Primitives;
+using AppTemplate.Application.Core.Common.Ports;
+using AppTemplate.Application.Features.ExternalIdentity.Services;
+using AppTemplate.Domain.Core.Common.Primitives;
 
 namespace %H%.Features.ExternalIdentity.Composition;
 

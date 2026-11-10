@@ -1,14 +1,14 @@
 using System.Text.Json.Serialization; //?JsonRequired
 
-namespace %P%.Api.Features.%F%.Contracts.Requests;
+namespace AppTemplate.Api.Features.Placeholders.Contracts.Requests;
 
-/// <summary>The new %Revised% of %a% %L%, whose id travels in the route.</summary>
-%if fields%
+/// <summary>The new %Revised% of %a% placeholder, whose id travels in the route.</summary>
+#if fields
 %FRequestDocs%
-public sealed record Update%A%Request(
+public sealed record UpdatePlaceholderRequest(
 %FRequestParams%);
-%else%
+#else
 /// <param name="Name">Required, at most 200 characters once trimmed.</param>
 /// <param name="Description">Required but may be empty, at most 2000 characters.</param>
-public sealed record Update%A%Request(string Name, string Description);
-%end%
+public sealed record UpdatePlaceholderRequest(string Name, string Description);
+#endif

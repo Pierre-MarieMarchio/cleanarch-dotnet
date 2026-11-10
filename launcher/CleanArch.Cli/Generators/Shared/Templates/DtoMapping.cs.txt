@@ -1,26 +1,26 @@
-using %P%.Application.Core.Common.Concurrency;
-using %P%.Application.Features.%F%.Model.Dtos;
-using %P%.Domain.Features.%F%.Model.Entities;
+using AppTemplate.Application.Core.Common.Concurrency;
+using AppTemplate.Application.Features.Placeholders.Model.Dtos;
+using AppTemplate.Domain.Features.Placeholders.Model.Entities;
 
-namespace %P%.Application.Features.%F%.Model.Mapping;
+namespace AppTemplate.Application.Features.Placeholders.Model.Mapping;
 
-internal static class %A%DtoMapping
+internal static class PlaceholderDtoMapping
 {
-    public static Versioned<%A%Dto> Detail(%A% %L%)
+    public static Versioned<PlaceholderDto> Detail(Placeholder placeholder)
     {
-        ArgumentNullException.ThrowIfNull(%L%);
+        ArgumentNullException.ThrowIfNull(placeholder);
 
-        var detail = new %A%Dto(
-            %L%.Id,
-%if fields%
+        var detail = new PlaceholderDto(
+            placeholder.Id,
+#if fields
 %FDetailArgs%
-%else%
-            %L%.Name,
-            %L%.Description,
-%end%
-            %L%.CreatedAt,
-            %L%.LastModifiedAt);
+#else
+            placeholder.Name,
+            placeholder.Description,
+#endif
+            placeholder.CreatedAt,
+            placeholder.LastModifiedAt);
 
-        return new Versioned<%A%Dto>(detail, %L%.Version);
+        return new Versioned<PlaceholderDto>(detail, placeholder.Version);
     }
 }

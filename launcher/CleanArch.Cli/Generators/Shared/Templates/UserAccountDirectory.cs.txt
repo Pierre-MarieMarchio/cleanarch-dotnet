@@ -1,6 +1,6 @@
-using %P%.Domain.Core.Common.Primitives;
+using AppTemplate.Domain.Core.Common.Primitives;
 
-namespace %P%.Application.Core.Common.Ports;
+namespace AppTemplate.Application.Core.Common.Ports;
 
 public interface IUserAccountDirectory
 {

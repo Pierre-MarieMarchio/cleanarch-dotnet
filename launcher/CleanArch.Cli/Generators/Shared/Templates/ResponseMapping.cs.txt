@@ -1,50 +1,50 @@
-using %P%.Api.Common.Contracts; //?PagedResponse
-using %P%.Api.Features.%F%.Contracts.Responses;
-using %P%.Application.Core.Common.Concurrency; //?Versioned
-using %P%.Application.Core.Common.Results;
-using %P%.Application.Features.%F%.Model.Dtos;
+using AppTemplate.Api.Common.Contracts; //?PagedResponse
+using AppTemplate.Api.Features.Placeholders.Contracts.Responses;
+using AppTemplate.Application.Core.Common.Concurrency; //?Versioned
+using AppTemplate.Application.Core.Common.Results;
+using AppTemplate.Application.Features.Placeholders.Model.Dtos;
 
-namespace %P%.Api.Features.%F%.Contracts.Mapping;
+namespace AppTemplate.Api.Features.Placeholders.Contracts.Mapping;
 
-internal static class %A%ResponseMapping
+internal static class PlaceholderResponseMapping
 {
-%if dto%
-    public static %A%Response ToResponse(%A%Dto %L%)
+#if dto
+    public static PlaceholderResponse ToResponse(PlaceholderDto placeholder)
     {
-        ArgumentNullException.ThrowIfNull(%L%);
+        ArgumentNullException.ThrowIfNull(placeholder);
 
-%if fields%
-        return new %A%Response(%L%.Id, %FResponseArgs%%L%.CreatedAt, %L%.LastModifiedAt);
-%else%
-        return new %A%Response(%L%.Id, %L%.Name, %L%.Description, %L%.CreatedAt, %L%.LastModifiedAt);
-%end%
+#if fields
+        return new PlaceholderResponse(placeholder.Id, %FResponseArgs%placeholder.CreatedAt, placeholder.LastModifiedAt);
+#else
+        return new PlaceholderResponse(placeholder.Id, placeholder.Name, placeholder.Description, placeholder.CreatedAt, placeholder.LastModifiedAt);
+#endif
     }
 
-%end%
-%if list%
-    public static %A%SummaryResponse ToResponse(%A%SummaryDto summary)
+#endif
+#if list
+    public static PlaceholderSummaryResponse ToResponse(PlaceholderSummaryDto summary)
     {
         ArgumentNullException.ThrowIfNull(summary);
 
-%if fields%
-        return new %A%SummaryResponse(summary.Id, %FSummaryResponseArgs%summary.CreatedAt, summary.LastModifiedAt);
-%else%
-        return new %A%SummaryResponse(summary.Id, summary.Name, summary.CreatedAt, summary.LastModifiedAt);
-%end%
+#if fields
+        return new PlaceholderSummaryResponse(summary.Id, %FSummaryResponseArgs%summary.CreatedAt, summary.LastModifiedAt);
+#else
+        return new PlaceholderSummaryResponse(summary.Id, summary.Name, summary.CreatedAt, summary.LastModifiedAt);
+#endif
     }
 
-    public static Result<PagedResponse<%A%SummaryResponse>> ToPageResponse(
-        Result<PagedResult<%A%SummaryDto>> result) =>
+    public static Result<PagedResponse<PlaceholderSummaryResponse>> ToPageResponse(
+        Result<PagedResult<PlaceholderSummaryDto>> result) =>
         result.Map(value => PagedResponse.From(value, ToResponse));
 
-%end%
-%if dto%
-%if etag%
-    public static Result<%ReadResponse%> To%A%Response(Result<%ReadDto%> result) =>
-        result.Map(value => new Versioned<%A%Response>(ToResponse(value.Value), value.Version));
-%else%
-    public static Result<%ReadResponse%> To%A%Response(Result<%ReadDto%> result) =>
+#endif
+#if dto
+#if etag
+    public static Result<%ReadResponse%> ToPlaceholderResponse(Result<%ReadDto%> result) =>
+        result.Map(value => new Versioned<PlaceholderResponse>(ToResponse(value.Value), value.Version));
+#else
+    public static Result<%ReadResponse%> ToPlaceholderResponse(Result<%ReadDto%> result) =>
         result.Map(ToResponse);
-%end%
-%end%
+#endif
+#endif
 }

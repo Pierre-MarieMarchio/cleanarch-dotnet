@@ -1,26 +1,26 @@
-using %P%.Application.Core.Common.Concurrency;
-using %P%.Application.Core.Common.Ports;
-using %P%.Application.Core.Common.Results;
-using %P%.Application.Features.%F%.Services;
-using %P%.Domain.Features.%F%.Repositories;
+using AppTemplate.Application.Core.Common.Concurrency;
+using AppTemplate.Application.Core.Common.Ports;
+using AppTemplate.Application.Core.Common.Results;
+using AppTemplate.Application.Features.Placeholders.Services;
+using AppTemplate.Domain.Features.Placeholders.Repositories;
 using Mediator;
 
-namespace %P%.Application.Features.%F%.UseCases.Commands.Delete%A%;
+namespace AppTemplate.Application.Features.Placeholders.UseCases.Commands.DeletePlaceholder;
 
-public sealed record Delete%A%Command(Guid %A%Id, VersionPrecondition? Precondition = null) : ICommand<Result>;
+public sealed record DeletePlaceholderCommand(Guid PlaceholderId, VersionPrecondition? Precondition = null) : ICommand<Result>;
 
-public sealed class Delete%A%CommandHandler(
-    I%A%Service service,
-    I%A%Repository repository,
-    IUnitOfWork unitOfWork) : ICommandHandler<Delete%A%Command, Result>
+public sealed class DeletePlaceholderCommandHandler(
+    IPlaceholderService service,
+    IPlaceholderRepository repository,
+    IUnitOfWork unitOfWork) : ICommandHandler<DeletePlaceholderCommand, Result>
 {
     public async ValueTask<Result> Handle(
-        Delete%A%Command command,
+        DeletePlaceholderCommand command,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var loaded = await service.%Load%(command.%A%Id, command.Precondition, cancellationToken);
+        var loaded = await service.%Load%(command.PlaceholderId, command.Precondition, cancellationToken);
 
         if (loaded.IsFailure)
         {

@@ -136,6 +136,15 @@ internal static class Template
 
     private static string RenderCompilableForm(string template, HashSet<string> flags, Dictionary<string, string> tokens)
     {
+        var bare = _preprocessorCondition.Matches(template)
+            .Select(directive => directive.Groups["condition"].Value.Trim())
+            .FirstOrDefault(condition => (condition.Contains("&&") || condition.Contains("||")) && !(condition.StartsWith('(') && condition.EndsWith(')')));
+
+        if (bare is not null)
+        {
+            throw new InvalidOperationException($"'{bare}' joins flags without parentheses around the whole condition.");
+        }
+
         var unknown = _preprocessorCondition.Matches(template)
             .SelectMany(directive => _symbol.Matches(directive.Groups["condition"].Value))
             .FirstOrDefault(symbol => symbol.Value is not ("true" or "false") && !_knownFlags.Contains(symbol.Value));

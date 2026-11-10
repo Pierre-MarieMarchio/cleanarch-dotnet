@@ -1,22 +1,22 @@
 using System.Net;
 using System.Net.Http.Json;
-using %P%.Api.Common.Contracts; //?PagedResponse
-using %P%.Api.Features.%F%.Contracts.Requests;
-using %P%.Api.Features.%F%.Contracts.Responses;
-using %P%.Api.IntegrationTests.Infrastructure;
-using %P%.Application.Core.Common.Collections; //?Cursor
-using %P%.Application.Features.%F%.Model.Policies; //?%A%CollectionPolicy
+using AppTemplate.Api.Common.Contracts; //?PagedResponse
+using AppTemplate.Api.Features.Placeholders.Contracts.Requests;
+using AppTemplate.Api.Features.Placeholders.Contracts.Responses;
+using AppTemplate.Api.IntegrationTests.Infrastructure;
+using AppTemplate.Application.Core.Common.Collections; //?Cursor
+using AppTemplate.Application.Features.Placeholders.Model.Policies; //?PlaceholderCollectionPolicy
 using Shouldly;
 using Xunit;
 
-namespace %P%.Api.IntegrationTests.Features.%F%;
+namespace AppTemplate.Api.IntegrationTests.Features.Placeholders;
 
-public sealed class %A%FieldTests(ApiFixture fixture) : IntegrationTestBase(fixture)
+public sealed class PlaceholderFieldTests(ApiFixture fixture) : IntegrationTestBase(fixture)
 {
     private const string _route = "/api/v1/%R%";
 
     [Fact]
-    public async Task %An%%A%_IsCreatedWithEveryField_AndAnswersThemBack()
+    public async Task %An%Placeholder_IsCreatedWithEveryField_AndAnswersThemBack()
     {
         var (client, _, _) = await SignInAsync();
 
@@ -24,7 +24,7 @@ public sealed class %A%FieldTests(ApiFixture fixture) : IntegrationTestBase(fixt
 
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
 
-        var created = await ApiJson.ReadAsync<%A%Response>(response, TestToken);
+        var created = await ApiJson.ReadAsync<PlaceholderResponse>(response, TestToken);
 
 %FResponseAsserts%
     }
@@ -33,7 +33,7 @@ public sealed class %A%FieldTests(ApiFixture fixture) : IntegrationTestBase(fixt
 
 %FApiRefusal%
 
-%if list%
+#if list
     [Fact]
     public async Task ACursorKey_SentWithANonZeroOffset_ResumesAfterTheSameInstant()
     {
@@ -46,7 +46,7 @@ public sealed class %A%FieldTests(ApiFixture fixture) : IntegrationTestBase(fixt
         Clock.AdjustTime(first.AddDays(1));
         var secondId = await PostedIdAsync(client);
 
-        var term = SortOrder.Parse(%A%CollectionPolicy.CreatedAtField, %A%CollectionPolicy.Instance).Value.Terms[0];
+        var term = SortOrder.Parse(PlaceholderCollectionPolicy.CreatedAtField, PlaceholderCollectionPolicy.Instance).Value.Terms[0];
         string cursor = Cursor.After(term, first.ToOffset(TimeSpan.FromHours(2)).ToString("O"), firstId).Encode();
 
         using var response = await client.GetAsync(
@@ -54,7 +54,7 @@ public sealed class %A%FieldTests(ApiFixture fixture) : IntegrationTestBase(fixt
             TestToken);
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        (await ApiJson.ReadAsync<PagedResponse<%A%SummaryResponse>>(response, TestToken)).Items.Select(item => item.Id).ShouldBe([secondId]);
+        (await ApiJson.ReadAsync<PagedResponse<PlaceholderSummaryResponse>>(response, TestToken)).Items.Select(item => item.Id).ShouldBe([secondId]);
     }
 
     private static async Task<Guid> PostedIdAsync(HttpClient client)
@@ -63,10 +63,10 @@ public sealed class %A%FieldTests(ApiFixture fixture) : IntegrationTestBase(fixt
 
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
 
-        return (await ApiJson.ReadAsync<%A%Response>(response, TestToken)).Id;
+        return (await ApiJson.ReadAsync<PlaceholderResponse>(response, TestToken)).Id;
     }
 
-%end%
+#endif
 
-    private static Create%A%Request AValidRequest() => %FRequestSample%;
+    private static CreatePlaceholderRequest AValidRequest() => %FRequestSample%;
 }

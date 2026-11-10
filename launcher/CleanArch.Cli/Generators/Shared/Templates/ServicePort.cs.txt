@@ -1,46 +1,46 @@
-using %P%.Application.Core.Common.Concurrency; //?Versioned|VersionPrecondition|ConcurrencyErrors
-using %P%.Application.Core.Common.Results;
-using %P%.Application.Features.%F%.Model.Dtos; //?%A%ContentDto|%A%Dto|%A%SummaryDto|%A%ListQueryDto
-using %P%.Application.Features.%F%.Model.Errors; //?%A%Errors
+using AppTemplate.Application.Core.Common.Concurrency; //?Versioned|VersionPrecondition|ConcurrencyErrors
+using AppTemplate.Application.Core.Common.Results;
+using AppTemplate.Application.Features.Placeholders.Model.Dtos; //?PlaceholderContentDto|PlaceholderDto|PlaceholderSummaryDto|PlaceholderListQueryDto
+using AppTemplate.Application.Features.Placeholders.Model.Errors; //?PlaceholderErrors
 
-namespace %P%.Application.Features.%F%.Services;
+namespace AppTemplate.Application.Features.Placeholders.Services;
 
-public interface I%A%Service
+public interface IPlaceholderService
 {
-%if list%
-    Task<Result<PagedResult<%A%SummaryDto>>> ListAsync(
-        %A%ListQueryDto query,
+#if list
+    Task<Result<PagedResult<PlaceholderSummaryDto>>> ListAsync(
+        PlaceholderListQueryDto query,
         CancellationToken cancellationToken = default);
 
-%end%
-%if get%
+#endif
+#if get
     Task<Result<%ReadDto%>> GetAsync(
-        Guid %L%Id,
+        Guid placeholderId,
         CancellationToken cancellationToken = default);
 
-%end%
-%if create%
+#endif
+#if create
     Task<Result<%ReadDto%>> CreateAsync(
-        %A%ContentDto content,
+        PlaceholderContentDto content,
         CancellationToken cancellationToken = default);
 
-%end%
-%if update%
+#endif
+#if update
     Task<Result<%ReadDto%>> UpdateAsync(
-        Guid %L%Id,
-        %A%ContentDto content,
-%if etag%
+        Guid placeholderId,
+        PlaceholderContentDto content,
+#if etag
         VersionPrecondition? precondition,
-%end%
+#endif
         CancellationToken cancellationToken = default);
 
-%end%
-%if delete%
+#endif
+#if delete
     Task<Result> DeleteAsync(
-        Guid %L%Id,
-%if etag%
+        Guid placeholderId,
+#if etag
         VersionPrecondition? precondition,
-%end%
+#endif
         CancellationToken cancellationToken = default);
-%end%
+#endif
 }

@@ -1,26 +1,26 @@
-using %P%.Application.Features.%F%.Model.Policies; //?%A%InputPolicy
+using AppTemplate.Application.Features.Placeholders.Model.Policies; //?PlaceholderInputPolicy
 using FluentValidation;
 
-namespace %P%.Application.Features.%F%.Model.Dtos;
+namespace AppTemplate.Application.Features.Placeholders.Model.Dtos;
 
-public sealed class %A%ContentDtoValidator : AbstractValidator<%A%ContentDto>
+public sealed class PlaceholderContentDtoValidator : AbstractValidator<PlaceholderContentDto>
 {
-    public %A%ContentDtoValidator()
+    public PlaceholderContentDtoValidator()
     {
-%if fields%
+#if fields
 %FRulesContent%
-%else%
+#else
         RuleFor(content => content.Name)
             .Cascade(CascadeMode.Stop)
-            .NotEmpty().WithMessage("%An% %L% name is required.")
+            .NotEmpty().WithMessage("%An% placeholder name is required.")
             .Must(name => name.Trim().Length <= %Limits%.NameMaxLength)
-            .WithMessage($"%An% %L% name cannot exceed {%Limits%.NameMaxLength} characters.");
+            .WithMessage($"%An% placeholder name cannot exceed {%Limits%.NameMaxLength} characters.");
 
         RuleFor(content => content.Description)
             .Cascade(CascadeMode.Stop)
-            .NotNull().WithMessage("%An% %L% description is required; it may be empty.")
+            .NotNull().WithMessage("%An% placeholder description is required; it may be empty.")
             .MaximumLength(%Limits%.DescriptionMaxLength)
-            .WithMessage($"%An% %L% description cannot exceed {%Limits%.DescriptionMaxLength} characters.");
-%end%
+            .WithMessage($"%An% placeholder description cannot exceed {%Limits%.DescriptionMaxLength} characters.");
+#endif
     }
 }

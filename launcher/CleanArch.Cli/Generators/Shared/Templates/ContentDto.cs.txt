@@ -1,8 +1,8 @@
-namespace %P%.Application.Features.%F%.Model.Dtos;
+namespace AppTemplate.Application.Features.Placeholders.Model.Dtos;
 
-%if fields%
-public sealed record %A%ContentDto(
+#if fields
+public sealed record PlaceholderContentDto(
 %FParamList%);
-%else%
-public sealed record %A%ContentDto(string Name, string Description);
-%end%
+#else
+public sealed record PlaceholderContentDto(string Name, string Description);
+#endif

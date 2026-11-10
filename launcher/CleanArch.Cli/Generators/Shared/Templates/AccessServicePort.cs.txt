@@ -1,13 +1,13 @@
-using %P%.Application.Core.Common.Concurrency;
-using %P%.Application.Core.Common.Results;
-using %P%.Domain.Features.%F%.Model.Entities;
+using AppTemplate.Application.Core.Common.Concurrency;
+using AppTemplate.Application.Core.Common.Results;
+using AppTemplate.Domain.Features.Placeholders.Model.Entities;
 
-namespace %P%.Application.Features.%F%.Services;
+namespace AppTemplate.Application.Features.Placeholders.Services;
 
-public interface I%A%Service
+public interface IPlaceholderService
 {
-    Task<Result<%A%>> %Load%(
-        Guid %L%Id,
+    Task<Result<Placeholder>> %Load%(
+        Guid placeholderId,
         VersionPrecondition? precondition,
         CancellationToken cancellationToken = default);
 }
