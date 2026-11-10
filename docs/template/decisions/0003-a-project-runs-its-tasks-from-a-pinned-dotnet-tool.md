@@ -91,16 +91,9 @@ expose one by one.
      command, before or after it, and steps to `verify`; removing a step of `verify` would take a
      project ADR, which the project file names, and a test would refuse the removal without it,
      since `verify` is the gate the CI runs. The project file carries no steps today.
-  2. **Code templates**, planned and not offered yet
-     ([#376](https://github.com/Pierre-MarieMarchio/cleanarch-dotnet/issues/376)):
-     the generators still build their files in C# code, and no `templates copy` command exists. The
-     design: a generator writes the files it creates from a reference feature written as
-     compilable C#, under placeholder names and with the template engine's conditions and name
-     forms, and instantiates it through the template engine; a template of the same path in the
-     project wins; a `templates copy <generator>` command copies the built-in ones and records the
-     hash of each copy's source, so the tool warns when a later version changes a template the
-     project overrides, as `.feature-manifest/` does for a feature. The edits a generator makes to
-     existing files stay the tool's code, outside this depth.
+  2. **Code templates**: a project overrides the text of a file a generator writes, as
+     [template decision 0006](0006-a-project-changes-generated-code-through-code-templates.md)
+     decides.
   3. **Local commands.** A file-based app `tools/<name>.cs` runs as `dotnet cleanarch <name>`. A new
      name adds a command, a built-in name is replaced by it, and `help` says which is which. Only a
      name of lower-case words joined by hyphens is a command, so the scripts named in PascalCase
@@ -111,8 +104,8 @@ expose one by one.
      `help`, `eject` and `adopt` are not ejected, since they say what the project's own commands
      are, make them, and run before the tool knows the project. Nor are `add` and `remove`: they
      run on CleanArch.Tooling, the library they share with the launcher, on Spectre.Console and on
-     Roslyn, none of which a file-based app carries; the code a generator writes is to change
-     through the code templates of the second depth once they exist.
+     Roslyn, none of which a file-based app carries; the code a generator writes changes through
+     the code templates of the second depth.
 - **The template's own tasks and gates stay here.** `tools/CheckComments.cs`,
   `tools/CheckDocPaths.cs`, `tools/CheckWorkflows.cs`, `tools/CheckGitLabCi.cs` and the web lockfiles' task audit this
   repository and the generated trees, and the tool never carries them. This repository runs the tool
@@ -132,10 +125,6 @@ expose one by one.
   from one project to the next, and the CI would run whatever the file says.
 - **Generators as `dotnet new` item templates alone.** An item template writes new files, but it
   cannot edit the registrations, the closed lists and the manifest that a feature joins.
-- **Code templates in Scriban or Liquid.** They are lighter, but their files do not compile, the IDE
-  does not help with them, and the repository would carry a second templating language.
-- **Code kept as strings in the generators**, as the file-based generator kept it. A team could
-  change it only by ejecting the whole command.
 - **A global tool.** Two projects on two template versions would share one version of the
   generators. A local tool pins each project's own.
 - **Team plugins loaded as assemblies.** Loading a team's assemblies into the tool's process brings
