@@ -25,11 +25,13 @@ internal abstract class FileGeneration(GenerationContext context, string feature
         if (ExistingFiles(Root, Emissions) is { } existing)
         {
             problems.Add(existing);
-
-            return false;
+        }
+        else
+        {
+            Editor = Edit(problems);
         }
 
-        Editor = Edit(problems);
+        problems.AddRange(Templates?.Problems ?? []);
 
         return problems.Count == 0;
     }

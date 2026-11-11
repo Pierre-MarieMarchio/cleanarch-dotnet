@@ -26,7 +26,7 @@ public sealed class FeatureFlagsTests
 
     [Fact]
     public void TheGuideToCodeTemplates_ListsEachFlagOfAddSetting_WithItsMeaning_AndNoOther() =>
-        ListsEachFlag("add setting", SettingPlan.Vocabulary);
+        ListsEachFlag("add setting", SettingFlags.Vocabulary);
 
     private static void ListsEachFlag(string generator, FlagSet flags)
     {

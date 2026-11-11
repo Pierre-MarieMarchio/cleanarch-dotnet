@@ -14,14 +14,4 @@ internal static class SourceText
             ? Directory.EnumerateFiles(folder, pattern, SearchOption.AllDirectories)
                 .Where(file => !_generatedFolders.Any(generated => file.Contains($"{Path.DirectorySeparatorChar}{generated}{Path.DirectorySeparatorChar}", StringComparison.Ordinal)))
             : [];
-
-    internal static string Sorted(string source)
-    {
-        string[] lines = source.ReplaceLineEndings("\n").Split('\n');
-        int usings = lines.TakeWhile(line => line.StartsWith("using ", StringComparison.Ordinal)).Count();
-
-        string[] sorted = [.. lines[..usings].Distinct(StringComparer.Ordinal).Order(UsingOrder.Directives)];
-
-        return string.Join('\n', [.. sorted, .. lines[usings..]]).TrimEnd('\n') + "\n";
-    }
 }
