@@ -115,7 +115,15 @@ migrations and the `Add<Field>To<Features>` ones of `add field` alone, each with
 so the model snapshot, the references and every file an edit touched read as they did. The solution
 then builds with warnings as errors and the model holds no pending change. Each removal checks the
 model, builds once and adds its migration, under half a minute once the first build is warm, so the
-four removals and the build after them add about seven minutes to the leg. A web leg also checks its
+four removals and the build after them add about seven minutes to the leg. The defaults leg, which
+sets `code_templates`, runs that round trip from the project's own code templates: after the commit
+generation made, `templates copy` copies those of `add-feature`, `add-field`, `add-use-case`,
+`add-event` and `add-setting`, committed untouched, then the copy of `PlaceholderRecord.cs.txt` takes
+a comment line after its `namespace` line and the copy of `add-feature/report.txt` a last line,
+committed too, and each case starts from that commit. The leg fails when a record `add feature`
+writes lacks the comment, its manifest does not name that copy under `templates`, its report lacks
+the added line or the `Written from this project's code templates:` list, or any generator prints a
+`warning: `, so a generated project's copies are read by the generators it runs. A web leg also checks its
 lockfile, adds a second app and a package with the item templates, scaffolds, runs the workspace's
 install, lint, test and build, fails when an app with a build script has no built page, checks a
 a second scaffold changes nothing, starts the whole stack and asks each app for its page, its
@@ -214,7 +222,8 @@ git for Windows allows by default; their `.gitattributes` keeps them LF whatever
 `core.autocrlf`.
 
 The legs are the entries of `.template.config/acceptance/matrix.json`: the fields the workflow's
-steps read, and the `tags` that name what the leg generates. The two web legs with external
+steps read, and the `tags` that name what the leg generates; `code_templates`, on the defaults leg,
+runs the generator round trip from copies of the code templates. The two web legs with external
 authentication add to their stack's `.env` the provider variables the API needs to start; no
 provider runs in Compose, and the API fetches nothing from the one it names until a token arrives.
 
@@ -1203,6 +1212,7 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | A `report.txt` holding a block, a token the tool's report does not name, a flag of another generator, or an `#if` never closed is refused; one naming a mode flag, a report flag, a flag of its generator and a token of the tool's report is read | `ReportOverrideTests.ACopyOfTheReport_HoldsWhatAReportReads_AndNothingElse` |
 | Each `add` generator warns over a copy of its `report.txt` the tool has changed since, and still writes | `ReportOverrideTests.ACopyOfTheReport_WarnsOnceTheToolChangesIt` |
 | `templates copy add-field` copies the report of `add field`, its one template | `TemplatesCommandTests.CopyOfAddField_WritesItsReport` |
+| A generated project's copies are read by the generators: a copied and edited record and report reach what `add feature` writes and prints, its manifest names the copy, and no generator warns over copies the tool has not changed | the defaults leg of `.github/workflows/template-acceptance.yml`, which sets `code_templates` |
 | The guide lists the mode flags of every report, and the flags and tokens of each generator's report, and no other | `FeatureFlagsTests.TheGuideToCodeTemplates_ListsEachFlagOfEveryReport_WithItsMeaning_AndNoOther`, `FeatureFlagsTests.TheGuideToCodeTemplates_ListsTheFlagsAndTokensOfEachReport_AndNoOther` |
 | The output of `add feature` and `add field` does not change when a template changes its form | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
 | The output of `add setting` does not change when a template changes its form, every type of key, a range from 0, a default at its minimum and a secret checked first included | `NewSettingTests.Output` |
