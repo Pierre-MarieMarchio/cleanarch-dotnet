@@ -21,13 +21,11 @@ internal sealed class FeatureGeneration(FeatureSpec spec, IReadOnlyList<string> 
 
     private Emission? _manifest;
 
-    private readonly TemplateOverrides _templates = Overrides(context.Root);
-
     protected override string Usage => NewFeature.Usage;
 
     protected override bool StopsAtDryRun => true;
 
-    protected override IEnumerable<string> Warnings => TemplateCopies.Stale(Root, _templates);
+    protected override TemplateOverrides Templates { get; } = Overrides(context.Root);
 
     protected override IReadOnlyList<string> EditFailures => _editor.Failures;
 
@@ -52,9 +50,9 @@ internal sealed class FeatureGeneration(FeatureSpec spec, IReadOnlyList<string> 
 
     protected override bool Draft(List<string> problems)
     {
-        _plan = Plan(spec, Root, _templates, out _skipped);
+        _plan = Plan(spec, Root, Templates, out _skipped);
         problems.AddRange(checkedProblems);
-        problems.AddRange(_templates.Problems);
+        problems.AddRange(Templates.Problems);
         problems.AddRange(NewFeature.Conflicts(Root, spec, _plan));
 
         if (problems.Count > 0)
@@ -64,7 +62,7 @@ internal sealed class FeatureGeneration(FeatureSpec spec, IReadOnlyList<string> 
 
         _page = FeaturePage.PageOf(Root, spec, _plan, out _unwritten);
         _editor = FeatureEdits.Edits(Root, spec, _plan);
-        _manifest = ManifestOf(spec, _plan, _page, _editor, version, _templates.Used);
+        _manifest = ManifestOf(spec, _plan, _page, _editor, version, Templates.Used);
 
         return true;
     }
@@ -81,7 +79,6 @@ internal sealed class FeatureGeneration(FeatureSpec spec, IReadOnlyList<string> 
     {
         FeatureReport.Report(Output, Root, spec, _plan, _manifest!.Path, _skipped, mode);
         FeatureReport.ReportPage(Output, spec, _page, _unwritten, mode);
-        _templates.ReportUsed(Output, mode);
 
         if (mode == ReportMode.Applied && _editor.Kept.Count > 0)
         {

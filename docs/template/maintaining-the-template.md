@@ -949,10 +949,13 @@ hashes, edits and the fields `add field` added merged, and written; `CSharpNames
 PascalCase and the C# keywords it must not become once lowered; and `FieldGrammar.cs`, the field
 model with the subset of each field profile; `TemplateOverrides.cs`, which text renders each template
 of one generator in one project; `TemplateCopies.cs`, the record `templates copy` keeps of each copy
-and the copies the tool has changed since; and `Generation.cs`, the run every generator follows,
-whose `Warnings` hook a generator overrides to print, after its draft and whether it writes or
-refuses, a dry run included, each line as `warning: ` on the error output, the exit code unchanged
-and a resumed run printing none. A change to a shared unit is made there once.
+and the copies the tool has changed since; and `Generation.cs`, the run every generator follows.
+A generator that writes from code templates gives that run the overrides it read as its `Templates`;
+the run then warns of each copy the tool has changed since and ends the report with the overrides
+used. Its `Warnings` hook a generator overrides to print more; every warning is printed after the
+draft and whether the run writes or refuses, a dry run included, each line as `warning: ` on the
+error output, the exit code unchanged and a resumed run printing none. A change to a shared unit is
+made there once.
 
 `add setting --keys` reads its own grammar: a key is a bounded configuration value with a default,
 `duration` and `secret` among its types, which no field has; its names follow `CSharpNames`.
@@ -1105,7 +1108,7 @@ ends in Options.cs, so the constant stays a reference name in the template and n
 The keys are the list `key` of `KeyBlocks`, repeated in the order
 `--keys` gives them; the code that differs by a key's type is a token computed by `KeyCode`, since a
 directive is decided once per generation and two blocks selecting by type would reorder the keys.
-Its vocabulary is `SettingPlan.Vocabulary`, listed in the guide as
+Its vocabulary is `SettingFlags.Vocabulary`, listed in the guide as
 [the flags of add setting](../guides/changing-generated-code.md#the-flags-of-add-setting). It reads a
 project's overrides from `code-templates/add-setting` as `add feature` does, refuses a broken one the
 same way, warns through `TemplateCopies.Stale` and lists the overrides it used in its report, but

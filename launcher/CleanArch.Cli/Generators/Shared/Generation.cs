@@ -26,6 +26,8 @@ internal abstract class Generation(GenerationContext context)
 
     protected virtual IEnumerable<string> Warnings => [];
 
+    protected virtual TemplateOverrides? Templates => null;
+
     internal int Generate()
     {
         if (Concluded() is { } concluded)
@@ -64,7 +66,7 @@ internal abstract class Generation(GenerationContext context)
             return refused;
         }
 
-        Report(context.DryRun ? ReportMode.DryRun : ReportMode.Applied);
+        ReportWithTemplates(context.DryRun ? ReportMode.DryRun : ReportMode.Applied);
 
         return context.DryRun ? Succeeded : Finish();
     }
@@ -95,7 +97,7 @@ internal abstract class Generation(GenerationContext context)
 
     protected int RefuseAfterReport(IEnumerable<string> failures, string unwritten)
     {
-        Report(ReportMode.Refused);
+        ReportWithTemplates(ReportMode.Refused);
 
         foreach (string failure in failures)
         {
@@ -132,15 +134,23 @@ internal abstract class Generation(GenerationContext context)
 
     private void WriteWarnings()
     {
-        foreach (string warning in Warnings)
+        IEnumerable<string> stale = Templates is { } templates ? TemplateCopies.Stale(Root, templates) : [];
+
+        foreach (string warning in Warnings.Concat(stale))
         {
             Error.WriteLine($"warning: {warning}");
         }
     }
 
+    private void ReportWithTemplates(ReportMode mode)
+    {
+        Report(mode);
+        Templates?.ReportUsed(Output, mode);
+    }
+
     private int StopAtDryRun()
     {
-        Report(ReportMode.DryRun);
+        ReportWithTemplates(ReportMode.DryRun);
         Output.WriteLine();
         Output.WriteLine("--dry-run: nothing was written and nothing was run.");
 
