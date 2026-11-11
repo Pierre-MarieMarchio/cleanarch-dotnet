@@ -2172,6 +2172,9 @@ public sealed partial class NewFeatureTests
             Refuses(() => Render("namespace N;\nclass %Plural%;\n", get), "'%Plural%' is a token this generation does not set"),
             "A template naming a token the generation does not set was rendered, the token written as code.");
         expect(Render("namespace N;\nclass %A%;\n", get) == "namespace N;\nclass Person;\n", "A token the generation sets was refused, or not replaced.");
+        expect(
+            Render("using MSApp.Domain;\nusing Mediator;\nusing System.Text;\nnamespace N;\n", []) == "using System.Text;\nusing Mediator;\nusing MSApp.Domain;\n\nnamespace N;\n",
+            "A template's usings were not ordered as the tool's edits order them, System first, then ignoring case.");
 
         var fields = FieldBlocks.For(FieldGrammar.Parse("Title:string(120), Size:int, Notes:text?", FieldProfile.Feature, [])!);
         const string arguments = "namespace N;\n    M(\n//#each field separator \",\\n\"\n        %field.Type% %field.Parameter%\n//#end \");\"\n";

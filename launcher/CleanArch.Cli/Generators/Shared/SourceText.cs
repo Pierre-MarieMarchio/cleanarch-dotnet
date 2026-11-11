@@ -20,10 +20,8 @@ internal static class SourceText
         string[] lines = source.ReplaceLineEndings("\n").Split('\n');
         int usings = lines.TakeWhile(line => line.StartsWith("using ", StringComparison.Ordinal)).Count();
 
-        string[] sorted = [.. lines[..usings].Distinct(StringComparer.Ordinal).OrderBy(UsingKey, StringComparer.Ordinal)];
+        string[] sorted = [.. lines[..usings].Distinct(StringComparer.Ordinal).Order(UsingOrder.Directives)];
 
         return string.Join('\n', [.. sorted, .. lines[usings..]]).TrimEnd('\n') + "\n";
     }
-
-    internal static string UsingKey(string line) => (line.StartsWith("using System", StringComparison.Ordinal) ? "0" : "1") + line.TrimEnd(';').ToUpperInvariant();
 }

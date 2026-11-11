@@ -87,12 +87,7 @@ internal static class Template
             }
         }
 
-        string[] sorted =
-        [
-            .. usings.Distinct(StringComparer.Ordinal)
-                .OrderBy(line => !line.StartsWith("using System", StringComparison.Ordinal))
-                .ThenBy(line => line.TrimEnd(';'), StringComparer.Ordinal),
-        ];
+        string[] sorted = [.. usings.Distinct(StringComparer.Ordinal).Order(UsingOrder.Directives)];
 
         return sorted.Length == 0 ? body : string.Join('\n', sorted) + "\n\n" + body;
     }
