@@ -1,0 +1,30 @@
+#if applied
+Added %Added% to Placeholders/Placeholder (%Options%), changing %Count% file(s), each through its syntax tree:
+#else
+Would add %Added% to Placeholders/Placeholder (%Options%), changes %Count% file(s), each through its syntax tree:
+#endif
+%Changes%
+
+#if applied
+Manifest: %Manifest%: the fields join its fields, with each default, its files their new SHA-256, and addedFields the declaration, the migration and each file's change, with its SHA-256 before and after.
+#else
+Manifest: %Manifest%, not written: the fields join its fields, with each default, its files their new SHA-256, and addedFields the declaration, the migration and each file's change, with its SHA-256 before and after.
+#endif
+
+Each field is checked by the validator and by the aggregate or the service, stored in a column of its length or
+precision, and carried by the contracts and the generated tests, as --fields writes it.
+
+%Compatibility%
+#if sorted
+
+The list now sorts by %Sortable% too, each with its index, which the migration creates.
+#endif
+#if !applied
+
+#if dryrun
+Then a run without --dry-run checks that no model change waits for a migration, writes, and runs in this order, stopping at the first that fails:
+#else
+Then, once the changes are made:
+#endif
+%Steps%
+#endif

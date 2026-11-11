@@ -7,61 +7,41 @@ namespace CleanArch.Cli.Generators.AddField;
 
 internal static class FieldReport
 {
-    internal static void Write(TextWriter output, string root, Addition addition, List<FieldChange> changes, ReportMode mode)
+    internal const string TemplateFolder = "add-field";
+
+    internal static FlagSet Shapes { get; } = new(
+        FeatureFlags.Vocabulary.Generator,
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["sorted"] = "The list sorts by a field added: `list` is among the operations, and a field added is sortable.",
+        });
+
+    internal static FlagSet Vocabulary { get; } = ReportFlags.For(FeatureFlags.Vocabulary, Shapes);
+
+    internal static TemplateOverrides Overrides(string root) => TemplateOverrides.Read(root, TemplateFolder, FeatureFlags.Vocabulary, Vocabulary);
+
+    internal static void Write(TextWriter output, TemplateOverrides templates, string root, Addition addition, List<FieldChange> changes, ReportMode mode)
     {
         var spec = addition.After;
-        string verb = mode == ReportMode.Applied ? "Added" : "Would add";
+        var tokens = NameTokens(spec);
+        var flags = Flags(spec);
+        string[] sortable = spec.Has("list") ? [.. addition.Added.Where(FieldCode.IsSortable).Select(field => field.Name)] : [];
 
-        output.WriteLine(
-            $"{verb} {string.Join(", ", addition.Added.Select(field => field.Declared))} to {spec.Features}/{spec.Type} "
-            + $"(access {spec.Access}, model {spec.Model}, operations {string.Join(',', spec.Operations)}, concurrency {spec.Concurrency}"
-            + (spec.Access == "owner" ? $", deletion {spec.Deletion}" : string.Empty) + "), "
-            + $"{(mode == ReportMode.Applied ? "changing" : "changes")} {changes.Count} file(s), each through its syntax tree:");
+        tokens["Added"] = string.Join(", ", addition.Added.Select(field => field.Declared));
+        tokens["Options"] = Described(spec);
+        tokens["Count"] = $"{changes.Count}";
+        tokens["Changes"] = string.Join('\n', changes.SelectMany(change => change.Members.Select(member => $"      {member}").Prepend($"  {change.Path}")));
+        tokens["Manifest"] = ManifestPath(spec);
+        tokens["Compatibility"] = string.Join("\n\n", addition.Added.Select(field => Compatibility(spec, field)));
+        tokens["Sortable"] = string.Join(", ", sortable);
+        tokens["Steps"] = ReportLines.Of(FieldGeneration.FieldSteps(root, addition).Select(step => step.Display));
 
-        foreach (var change in changes)
+        if (sortable.Length > 0)
         {
-            output.WriteLine($"  {change.Path}");
-
-            foreach (string member in change.Members)
-            {
-                output.WriteLine($"      {member}");
-            }
+            flags.Add("sorted");
         }
 
-        output.WriteLine();
-        output.WriteLine(
-            $"Manifest: {ManifestPath(spec)}{(mode == ReportMode.Applied ? string.Empty : ", not written")}: the fields join its fields, with each "
-            + "default, its files their new SHA-256, and addedFields the declaration, the migration and each file's change, "
-            + "with its SHA-256 before and after.");
-
-        output.WriteLine();
-        output.WriteLine("Each field is checked by the validator and by the aggregate or the service, stored in a column of its length or");
-        output.WriteLine("precision, and carried by the contracts and the generated tests, as --fields writes it.");
-
-        foreach (var field in addition.Added)
-        {
-            output.WriteLine();
-            output.WriteLine(Compatibility(spec, field));
-        }
-
-        if (spec.Has("list") && addition.Added.Where(FieldCode.IsSortable).Select(field => field.Name).ToList() is { Count: > 0 } sortable)
-        {
-            output.WriteLine();
-            output.WriteLine($"The list now sorts by {string.Join(", ", sortable)} too, each with its index, which the migration creates.");
-        }
-
-        if (mode != ReportMode.Applied)
-        {
-            output.WriteLine();
-            output.WriteLine(mode == ReportMode.DryRun
-                ? "Then a run without --dry-run checks that no model change waits for a migration, writes, and runs in this order, stopping at the first that fails:"
-                : "Then, once the changes are made:");
-
-            foreach (var step in FieldGeneration.FieldSteps(root, addition))
-            {
-                output.WriteLine($"  {step.Display}");
-            }
-        }
+        templates.WriteReport(output, mode, flags, tokens);
     }
 
     internal static string Compatibility(FeatureSpec spec, Field field)

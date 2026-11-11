@@ -261,6 +261,19 @@ internal static class FeatureCode
         ];
     }
 
+    internal static Dictionary<string, string> NameTokens(FeatureSpec spec)
+    {
+        var tokens = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        NameTokens(tokens, spec);
+
+        return tokens;
+    }
+
+    internal static string Described(FeatureSpec spec) =>
+        $"access {spec.Access}, model {spec.Model}, operations {string.Join(',', spec.Operations)}, concurrency {spec.Concurrency}"
+        + (IsOwner(spec) ? $", deletion {spec.Deletion}" : string.Empty);
+
     private static void NameTokens(Dictionary<string, string> tokens, FeatureSpec spec)
     {
         string lower = CSharpNames.Lower(spec.Type);
