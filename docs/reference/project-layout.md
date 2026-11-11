@@ -262,17 +262,15 @@ accounts.
 Each host's `Features/Auth/` is one host feature over the authentication features: one composition
 entry and one folder to delete for a host without local accounts.
 <!--#endif-->
-<!--#if (canAddFeature)-->
 
 ## Code templates
 
 `code-templates/`, at the root, holds this project's copies of the code templates a generator writes
 from, which `dotnet cleanarch templates copy` writes once and the team edits:
-`code-templates/<generator>/<reference path>.txt`, such as `code-templates/add-feature/` for
-`add feature` and `add field`. `code-templates/manifest.json` beside them is the tool's: it records
-the version and the source of each copy, and nobody edits it.
+`code-templates/<generator>/<reference path>.txt`, such as `code-templates/add-use-case/` for
+`add use-case`. `code-templates/manifest.json` beside them is the tool's: it records the version and
+the source of each copy, and nobody edits it.
 [Changing generated code](../guides/changing-generated-code.md) says how a copy is made and read.
-<!--#endif-->
 
 ## The worked example
 

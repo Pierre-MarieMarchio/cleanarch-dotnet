@@ -85,7 +85,8 @@ dotnet cleanarch remove feature <Features>   # reports; --apply removes it, once
 This project authenticates nobody, so `add feature` refuses it: write a feature by hand from
 [adding a feature](docs/guides/adding-a-feature.md), its page from `docs/_page-templates/feature.md`.
 `dotnet cleanarch add use-case <Features> <UseCase> --kind command|query` then adds an operation to
-it once it has the rich shape, and `--dry-run` shows what it would write.
+it once it has the rich shape, and `--dry-run` shows what it would write. To change the code a
+generator writes: `templates copy`, [the guide](docs/guides/changing-generated-code.md).
 <!--#endif-->
 
 ## Where code goes

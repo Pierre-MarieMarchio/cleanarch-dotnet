@@ -119,7 +119,7 @@ public sealed class CommandContractTests : IDisposable
     }
 
     [Theory]
-    [InlineData("auth none, no presentation", "openapi run end-to-end sonar adopt templates")]
+    [InlineData("auth none, no presentation", "openapi run end-to-end sonar adopt")]
     [InlineData("auth local, blazor presentation, sonar false, client, web", "openapi run end-to-end sonar adopt")]
     [InlineData("auth local, api, sonar true, client", "adopt")]
     [InlineData("auth local, api, sonar true, web", "adopt")]
