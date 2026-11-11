@@ -29,7 +29,8 @@ internal static class NewUseCase
         + "  --dry-run   print the files and the edit, and write and run nothing.\n"
         + "  Where the API serves the feature, it also adds the action to the feature's controller, writes\n"
         + "  the request and response contracts and the route's row, every edit or none, then rewrites the\n"
-        + "  OpenAPI reference and the clients written from it.";
+        + "  OpenAPI reference and the clients written from it. A file comes from the project's copy of its\n"
+        + "  code template, under code-templates/add-use-case, where it has one.";
 
     private static readonly string[] _reservedNames =
     [

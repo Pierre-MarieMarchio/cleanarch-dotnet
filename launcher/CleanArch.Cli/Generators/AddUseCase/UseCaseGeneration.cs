@@ -8,6 +8,8 @@ internal sealed class UseCaseGeneration(UseCaseSpec spec, GenerationContext cont
 
     private readonly List<(string Path, byte[] Original, byte[] Bytes)> _replaced = [];
 
+    private readonly TemplateOverrides _templates = UseCasePlan.Overrides(context.Root);
+
     private List<Emission> _plan = [];
 
     private List<Emission> _contracts = [];
@@ -18,6 +20,8 @@ internal sealed class UseCaseGeneration(UseCaseSpec spec, GenerationContext cont
 
     protected override bool StopsAtDryRun => true;
 
+    protected override IEnumerable<string> Warnings => TemplateCopies.Stale(Root, _templates);
+
     protected override IReadOnlyList<string> EditFailures => _editor.Failures;
 
     protected override IReadOnlyList<(string Path, byte[] Bytes)> Created => [.. _plan.Concat(_contracts).Select(emission => (emission.Path, emission.Bytes()))];
@@ -26,9 +30,10 @@ internal sealed class UseCaseGeneration(UseCaseSpec spec, GenerationContext cont
 
     protected override bool Draft(List<string> problems)
     {
-        _plan = UseCasePlan.Plan(spec, Root, out _skipped);
-        _contracts = UseCasePlan.Contracts(spec, Root);
+        _plan = UseCasePlan.Plan(spec, Root, _templates, out _skipped);
+        _contracts = UseCasePlan.Contracts(spec, Root, _templates);
         UseCaseHttp.Http(_editor, Root, spec);
+        problems.AddRange(_templates.Problems);
 
         if (ExistingFiles(Root, _plan.Concat(_contracts)) is { } existing)
         {
@@ -53,7 +58,11 @@ internal sealed class UseCaseGeneration(UseCaseSpec spec, GenerationContext cont
         return true;
     }
 
-    protected override void Report(ReportMode mode) => UseCaseReport.Write(Output, Root, spec, _plan, _contracts, _skipped, mode);
+    protected override void Report(ReportMode mode)
+    {
+        UseCaseReport.Write(Output, Root, spec, _plan, _contracts, _skipped, mode);
+        _templates.ReportUsed(Output, mode);
+    }
 
     protected override int Finish() =>
         _contracts.Count == 0 && _editor.Applied.Count == 0

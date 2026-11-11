@@ -22,7 +22,7 @@ internal sealed class TemplateOverrides
 
     internal string Generator => _generator;
 
-    private string Spoken => _generator.Replace('-', ' ');
+    private string Spoken => ToolTemplates.Spoken(_generator);
 
     internal IReadOnlyList<UsedTemplate> Used => [.. _used.Select(used => new UsedTemplate(used.Key, used.Value))];
 
