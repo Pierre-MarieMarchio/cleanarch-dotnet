@@ -17,6 +17,8 @@ internal sealed class UseCasePlan
 
     private readonly string _root;
 
+    private readonly TemplateOverrides _templates;
+
     private readonly HashSet<string> _flags;
 
     private readonly Dictionary<string, string> _tokens;
@@ -29,10 +31,11 @@ internal sealed class UseCasePlan
 
     private readonly string _useCase;
 
-    private UseCasePlan(UseCaseSpec spec, string root)
+    private UseCasePlan(UseCaseSpec spec, string root, TemplateOverrides templates)
     {
         _spec = spec;
         _root = root;
+        _templates = templates;
         _flags = UseCaseFlags.Of(spec);
         _tokens = Tokens(spec);
         _parameters = ParameterBlocks.For(spec);
@@ -41,11 +44,13 @@ internal sealed class UseCasePlan
         _useCase = $"UseCases/{spec.Folder}/{_name}";
     }
 
-    internal static List<Emission> Plan(UseCaseSpec spec, string root, out string? skippedTests) =>
-        new UseCasePlan(spec, root).Application(out skippedTests);
+    internal static TemplateOverrides Overrides(string root) => TemplateOverrides.Read(root, NewUseCase.TemplateFolder, UseCaseFlags.Vocabulary);
 
-    internal static List<Emission> Contracts(UseCaseSpec spec, string root) =>
-        Directory.Exists(Full(root, UseCaseHttp.ApiFolder(spec))) ? new UseCasePlan(spec, root).Api() : [];
+    internal static List<Emission> Plan(UseCaseSpec spec, string root, TemplateOverrides templates, out string? skippedTests) =>
+        new UseCasePlan(spec, root, templates).Application(out skippedTests);
+
+    internal static List<Emission> Contracts(UseCaseSpec spec, string root, TemplateOverrides templates) =>
+        Directory.Exists(Full(root, UseCaseHttp.ApiFolder(spec))) ? new UseCasePlan(spec, root, templates).Api() : [];
 
     private static Dictionary<string, string> Tokens(UseCaseSpec spec)
     {
@@ -127,7 +132,5 @@ internal sealed class UseCasePlan
     ];
 
     private Emission Render(string reference) =>
-        new(
-            PathOf(_spec.Prefix, reference, _tokens),
-            Template.Render(ToolTemplates.Of(NewUseCase.TemplateFolder)[reference], UseCaseFlags.Vocabulary, _flags, _tokens, _parameters));
+        new(PathOf(_spec.Prefix, reference, _tokens), _templates.Render(reference, _flags, _tokens, _parameters));
 }

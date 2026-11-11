@@ -17,6 +17,8 @@ internal static class ToolTemplates
 
     internal static string PathOf(string generator, string reference) => $"{Folder}/{generator}/{reference}{Extension}";
 
+    internal static string Spoken(string generator) => string.Join(' ', generator.Split('-', 2));
+
     internal static string Digest(string text) => FeatureManifest.Sha256(Encoding.UTF8.GetBytes(Normalize(text)));
 
     internal static string Normalize(string text)

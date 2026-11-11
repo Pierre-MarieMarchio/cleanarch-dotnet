@@ -205,6 +205,12 @@ tests only with a rule, the handler's test only where the application's tests ho
 `ValidatedHandler` double, the DTO unless the feature declares it, the contracts only where the API
 serves the feature. The controller's action and the route's row are edits, which no template writes.
 
+A copy of one lies at `code-templates/add-use-case/<reference path>.txt`, and `add use-case` writes
+that file from it as `add feature` does: it reads every copy before writing anything, refuses a
+broken one as [below](#refusals), and lists the copies it wrote from under `Written from this
+project's code templates:`. The feature's manifest records the files it wrote, never the copies:
+only `add field` reads them back.
+
 ### Reference names of add use-case
 
 `ApprovePlaceholder` and `GetPlaceholderTotals` become the use case's name, `PlaceholderTotals` the
@@ -251,13 +257,13 @@ A block of `add use-case` repeats over `parameter`, the values the message carri
 `add feature` and `add field` read every copy before writing anything, and refuse, writing nothing,
 with a message that starts with the copy's path, and the line's number where there is one:
 
-- a file under `code-templates/add-feature` whose path names no template of `add feature`; a file
+- a file under `code-templates/<generator>` whose path names no template of that generator; a file
   whose name starts with a dot is not read;
 - a condition naming a flag outside the table, empty, left dangling or unbalanced;
 - an `#elif`, `#else` or `#endif` without its `#if`, an `#if` never closed, text after `#else` or
   `#endif`;
-- a block over another list than `field`, naming an unknown token or trait, left open, or a
-  `%field.<Token>%` outside any block;
+- a block over another list than the generator's, `field` or `parameter`, naming an unknown token
+  or trait, left open, or a `%field.<Token>%` or `%parameter.<Token>%` outside any block;
 - a `%Token%` the generation does not set.
 
 Fix the copy, or delete it, and run the same command again.
