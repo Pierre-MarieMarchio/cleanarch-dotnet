@@ -33,10 +33,10 @@ live on, and the gate the template proves was no longer the one the project ran.
   ([adding a leg](../maintaining-the-template.md#adding-a-leg)). The contract is in
   [code hosts](../maintaining-the-template.md#code-hosts).
 - **The values.** `github`, the default, whose output is unchanged. `none`, which writes no host file
-  at all: no workflow, no Dependabot, no issue form, no pull request template. `gitlab` is offered
-  once its overlay is complete: a pipeline holding the same gate, merge request and issue templates,
-  Renovate in place of Dependabot, and GitLab's SAST in place of CodeQL. While it is unfinished the
-  value stays out of the choices, so no project is generated without it.
+  at all: no workflow, no Dependabot, no issue form, no pull request template. `gitlab`: a pipeline
+  holding the same gate, merge request and issue templates, Renovate in place of Dependabot, and
+  GitLab's SAST in place of CodeQL. A host whose overlay is unfinished stays out of the choices, so
+  no project is generated without it.
 - **`--ci` keeps its meaning for the chosen host**: that host's pipelines. Under `none` there is
   none to write, so the launcher does not ask it and `cleanarch.json` records `"ci": false`.
 - **The only unpinned includes a GitLab pipeline may carry are GitLab's own SAST and Secret
@@ -73,9 +73,11 @@ live on, and the gate the template proves was no longer the one the project ran.
 - Each host's files evolve together: a step added to one host's gate is added to every other's, and
   `TemplatePackagingTests.AGitLabProject_RunsEveryCommandOfTheGitHubGate` pairs the gate jobs of
   `ci.yml` with GitLab's.
-- A GitLab pipeline is never run by the template's own CI, which runs on GitHub. Its schema, the
-  template gate and a local runner stand in, and a first run on GitLab.com proves it before the value
-  is offered.
+- A GitLab pipeline is never run by the template's own CI, which runs on GitHub. GitLab's schema,
+  the template gate and `gitlab-ci-local` prove it on every pull request that changes it; a GitLab CE
+  instance with a runner, started by hand, proves its rules, templates and release jobs. What only
+  GitLab.com can prove, the push to its registry and the keyless signature its OIDC issuer allows, is
+  proved by a project's first tag there.
 - A host's free tier sets limits the project inherits: GitLab's SAST runs on every tier, but its
   merge request widget is Ultimate's.
 - A project cannot move host by editing a setting: it moves by generating again with the other value

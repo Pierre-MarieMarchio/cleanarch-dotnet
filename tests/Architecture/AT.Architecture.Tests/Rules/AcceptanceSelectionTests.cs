@@ -208,7 +208,10 @@ public sealed class AcceptanceSelectionTests
             .Where(folder => Directory.Exists(Path.Combine(folder, "src", "Presentation"))
                 && Directory.EnumerateFiles(Path.Combine(folder, "src", "Presentation"), "scaffold.json", SearchOption.AllDirectories).Any())
             .Select(folder => Path.GetFileName(folder))];
+        string[] codeHosts = [.. Directory.GetDirectories(Path.Combine(TemplateConfig, "variants"), "code-host-*")
+            .Select(folder => Path.GetFileName(folder)["code-host-".Length..])];
 
+        codeHosts.ShouldContain("gitlab", "GitLab's overlay was not found under .template.config/variants.");
         webStarters.ShouldContain("angular", "No web starter was found under .template.config/starters.");
         presentationStarters.ShouldContain("avalonia", "No presentation starter was found under .template.config/starters.");
         presentationStarters.ShouldContain("worker", "The worker's starter, a --presentation value, was not found under .template.config/starters.");
@@ -216,7 +219,7 @@ public sealed class AcceptanceSelectionTests
         foreach (var leg in Legs())
         {
             leg.Tags.Order(StringComparer.Ordinal).ShouldBe(
-                ChosenTags(leg.Entry, webStarters, presentationStarters).Order(StringComparer.Ordinal),
+                ChosenTags(leg.Entry, webStarters, presentationStarters, codeHosts).Order(StringComparer.Ordinal),
                 $"The tags of '{leg.Name}' in matrix.json are not the ones its options choose, so a change to what it generates would skip it.");
         }
     }
@@ -238,7 +241,7 @@ public sealed class AcceptanceSelectionTests
             "items of .template.config/TemplatePackage.csproj, or give it the tags of the legs that read it.");
     }
 
-    private static List<string> ChosenTags(JsonObject leg, string[] webStarters, string[] presentationStarters)
+    private static List<string> ChosenTags(JsonObject leg, string[] webStarters, string[] presentationStarters, string[] codeHosts)
     {
         string? Field(string name) => leg[name]?.GetValue<string>();
         string[] options = Words(Field("options"));
@@ -278,6 +281,8 @@ public sealed class AcceptanceSelectionTests
                 || (starter == "blazor-wasm" && Field("wasm_app") is not null))
             .Select(starter => $"starter-{starter}"));
 
+        tags.AddRange(codeHosts.Where(host => Chooses(options, "--code-host", host)).Select(host => $"code-host-{host}"));
+
         if (options.Length == 0 && tags.Count == 0)
         {
             tags.Add("defaults");
@@ -302,7 +307,7 @@ public sealed class AcceptanceSelectionTests
         var leg = JsonNode.Parse(
             """
             {
-              "options": "--presentation worker --web react",
+              "options": "--presentation worker --web react --code-host gitlab",
               "database": "sqlite",
               "web": "true",
               "first_presentation": "--framework avalonia",
@@ -310,10 +315,11 @@ public sealed class AcceptanceSelectionTests
             }
             """)!.AsObject();
 
-        ChosenTags(leg, ["react", "angular", "vue"], ["worker", "avalonia", "wpf"])
+        ChosenTags(leg, ["react", "angular", "vue"], ["worker", "avalonia", "wpf"], ["gitlab"])
             .Order(StringComparer.Ordinal)
             .ShouldBe(
                 [
+                    "code-host-gitlab",
                     "database-sqlite",
                     "presentation-avalonia",
                     "presentation-item",
@@ -323,8 +329,8 @@ public sealed class AcceptanceSelectionTests
                     "web",
                 ]);
 
-        ChosenTags(JsonNode.Parse("{}")!.AsObject(), ["react"], ["worker"]).ShouldBe(["defaults"]);
-        ChosenTags(JsonNode.Parse("""{ "database": "sqlite" }""")!.AsObject(), ["react"], ["worker"]).ShouldBe(["database-sqlite"]);
+        ChosenTags(JsonNode.Parse("{}")!.AsObject(), ["react"], ["worker"], ["gitlab"]).ShouldBe(["defaults"]);
+        ChosenTags(JsonNode.Parse("""{ "database": "sqlite" }""")!.AsObject(), ["react"], ["worker"], ["gitlab"]).ShouldBe(["database-sqlite"]);
     }
 
     [Fact]

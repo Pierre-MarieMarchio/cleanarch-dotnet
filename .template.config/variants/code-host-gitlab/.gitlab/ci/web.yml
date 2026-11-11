@@ -1,0 +1,100 @@
+# Node.js from its release archive, at the version src/Web/.node-version names, checked against its published SHA-256: bump the two with that file; pnpm from corepack, at the version and hash packageManager names in src/Web/package.json, as the web images get it.
+.node:
+  before_script:
+    - |
+      node=v26.13.0
+      node_sha256=5848553868b402d3fabb5b09270649977780a390f832155721025a08b5104455
+      curl -sSfL --retry 3 --retry-delay 2 -o /tmp/node.tar.gz "https://nodejs.org/dist/${node}/node-${node}-linux-x64.tar.gz"
+      echo "${node_sha256}  /tmp/node.tar.gz" | sha256sum --check --strict -
+      tar -xzf /tmp/node.tar.gz -C /usr/local --strip-components 1 --no-same-owner
+      npm install --global corepack@0.36.0
+      corepack enable
+      export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+      node --version
+      (cd src/Web && pnpm --version)
+
+web:
+  extends:
+    - .gate
+    - .dotnet
+    - .node
+  stage: test
+  timeout: 20 minutes
+  script:
+    - cd src/Web
+    - pnpm install --frozen-lockfile
+    # Any advisory fails, whatever its severity, as NuGetAudit does for the .NET packages.
+    - pnpm audit
+    - pnpm lint
+    - pnpm test
+    - pnpm build
+    # pnpm api asks dotnet cleanarch for the OpenAPI reference.
+    - dotnet tool restore
+    - |
+      pnpm api
+      if ! git diff --exit-code -- packages/api-client/src/generated; then
+        echo "Stale API client: the API changed since packages/api-client was generated. Run pnpm api in src/Web and commit the result."
+        exit 1
+      fi
+
+# Every folder under src/Web/apps holding a Dockerfile and a package.json is an app with its own image, built here one after the other, since a pipeline cannot fan a job out over the folders it finds; one still holding scaffold.json waits for web-scaffold.
+web-image:
+  extends:
+    - .gate
+    - .docker
+  image: docker:29.9.3-cli@sha256:2357639ad1ea7d0194134bf3292622fd4e562483966ed674e5d7c945b5f3b28d
+  stage: test
+  timeout: 40 minutes
+  script:
+    - |
+      apps=$(find src/Web/apps -mindepth 2 -maxdepth 2 -name Dockerfile | while read -r dockerfile; do app=$(dirname "$dockerfile"); if [ -f "$app/package.json" ]; then basename "$app"; fi; done | sort)
+      if [ -z "$apps" ]; then
+        echo "No web app: src/Web/apps holds no app with a Dockerfile and a package.json: run dotnet cleanarch bootstrap, or dotnet cleanarch add web-app --name <App> for one app, and commit the app it creates."
+        exit 1
+      fi
+      echo "Web apps:" $apps
+    # Each app is built and judged even when another fails; Docker refuses an image name with capitals, and an app's folder is PascalCase.
+    - |
+      failed=""
+      for app in $apps; do
+        image="web-$(echo "$app" | tr '[:upper:]' '[:lower:]'):ci-$CI_COMMIT_SHA"
+        if ! docker build --platform linux/amd64 --file "src/Web/apps/$app/Dockerfile" --tag "$image" src/Web; then
+          failed="$failed $app"
+          continue
+        fi
+        user=$(docker image inspect "$image" --format '{{.Config.User}}')
+        ports=$(docker image inspect "$image" --format '{{range $p, $_ := .Config.ExposedPorts}}{{$p}} {{end}}')
+        echo "$app: image USER = '${user}', exposed = '${ports}'"
+        if [ -z "$user" ] || [ "$user" = "root" ] || [ "$user" = "0" ]; then
+          echo "$app: image runs as root: expected a non-root USER."
+          failed="$failed $app"
+        elif [ "$(echo $ports | tr -d ' ')" != "8080/tcp" ]; then
+          echo "$app: unexpected exposed ports: a web image exposes 8080/tcp only."
+          failed="$failed $app"
+        fi
+      done
+      if [ -n "$failed" ]; then
+        echo "Failed:$failed"
+        exit 1
+      fi
+
+# The browser smoke that closes the task drives every web app in Chromium: the workspace is installed for it, and the browser is cached by the manifest that pins the Playwright release.
+end-to-end:
+  variables:
+    PLAYWRIGHT_BROWSERS_PATH: $CI_PROJECT_DIR/.cache/ms-playwright
+  cache:
+    - key:
+        files:
+          - src/Web/packages/browser-smoke/package.json
+        prefix: playwright
+      paths:
+        - .cache/ms-playwright
+  before_script:
+    - !reference [.docker-client, before_script]
+    - !reference [.node, before_script]
+    - cd src/Web
+    - pnpm install --frozen-lockfile
+    - pnpm --filter '*browser-smoke' exec playwright --version
+    # Runs on a cache hit too, for the system libraries, and downloads nothing the cache holds.
+    - pnpm --filter '*browser-smoke' exec playwright install --only-shell --with-deps chromium
+    - cd "$CI_PROJECT_DIR"

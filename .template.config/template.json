@@ -267,6 +267,10 @@
           "description": "GitHub: the .github folder, with Dependabot, the issue forms, the pull request template and, with --ci true, the GitHub Actions workflows."
         },
         {
+          "choice": "gitlab",
+          "description": "GitLab: the .gitlab folder, with Renovate, the issue and merge request templates and, with --ci true, the GitLab CI/CD pipeline .gitlab-ci.yml."
+        },
+        {
           "choice": "none",
           "description": "No code host: no .github folder, no pipeline and no dependency updates; --ci has nothing to write."
         }
@@ -290,7 +294,7 @@
       "displayName": "CI pipelines",
       "datatype": "bool",
       "defaultValue": "true",
-      "description": "Include the chosen code host's pipelines that build, test, scan and release the solution: on GitHub, the Actions workflows ci.yml, codeql.yml and release.yml, with web.yml and web-node-version.yml with a web app. Without a code host there is none to write."
+      "description": "Include the chosen code host's pipelines that build, test, scan and release the solution: on GitHub, the Actions workflows ci.yml, codeql.yml and release.yml, with web.yml and web-node-version.yml with a web app; on GitLab, .gitlab-ci.yml, with .gitlab/ci/release.yml with a server database and .gitlab/ci/web.yml with a web app. Without a code host there is none to write."
     },
     "githubCi": {
       "type": "computed",
@@ -301,7 +305,7 @@
       "displayName": "Sonar analysis",
       "datatype": "bool",
       "defaultValue": "true",
-      "description": "Include the Sonar analysis: the local SonarQube compose profile, its scanner image and task, and the SonarQube Cloud workflow with the GitHub Actions workflows (--code-host github, --ci true)."
+      "description": "Include the Sonar analysis: the local SonarQube compose profile, its scanner image and task, and the SonarQube Cloud analysis in the code host's pipelines (--ci true)."
     },
     "sonarWorkflow": {
       "type": "computed",
@@ -1312,6 +1316,10 @@
             "value": "\"codeHost\": \"none\""
           },
           {
+            "condition": "(codeHost == \"gitlab\")",
+            "value": "\"codeHost\": \"gitlab\""
+          },
+          {
             "condition": "(true)",
             "value": "\"codeHost\": \"github\""
           }
@@ -1855,6 +1863,7 @@
             "tests/Architecture/AT.Architecture.Tests/Rules/ConditionedUsingTests.cs",
             "tests/Architecture/AT.Architecture.Tests/Rules/ConditionedMarkdownTests.cs",
             "tests/Architecture/AT.Architecture.Tests/Rules/AgentFileLengthTests.cs",
+            "tests/Architecture/AT.Architecture.Tests/Rules/RenovateParityTests.cs",
             "tests/Architecture/AT.Architecture.Tests/Fixtures/TemplateForms.cs"
           ]
         },
@@ -2055,7 +2064,8 @@
           "condition": "(!gitlabHost)",
           "exclude": [
             "tests/Architecture/AT.Architecture.Tests/Rules/IssueTemplateTests.cs",
-            "tests/Architecture/AT.Architecture.Tests/Rules/MergeRequestTemplateTests.cs"
+            "tests/Architecture/AT.Architecture.Tests/Rules/MergeRequestTemplateTests.cs",
+            "tests/Architecture/AT.Architecture.Tests/Rules/RenovateConfigurationTests.cs"
           ]
         },
         {
@@ -2189,7 +2199,20 @@
         {
           "condition": "(!gitlabCi)",
           "exclude": [
-            ".gitlab-ci.yml"
+            ".gitlab-ci.yml",
+            ".gitlab/ci/**"
+          ]
+        },
+        {
+          "condition": "(!anyWeb)",
+          "exclude": [
+            ".gitlab/ci/web.yml"
+          ]
+        },
+        {
+          "condition": "(!serverDatabase)",
+          "exclude": [
+            ".gitlab/ci/release.yml"
           ]
         }
       ]

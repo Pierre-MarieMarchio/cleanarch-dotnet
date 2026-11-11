@@ -15,7 +15,7 @@ The package holds four templates:
 
 | Template | Generates |
 |---|---|
-| `cleanarch-webapi` | the solution: four layers held by architecture tests, EF Core on PostgreSQL, SQL Server or SQLite, local, external or no authentication, Files, jobs, mail, CI and documentation |
+| `cleanarch-webapi` | the solution: four layers held by architecture tests, EF Core on PostgreSQL, SQL Server or SQLite, local, external or no authentication, Files, jobs, mail, CI on GitHub or GitLab, and documentation |
 | `cleanarch-webapp` | a web app in the project's pnpm workspace |
 | `cleanarch-webpackage` | a package in that workspace |
 | `cleanarch-presentation` | a presentation project in a solution generated without one |

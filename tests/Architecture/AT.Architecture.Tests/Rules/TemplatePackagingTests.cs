@@ -752,8 +752,40 @@ public sealed class TemplatePackagingTests
 
     private static Dictionary<string, List<string>> GateCommands(string[] lines, Func<string, string?> jobOf)
     {
+        var kept = Kept(lines, out var templateOnly);
+        var commands = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        List<string>? current = null;
+
+        for (int index = 0; index < kept.Count; index++)
+        {
+            if (jobOf(kept[index]) is { } job)
+            {
+                current = commands[job] = [];
+                continue;
+            }
+
+            if (current is null || _dotnetCommand.Match(kept[index].Trim()) is not { Success: true } match)
+            {
+                continue;
+            }
+
+            string command = match.Groups["command"].Value;
+            while (command.EndsWith('\\') && index + 1 < kept.Count)
+            {
+                command = command[..^1] + " " + kept[++index].Trim();
+            }
+
+            current.Add(string.Join(' ', _whitespace.Split(command.Trim())
+                .Where(word => !templateOnly.Any(name => word == $"${{{name}}}" || word == $"${name}"))));
+        }
+
+        return commands;
+    }
+
+    private static List<string> Kept(string[] lines, out HashSet<string> templateOnly)
+    {
         var kept = new List<string>();
-        var templateOnly = new HashSet<string>(StringComparer.Ordinal);
+        templateOnly = new HashSet<string>(StringComparer.Ordinal);
         var branches = new Stack<(bool TemplateOnly, bool Kept)>();
 
         foreach (string line in lines)
@@ -788,33 +820,701 @@ public sealed class TemplatePackagingTests
             }
         }
 
-        var commands = new Dictionary<string, List<string>>(StringComparer.Ordinal);
-        List<string>? current = null;
+        return kept;
+    }
 
-        for (int index = 0; index < kept.Count; index++)
+    private static readonly (string Workflow, string Job, string GitLabJob)[] _pairedJobs =
+    [
+        ("ci.yml", "docker", "docker"),
+        ("ci.yml", "load", "load"),
+        ("ci.yml", "end-to-end", "end-to-end"),
+        ("ci.yml", "compose", "compose"),
+        ("web.yml", "web", "web"),
+        ("web.yml", "web-apps", "web-image"),
+        ("web.yml", "web-image", "web-image"),
+        ("release.yml", "verify", "verify"),
+        ("release.yml", "migration-bundle", "migration-bundle"),
+        ("release.yml", "image", "container-image"),
+    ];
+
+    private static readonly string[] _pairedPrograms = ["dotnet", "docker", "pnpm", "k6", "curl", "sha256sum", "cp", "git", "find", "cosign"];
+
+    private static readonly string[] _metadataLabels = ["created", "description", "revision", "source", "title", "url", "version"];
+
+    private static readonly string[] _shellKeywords = ["if", "then", "else", "elif", "do", "while", "until", "!"];
+
+    private static readonly string[] _findActions = ["-printf", "-print", "-print0", "-exec", "-delete"];
+
+    private static readonly Regex _gitLabKey = new(@"^(?<name>\.?[A-Za-z][\w-]*):\s*$", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _stepStart = new(@"^      - (?<rest>.*)$", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _stepKey = new(@"^ {8}(?<key>[\w-]+):\s*(?<value>.*)$", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _withKey = new(@"^ {10}(?<key>[\w-]+):\s*(?<value>.*)$", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _matrixEntry = new(@"^ {10}(?:- |  )?(?<key>[\w-]+):\s*(?<value>\S.*)$", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _tagGlob = new(@"^ {6}- ""(?<glob>[^""]+)""\s*$", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _jobKey = new(@"^    (?<key>[\w-]+):\s*(?<value>.*)$", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _expression = new(@"\$\{\{.*?\}\}", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _literalAssignment = new(@"^[A-Za-z_]\w*=(?!.*\$\()\S.*$", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _extendsInline = new(@"^  extends:\s*(?<parent>\.?[\w-]+)\s*$", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _extendsItem = new(@"^    - (?<parent>\.[\w-]+)\s*$", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private static readonly Regex _reference = new(@"!reference\s*\[\s*(?<job>[^,\]\s]+)", RegexOptions.None, TimeSpan.FromSeconds(5));
+
+    private sealed class WorkflowStep
+    {
+        public string? Uses { get; set; }
+
+        public Dictionary<string, string> With { get; } = new(StringComparer.Ordinal);
+
+        public List<string> Run { get; } = [];
+    }
+
+    [Fact]
+    public void AGitLabProject_RunsEveryCommandOfTheGitHubStackWebAndReleaseJobs()
+    {
+        string root = ProjectReferenceGraph.RepositoryRoot;
+        string overlay = Path.Combine(root, ".template.config", "variants", "code-host-gitlab");
+        string[] pipelineFiles = [Path.Combine(overlay, ".gitlab-ci.yml"), .. Directory.EnumerateFiles(Path.Combine(overlay, ".gitlab", "ci"), "*.yml").Order(StringComparer.Ordinal)];
+        var gitlab = GitLabJobs(pipelineFiles);
+        var missing = new List<string>();
+
+        foreach (var (workflow, job, gitlabJob) in _pairedJobs)
         {
-            if (jobOf(kept[index]) is { } job)
+            var kept = Kept(File.ReadAllLines(Path.Combine(root, ".github", "workflows", workflow)), out var templateOnly);
+            var (steps, settings, matrix) = WorkflowJob(kept, job);
+            steps.Count.ShouldBeGreaterThan(1, $"Far fewer steps were read from {workflow}'s {job} job than it runs.");
+            gitlab.ContainsKey(gitlabJob).ShouldBeTrue($"The GitLab pipeline has no {gitlabJob} job, which pairs with {workflow}'s {job}.");
+
+            string[] lines = [.. ResolvedJob(gitlab, gitlabJob, [])];
+            var counterparts = LogicalLines(lines.Select(UnlistedLine).Select(OnTheRunnersHost)).SelectMany(ShellCommands).ToList();
+            var commands = steps
+                .SelectMany(step => LogicalLines(step.Run.Select(line => WithoutTemplateOnly(line, templateOnly))))
+                .SelectMany(ShellCommands)
+                .ToList();
+            (commands.Count + steps.Count(step => step.Uses is not null && !step.Uses.StartsWith("actions/checkout@", StringComparison.Ordinal)))
+                .ShouldBeGreaterThan(0, $"No command and no action was read from {workflow}'s {job} job.");
+
+            missing.AddRange(commands
+                .Where(command => !counterparts.Any(candidate => PairsWith(command, candidate)))
+                .Select(command => $"{gitlabJob} lacks `{string.Join(' ', command)}` of {workflow}'s {job}"));
+            missing.AddRange(steps
+                .SelectMany(step => step.Run.Select(line => line.Trim()))
+                .Where(line => _literalAssignment.IsMatch(line) && !line.Contains("${{", StringComparison.Ordinal))
+                .Where(assignment => !lines.Any(line => UnlistedLine(line).Trim() == assignment))
+                .Select(assignment => $"{gitlabJob} lacks `{assignment}` of {workflow}'s {job}"));
+            missing.AddRange(steps
+                .Where(step => step.Uses is not null)
+                .Select(step => ActionCounterpart(root, step, steps, lines))
+                .OfType<string>()
+                .Select(problem => $"{gitlabJob}, for {workflow}'s {job}: {problem}"));
+
+            if (commands.Any(command => command is ["docker", "compose", "up", ..] or ["dotnet", "cleanarch", "end-to-end"])
+                && !(lines.Any(line => line.Trim() == "STACK_PUBLISH_ADDRESS: 0.0.0.0") && lines.Any(line => line.Trim().StartsWith("STACK_HOST: ", StringComparison.Ordinal))))
             {
-                current = commands[job] = [];
+                missing.Add($"{gitlabJob} starts the stack on a daemon in another container without STACK_PUBLISH_ADDRESS: 0.0.0.0 and the STACK_HOST it is reached on");
+            }
+
+            missing.AddRange(matrix
+                .Where(entry => !lines.Any(line => UnlistedLine(line).Trim() == $"{entry.Key.ToUpperInvariant()}: {entry.Value}"))
+                .Select(entry => $"{gitlabJob} has no matrix entry {entry.Key.ToUpperInvariant()}: {entry.Value}, as {workflow}'s {job} has {entry.Key}: {entry.Value}"));
+
+            if (settings.TryGetValue("continue-on-error", out string? tolerated) && tolerated == "true"
+                && !lines.Any(line => line.Trim() == "allow_failure: true"))
+            {
+                missing.Add($"{gitlabJob} does not set allow_failure: true, as {workflow}'s {job} sets continue-on-error");
+            }
+
+            if (settings.TryGetValue("needs", out string? needs))
+            {
+                foreach (string need in needs.Trim('[', ']').Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    string paired = _pairedJobs.Where(pair => pair.Workflow == workflow && pair.Job == need).Select(pair => pair.GitLabJob).FirstOrDefault() ?? need;
+                    if (paired != gitlabJob && !gitlab[gitlabJob].Any(line => line.Trim() == $"- {paired}" || line.Trim() == $"needs: [{paired}]"))
+                    {
+                        missing.Add($"{gitlabJob} does not need {paired}, as {workflow}'s {job} needs {need}");
+                    }
+                }
+            }
+        }
+
+        string[] gate = [.. ResolvedJob(gitlab, "build-test", [])];
+        if (!gate.Any(line => line.Trim() == "TESTCONTAINERS_HOST_OVERRIDE: docker"))
+        {
+            missing.Add("build-test starts the integration tests' containers on the Docker-in-Docker service without TESTCONTAINERS_HOST_OVERRIDE: docker");
+        }
+
+        missing.ShouldBeEmpty(
+            "The GitLab pipeline does not run what these jobs of ci.yml and web.yml run: a step added to one host's pipeline is added to the other's.");
+    }
+
+    [Fact]
+    public void AGitLabProject_RunsOnATag_WhatTheGitHubWorkflowsRunOnOne()
+    {
+        string root = ProjectReferenceGraph.RepositoryRoot;
+        string overlay = Path.Combine(root, ".template.config", "variants", "code-host-gitlab");
+        string[] pipelineFiles = [Path.Combine(overlay, ".gitlab-ci.yml"), .. Directory.EnumerateFiles(Path.Combine(overlay, ".gitlab", "ci"), "*.yml").Order(StringComparer.Ordinal)];
+        var gitlab = GitLabJobs(pipelineFiles);
+        var workflowRules = Kept(File.ReadAllLines(pipelineFiles[0]), out _).SkipWhile(line => line != "workflow:").Skip(1).TakeWhile(line => line.Length == 0 || char.IsWhiteSpace(line[0])).Select(line => line.Trim()).ToList();
+        var problems = new List<string>();
+        var released = new List<string>();
+
+        foreach (var gitlabJobs in _pairedJobs.GroupBy(pair => pair.Workflow, pair => pair.GitLabJob)
+            .Append(_gateJobs.GroupBy(_ => "ci.yml").Single()))
+        {
+            string workflow = gitlabJobs.Key;
+            string[] workflowLines = File.ReadAllLines(Path.Combine(root, ".github", "workflows", workflow));
+            var globs = TagGlobs(workflowLines);
+            foreach (string glob in globs)
+            {
+                string rule = $"- if: $CI_COMMIT_TAG =~ /^{Regex.Escape(glob).Replace(@"\*", @"[^\/]*", StringComparison.Ordinal)}$/";
+                if (!workflowRules.Contains(rule))
+                {
+                    problems.Add($"the pipeline's workflow: rules lack `{rule}`, the tag {workflow} runs on");
+                }
+            }
+
+            if (globs.Count > 0 && workflowLines.Any(line => line.Trim() == "workflow_dispatch:") && !workflowRules.Contains("- if: $CI_PIPELINE_SOURCE == \"web\""))
+            {
+                problems.Add($"the pipeline's workflow: rules let no run from Run pipeline, which stands for {workflow}'s workflow_dispatch on a tag");
+            }
+
+            foreach (string job in gitlabJobs.Distinct(StringComparer.Ordinal))
+            {
+                var rules = Rules(gitlab[job]) is { Count: > 0 } own ? own : Rules([.. ResolvedJob(gitlab, job, [])]);
+                int tagRule = rules.IndexOf("- if: $CI_COMMIT_TAG");
+                bool skipsTags = tagRule >= 0 && tagRule + 1 < rules.Count && rules[tagRule + 1] == "when: never";
+                if (globs.Count > 0 && (tagRule < 0 || skipsTags))
+                {
+                    problems.Add($"{job} does not run on a tag alone, as {workflow} does");
+                }
+                else if (globs.Count == 0 && !skipsTags)
+                {
+                    problems.Add($"{job} runs on a tag, where {workflow} runs on none, so a release would run it beside the release's own gate");
+                }
+                else if (globs.Count > 0)
+                {
+                    released.Add(job);
+                }
+            }
+        }
+
+        released.ShouldNotBeEmpty("No GitLab job was read as release.yml's; the reader of tag triggers is broken.");
+        problems.ShouldBeEmpty("A GitLab pipeline runs on a tag what the GitHub workflows run on one, and nothing else.");
+    }
+
+    private static List<string> Rules(List<string> resolved)
+    {
+        int start = resolved.FindIndex(line => line.Trim() == "rules:");
+        if (start < 0)
+        {
+            return [];
+        }
+
+        int indent = resolved[start].Length - resolved[start].TrimStart().Length;
+        return [.. resolved.Skip(start + 1).TakeWhile(line => line.Length - line.TrimStart().Length > indent).Select(line => line.Trim())];
+    }
+
+    private static List<string> TagGlobs(string[] lines)
+    {
+        var on = lines.SkipWhile(line => line != "on:").Skip(1).TakeWhile(line => line.Length == 0 || char.IsWhiteSpace(line[0])).ToList();
+        return [.. on.SkipWhile(line => line != "  push:").Skip(1).TakeWhile(line => line.Length == 0 || line.StartsWith("    ", StringComparison.Ordinal))
+            .SkipWhile(line => line.Trim() != "tags:").Skip(1)
+            .TakeWhile(line => _tagGlob.IsMatch(line))
+            .Select(line => _tagGlob.Match(line).Groups["glob"].Value)];
+    }
+
+    [Fact]
+    public void TheParityReader_SplitsShellLinesIntoTheCommandsItPairs()
+    {
+        ShellCommands("if ! git diff --exit-code -- packages/x; then").Select(command => string.Join(' ', command)).ShouldBe(["git diff --exit-code -- packages/x"]);
+        ShellCommands("ports=$(docker image inspect \"app:ci-${{ github.sha }}\" --format '{{range $p, $_ := .Config.ExposedPorts}}{{$p}} {{end}}')")
+            .Select(command => string.Join(' ', command))
+            .ShouldBe(["docker image inspect * --format '{{range $p, $_ := .Config.ExposedPorts}}{{$p}} {{end}}'"]);
+        ShellCommands("echo \"${sha256}  /tmp/k6.tar.gz\" | sha256sum --check --strict -").Select(command => string.Join(' ', command)).ShouldBe(["sha256sum --check --strict -"]);
+        ShellCommands("apps=$(find src/Web/apps -mindepth 2 -name Dockerfile -printf '%h\\n' | sort)").Select(command => string.Join(' ', command)).ShouldBe(["find src/Web/apps -mindepth 2 -name Dockerfile"]);
+        ShellCommands("echo hi && tar -xzf x.tgz; sleep 2").ShouldBeEmpty("echo, tar and sleep are none of the programs the rule pairs");
+        PairsWith(["docker", "compose", "up", "-d", "*"], ["docker", "compose", "up", "-d", "*"]).ShouldBeTrue();
+        PairsWith(["docker", "image", "inspect", "*"], ["docker", "image", "inspect", "\"$image\""]).ShouldBeTrue();
+        PairsWith(["pnpm", "lint"], ["pnpm", "test"]).ShouldBeFalse();
+        PairsWith(["pnpm", "install", "--frozen-lockfile"], ["pnpm", "install"]).ShouldBeFalse("a dropped flag is a different command");
+        LogicalLines(["curl -sSfL \\", "  -o /tmp/x \\", "  https://example.com/x"]).ShouldBe(["curl -sSfL -o /tmp/x https://example.com/x"]);
+    }
+
+    private static (List<WorkflowStep> Steps, Dictionary<string, string> Settings, List<(string Key, string Value)> Matrix) WorkflowJob(List<string> lines, string job)
+    {
+        var steps = new List<WorkflowStep>();
+        var settings = new Dictionary<string, string>(StringComparer.Ordinal);
+        var matrix = new List<(string Key, string Value)>();
+        bool inside = false;
+        WorkflowStep? step = null;
+        string? block = null;
+        string? input = null;
+
+        foreach (string line in lines)
+        {
+            if (_workflowJob.Match(line) is { Success: true } start)
+            {
+                inside = start.Groups["name"].Value == job;
+                step = null;
                 continue;
             }
 
-            if (current is null || _dotnetCommand.Match(kept[index].Trim()) is not { Success: true } match)
+            if (!inside || line.TrimStart().StartsWith('#'))
             {
                 continue;
             }
 
-            string command = match.Groups["command"].Value;
-            while (command.EndsWith('\\') && index + 1 < kept.Count)
+            if (block is not null && (line.Length == 0 || line.StartsWith(new string(' ', 10), StringComparison.Ordinal)))
             {
-                command = command[..^1] + " " + kept[++index].Trim();
+                if (block == "run")
+                {
+                    step!.Run.Add(line);
+                }
+                else if (_withKey.Match(line) is { Success: true } key)
+                {
+                    input = key.Groups["key"].Value;
+                    string value = key.Groups["value"].Value.Trim();
+                    step!.With[input] = value is "|" or ">" ? "" : value;
+                }
+                else if (input is not null && line.Trim().Length > 0)
+                {
+                    step!.With[input] = step.With[input].Length == 0 ? line.Trim() : step.With[input] + "\n" + line.Trim();
+                }
+
+                continue;
             }
 
-            current.Add(string.Join(' ', _whitespace.Split(command.Trim())
-                .Where(word => !templateOnly.Any(name => word == $"${{{name}}}" || word == $"${name}"))));
+            block = null;
+            input = null;
+
+            if (_stepStart.Match(line) is { Success: true } item)
+            {
+                step = new WorkflowStep();
+                steps.Add(step);
+                StepKey(step, "        " + item.Groups["rest"].Value, ref block);
+            }
+            else if (step is not null && line.StartsWith("        ", StringComparison.Ordinal))
+            {
+                StepKey(step, line, ref block);
+            }
+            else if (step is null && _jobKey.Match(line) is { Success: true } setting)
+            {
+                settings[setting.Groups["key"].Value] = setting.Groups["value"].Value.Trim();
+            }
+            else if (step is null && settings.ContainsKey("strategy") && _matrixEntry.Match(line) is { Success: true } entry)
+            {
+                matrix.Add((entry.Groups["key"].Value, entry.Groups["value"].Value.Trim()));
+            }
+        }
+
+        return (steps, settings, matrix);
+    }
+
+    private static string WithoutTemplateOnly(string line, HashSet<string> templateOnly) =>
+        templateOnly.Aggregate(line, (text, name) => text.Replace($"${{{name}}}", "", StringComparison.Ordinal).Replace($"${name}", "", StringComparison.Ordinal));
+
+    private static void StepKey(WorkflowStep step, string line, ref string? block)
+    {
+        if (_stepKey.Match(line) is not { Success: true } key)
+        {
+            return;
+        }
+
+        string value = key.Groups["value"].Value.Trim();
+        switch (key.Groups["key"].Value)
+        {
+            case "uses":
+                step.Uses = value;
+                break;
+            case "run" when value is "|" or ">":
+                block = "run";
+                break;
+            case "run":
+                step.Run.Add(value);
+                break;
+            case "with":
+                block = "with";
+                break;
+        }
+    }
+
+    private static Dictionary<string, List<string>> GitLabJobs(IEnumerable<string> files)
+    {
+        var jobs = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+        foreach (string file in files)
+        {
+            List<string>? current = null;
+            foreach (string line in Kept(File.ReadAllLines(file), out _))
+            {
+                if (_gitLabKey.Match(line) is { Success: true } key)
+                {
+                    current = jobs.TryGetValue(key.Groups["name"].Value, out var known) ? known : jobs[key.Groups["name"].Value] = [];
+                }
+                else if (line.Length > 0 && !char.IsWhiteSpace(line[0]) && !line.StartsWith('#'))
+                {
+                    current = null;
+                }
+                else if (current is not null && line.Length > 0 && char.IsWhiteSpace(line[0]))
+                {
+                    current.Add(line);
+                }
+            }
+        }
+
+        return jobs;
+    }
+
+    private static IEnumerable<string> ResolvedJob(Dictionary<string, List<string>> jobs, string job, HashSet<string> seen)
+    {
+        if (!seen.Add(job) || !jobs.TryGetValue(job, out var lines))
+        {
+            yield break;
+        }
+
+        bool extending = false;
+        foreach (string line in lines)
+        {
+            yield return line;
+
+            string? parent = null;
+            if (_extendsInline.Match(line) is { Success: true } inline)
+            {
+                parent = inline.Groups["parent"].Value;
+            }
+            else if (line == "  extends:")
+            {
+                extending = true;
+                continue;
+            }
+            else if (extending && _extendsItem.Match(line) is { Success: true } item)
+            {
+                parent = item.Groups["parent"].Value;
+            }
+            else
+            {
+                extending = false;
+            }
+
+            foreach (Match reference in _reference.Matches(line))
+            {
+                foreach (string referenced in ResolvedJob(jobs, reference.Groups["job"].Value, seen))
+                {
+                    yield return referenced;
+                }
+            }
+
+            if (parent is not null)
+            {
+                foreach (string inherited in ResolvedJob(jobs, parent, seen))
+                {
+                    yield return inherited;
+                }
+            }
+        }
+    }
+
+    private static string OnTheRunnersHost(string line) =>
+        line.Replace("${STACK_HOST}", "localhost", StringComparison.Ordinal).Replace("$STACK_HOST", "localhost", StringComparison.Ordinal);
+
+    private static string UnlistedLine(string line)
+    {
+        string trimmed = line.TrimStart();
+        return trimmed.StartsWith("- ", StringComparison.Ordinal) ? trimmed[2..] : trimmed;
+    }
+
+    private static List<string> LogicalLines(IEnumerable<string> lines)
+    {
+        var joined = new List<string>();
+        string? pending = null;
+
+        foreach (string line in lines.Select(line => line.Trim()))
+        {
+            string current = pending is null ? line : pending + " " + line;
+            if (current.EndsWith('\\'))
+            {
+                pending = current[..^1].TrimEnd();
+                continue;
+            }
+
+            pending = null;
+            joined.Add(current);
+        }
+
+        if (pending is not null)
+        {
+            joined.Add(pending);
+        }
+
+        return joined;
+    }
+
+    private static List<string[]> ShellCommands(string line)
+    {
+        var commands = new List<string[]>();
+        string text = _expression.Replace(line, "$GH");
+
+        foreach (string substitution in Substitutions(ref text))
+        {
+            commands.AddRange(ShellCommands(substitution));
+        }
+
+        foreach (string segment in Segments(text))
+        {
+            var words = Words(segment).SkipWhile(word => _shellKeywords.Contains(word, StringComparer.Ordinal)).ToList();
+            if (words.Count == 0 || !_pairedPrograms.Contains(words[0], StringComparer.Ordinal))
+            {
+                continue;
+            }
+
+            if (words[0] == "find")
+            {
+                int action = words.FindIndex(word => _findActions.Contains(word, StringComparer.Ordinal));
+                words = action < 0 ? words : words[..action];
+            }
+
+            commands.Add([.. words.Select(word => !word.StartsWith('\'') && word.Contains('$', StringComparison.Ordinal) ? "*" : word)]);
         }
 
         return commands;
+    }
+
+    private static List<string> Substitutions(ref string text)
+    {
+        var found = new List<string>();
+        int start;
+
+        while ((start = text.IndexOf("$(", StringComparison.Ordinal)) >= 0)
+        {
+            int depth = 0;
+            int end = start + 1;
+            for (; end < text.Length; end++)
+            {
+                depth += text[end] == '(' ? 1 : text[end] == ')' ? -1 : 0;
+                if (depth == 0)
+                {
+                    break;
+                }
+            }
+
+            found.Add(text[(start + 2)..Math.Min(end, text.Length)]);
+            text = text[..start] + "$SUB" + (end + 1 < text.Length ? text[(end + 1)..] : "");
+        }
+
+        return found;
+    }
+
+    private static IEnumerable<string> Segments(string text)
+    {
+        var segment = new System.Text.StringBuilder();
+        char? quote = null;
+
+        for (int index = 0; index < text.Length; index++)
+        {
+            char character = text[index];
+            if (quote is not null)
+            {
+                quote = character == quote ? null : quote;
+                segment.Append(character);
+            }
+            else if (character is '\'' or '"')
+            {
+                quote = character;
+                segment.Append(character);
+            }
+            else if (character is '|' or ';' || (character == '&' && index + 1 < text.Length && text[index + 1] == '&'))
+            {
+                yield return segment.ToString();
+                segment.Clear();
+                index += index + 1 < text.Length && text[index + 1] == character ? 1 : 0;
+            }
+            else
+            {
+                segment.Append(character);
+            }
+        }
+
+        yield return segment.ToString();
+    }
+
+    private static List<string> Words(string segment)
+    {
+        var words = new List<string>();
+        var word = new System.Text.StringBuilder();
+        char? quote = null;
+
+        foreach (char character in segment.Trim())
+        {
+            if (quote is null && char.IsWhiteSpace(character))
+            {
+                if (word.Length > 0)
+                {
+                    words.Add(word.ToString());
+                    word.Clear();
+                }
+
+                continue;
+            }
+
+            quote = quote is null && character is '\'' or '"' ? character : character == quote ? null : quote;
+            word.Append(character);
+        }
+
+        if (word.Length > 0)
+        {
+            words.Add(word.ToString());
+        }
+
+        return words;
+    }
+
+    private static bool PairsWith(string[] command, string[] candidate) =>
+        command.Length == candidate.Length
+        && command.Zip(candidate).All(pair => pair.First == pair.Second || pair.First == "*");
+
+    private static string? ActionCounterpart(string root, WorkflowStep step, List<WorkflowStep> steps, string[] lines)
+    {
+        string action = step.Uses!.Split('@')[0];
+        string text = string.Join('\n', lines);
+        string With(string key) => step.With.TryGetValue(key, out string? value) ? value : "";
+        var commands = LogicalLines(lines.Select(UnlistedLine)).SelectMany(ShellCommands).ToList();
+        bool pushes = steps.Any(other => other.Uses?.StartsWith("docker/build-push-action@", StringComparison.Ordinal) == true
+            && other.With.TryGetValue("push", out string? push) && push == "true");
+
+        switch (action)
+        {
+            case "actions/checkout":
+                return null;
+            case "docker/setup-buildx-action":
+                string buildkit = With("driver-opts").Split(',').Select(option => option.Trim()).FirstOrDefault(option => option.StartsWith("image=", StringComparison.Ordinal)) ?? "";
+                return !pushes || commands.Any(candidate => candidate is ["docker", "buildx", "create", ..]
+                        && Follows(candidate, "--driver", "docker-container") && Follows(candidate, "--driver-opt", buildkit))
+                    ? null
+                    : $"no `docker buildx create --driver docker-container --driver-opt {buildkit}`, the builder setup-buildx-action gives the build that pushes";
+            case "docker/setup-qemu-action":
+                string platforms = With("platforms") is { Length: > 0 } listed ? listed : "all";
+                string[] binfmt = ["docker", "run", "--privileged", "--rm", With("image"), "--install", platforms];
+                return commands.Any(candidate => PairsWith(binfmt, candidate))
+                    ? null
+                    : $"no `{string.Join(' ', binfmt)}`, the emulators setup-qemu-action installs";
+            case "docker/login-action":
+                return commands.Any(candidate => PairsWith(["docker", "login", "*", "--username", "*", "--password-stdin"], candidate))
+                    && text.Contains("\"$CI_REGISTRY\"", StringComparison.Ordinal) && text.Contains("\"$CI_REGISTRY_USER\"", StringComparison.Ordinal)
+                    && text.Contains("\"$CI_JOB_TOKEN\"", StringComparison.Ordinal)
+                    ? null
+                    : "no `docker login` to $CI_REGISTRY as $CI_REGISTRY_USER with $CI_JOB_TOKEN, the registry the project's images go to";
+            case "docker/metadata-action":
+                return MetadataCounterpart(With("tags"), lines);
+            case "actions/upload-artifact":
+                var artifact = new Regex("^" + Regex.Escape(_expression.Replace(With("name"), "\u0001")).Replace("\u0001", @"\$CI_COMMIT_TAG", StringComparison.Ordinal) + "$", RegexOptions.None, TimeSpan.FromSeconds(5));
+                var paths = With("path").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                return lines.Any(line => line.Trim().StartsWith("name: ", StringComparison.Ordinal) && artifact.IsMatch(line.Trim()[6..]))
+                    && lines.Any(line => line.Trim() == $"expire_in: {With("retention-days")} days")
+                    && paths.Length > 0 && paths.All(path => lines.Any(line => line.Trim() == $"- {path}"))
+                    ? null
+                    : $"no artifacts named {artifact} holding {string.Join(", ", paths)} for {With("retention-days")} days, as actions/upload-artifact keeps them";
+            case "actions/attest-build-provenance":
+                return commands.Any(candidate => PairsWith(["cosign", "sign", "--yes", "*"], candidate))
+                    && commands.Any(candidate => candidate is ["sha256sum", "-c" or "--check", ..])
+                    && !text.Contains("--upload=false", StringComparison.Ordinal) == (With("push-to-registry") == "true")
+                    && lines.Any(line => line.Trim() == "SIGSTORE_ID_TOKEN:") && lines.Any(line => line.Trim() == "aud: sigstore")
+                    ? null
+                    : "no `cosign sign --yes <image>@<digest>`, keyless under a SIGSTORE_ID_TOKEN for aud sigstore, from a checked cosign, which signs what attest-build-provenance attests";
+            case "actions/setup-dotnet":
+                return text.Contains("mcr.microsoft.com/dotnet/sdk:", StringComparison.Ordinal) ? null : "no .NET SDK image, which actions/setup-dotnet gives";
+            case "actions/setup-node":
+                string version = File.ReadAllText(Path.Combine(root, With("node-version-file"))).Trim();
+                return text.Contains($"node=v{version}\n", StringComparison.Ordinal) ? null : $"no Node.js v{version}, the version {With("node-version-file")} names";
+            case "pnpm/action-setup":
+                string workspace = Path.GetDirectoryName(With("package_json_file"))!.Replace('\\', '/');
+                return text.Contains("corepack enable", StringComparison.Ordinal) && text.Contains($"cd {workspace}", StringComparison.Ordinal)
+                    ? null
+                    : $"no pnpm from corepack, at the version packageManager names in {With("package_json_file")}";
+            case "actions/cache":
+                string cached = With("path").TrimEnd('/').Split('/')[^1];
+                return lines.Any(line => line.Trim() == "cache:") && lines.Any(line => line.Trim().StartsWith("- ", StringComparison.Ordinal) && line.Trim().EndsWith("/" + cached, StringComparison.Ordinal))
+                    ? null
+                    : $"no cache of {cached}, which actions/cache keeps";
+            case "docker/build-push-action" when With("push") == "true":
+                var pushed = commands.Where(candidate => candidate is ["docker", "buildx", "build", ..] && candidate[^1] == With("context")).ToList();
+                (string Flag, string Value)[] options =
+                [
+                    ("--platform", With("platforms")),
+                    ("--file", _expression.IsMatch(With("file")) ? "*" : With("file")),
+                ];
+                string[] switches = [.. new[] { "--push", "--label", With("sbom").Length > 0 ? $"--sbom={With("sbom")}" : "", With("provenance").Length > 0 ? $"--provenance={With("provenance")}" : "" }.Where(word => word.Length > 0)];
+                return pushed.Any(candidate => options.All(option => Follows(candidate, option.Flag, option.Value)) && switches.All(candidate.Contains))
+                    ? null
+                    : $"no `docker buildx build` of {With("context")} with {string.Join(", ", options.Select(option => $"{option.Flag} {option.Value}").Concat(switches))}, the build docker/build-push-action pushes";
+            case "docker/build-push-action":
+                string[] build = ["docker", "build", "--platform", With("platforms"), "--file", _expression.Replace(With("file"), "$GH"), "--tag", "*", With("context")];
+                string[] expected = [.. build.Select(word => word.Contains('$', StringComparison.Ordinal) ? "*" : word)];
+                return LogicalLines(lines.Select(UnlistedLine)).SelectMany(ShellCommands).Any(candidate => PairsWith(expected, candidate))
+                    ? null
+                    : $"no `{string.Join(' ', expected)}`, the build docker/build-push-action runs";
+            default:
+                return $"no counterpart is known for {action}: run what it does, then teach this rule its name";
+        }
+    }
+
+    private static bool Follows(string[] command, string flag, string value) =>
+        command.Zip(command.Skip(1)).Any(pair => pair.First == flag && pair.Second == value);
+
+    private static string? MetadataCounterpart(string tags, string[] lines)
+    {
+        var problems = new List<string>();
+        var placeholders = new Dictionary<string, string>(StringComparer.Ordinal) { ["{{version}}"] = "$version", ["{{major}}"] = "$major", ["{{minor}}"] = "$minor" };
+
+        foreach (string rule in tags.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var fields = rule.Split(',', 2);
+            var settings = _expression.Replace(fields.Length > 1 ? fields[1] : "", match => match.Value.Replace(",", "\u0001", StringComparison.Ordinal))
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(setting => setting.Replace("\u0001", ",", StringComparison.Ordinal).Split('=', 2))
+                .ToDictionary(setting => setting[0], setting => setting.Length > 1 ? setting[1] : "", StringComparer.Ordinal);
+            string tag = fields[0] switch
+            {
+                "type=semver" => placeholders.Aggregate(settings.GetValueOrDefault("pattern", ""), (text, placeholder) => text.Replace(placeholder.Key, placeholder.Value, StringComparison.Ordinal)),
+                "type=raw" => settings.GetValueOrDefault("value", ""),
+                _ => "",
+            };
+
+            if (tag.Length == 0 || tag.Contains("{{", StringComparison.Ordinal))
+            {
+                problems.Add($"no counterpart is known for the tag rule {rule}");
+                continue;
+            }
+
+            string written = $"$image:{tag}";
+            bool unlessPrerelease = settings.TryGetValue("enable", out string? enable) && enable.Contains("contains(", StringComparison.Ordinal) && enable.Contains("'-'", StringComparison.Ordinal);
+            bool found = unlessPrerelease
+                ? lines.Any(line => line.Contains(written, StringComparison.Ordinal) && line.Contains("\"$CI_COMMIT_TAG\"", StringComparison.Ordinal) && line.Contains("*-*)", StringComparison.Ordinal))
+                : lines.Any(line => line.Contains(written + " ", StringComparison.Ordinal) || line.Contains(written + "\"", StringComparison.Ordinal));
+            if (!found)
+            {
+                problems.Add(unlessPrerelease ? $"no tag {written} skipped for a prerelease tag" : $"no tag {written}");
+            }
+        }
+
+        problems.AddRange(_metadataLabels
+            .Where(label => !lines.Any(line => line.Contains($"--label \"org.opencontainers.image.{label}=", StringComparison.Ordinal)))
+            .Select(label => $"no org.opencontainers.image.{label} label"));
+
+        if (!lines.Any(line => line.Contains("image=\"$CI_REGISTRY_IMAGE/", StringComparison.Ordinal)))
+        {
+            problems.Add("no image under $CI_REGISTRY_IMAGE");
+        }
+
+        return problems.Count == 0 ? null : $"not the tags and labels docker/metadata-action computes: {string.Join("; ", problems)}";
     }
 
     private const string _withoutGitHub = "(!githubHost)";
@@ -2357,7 +3057,7 @@ public sealed class TemplatePackagingTests
             .Select(pattern => pattern.Replace("$(TemplateRoot)", string.Empty, StringComparison.Ordinal))];
     }
 
-    private static List<string> ConditionedBlocks(string[] lines, string symbol)
+    internal static List<string> ConditionedBlocks(string[] lines, string symbol)
     {
         string opening = "#" + $"if ({symbol})";
         string closing = "#" + "endif";
@@ -2384,7 +3084,7 @@ public sealed class TemplatePackagingTests
         return blocks;
     }
 
-    private static List<string> AddedBlocksUnder(string[] lines, string bullet)
+    internal static List<string> AddedBlocksUnder(string[] lines, string bullet)
     {
         int[] starts = [.. Enumerable.Range(0, lines.Length).Where(index => lines[index].StartsWith(bullet, StringComparison.Ordinal))];
         starts.ShouldNotBeEmpty($"src/Web/README.md has no bullet starting '{bullet}'.");

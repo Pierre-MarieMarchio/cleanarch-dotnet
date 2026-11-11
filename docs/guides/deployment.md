@@ -30,8 +30,8 @@ A file has one writer at a time, its locks live in the process that opened it, a
 fewer than a server's: a project that started anywhere would meet these limits in production, under
 load, rather than on its first start. The host throws at composition when its environment is not
 `Development`, with a message that names the way out, and no setting lifts the refusal: every
-deployment would set it, and the refusal would stop saying anything. No release workflow and no
-migration bundle are generated, since there is nothing to deploy.
+deployment would set it, and the refusal would stop saying anything. Nothing is released and no
+migration bundle is generated, since there is nothing to deploy.
 
 To deploy, generate the project again with `--database postgresql` or `sqlserver`, move the
 features' code across, and let `bootstrap` create the migrations for the new provider. The domain and
@@ -169,6 +169,11 @@ Each carries no connection string and needs no SDK on the target:
 
 The release workflow builds the bundles from the tagged commit and uploads them as artifacts;
 running them is the deployment's step.
+<!--#endif-->
+<!--#if (gitlabCi)-->
+
+The release pipeline's `migration-bundle` job builds the bundles from the tagged commit and keeps
+them as its artifacts for 90 days; running them is the deployment's step.
 <!--#endif-->
 
 Running migrations at release is a row of [the stack](../architecture/README.md#the-stack).
@@ -311,6 +316,29 @@ gh attestation verify oci://ghcr.io/<owner>/<repository>/<component>@<digest> --
 the workflow and the commit that built the image, and fails for an image this repository's workflow
 did not attest. A private package needs `docker login ghcr.io` first. Deploy by digest, which a tag
 moved later cannot change.
+
+<!--#endif-->
+<!--#if (gitlabCi && serverDatabase)-->
+## Verifying an image
+
+The release pipeline signs each image it pushes to the project's container registry with cosign,
+keyless, through Sigstore and the identity of the pipeline that built it, and attaches BuildKit's SBOM
+and provenance to the image itself, under the signed digest. Before deploying an image, check that
+this project's release built it:
+
+```bash
+cosign verify <registry>/<group>/<project>/<component>@<digest> \
+  --certificate-identity "https://<gitlab host>/<group>/<project>//.gitlab-ci.yml@refs/tags/<tag>" \
+  --certificate-oidc-issuer https://<gitlab host>
+```
+
+`<component>` is the image's name in the `container-image` matrix of `.gitlab/ci/release.yml`, and
+`<digest>` the digest the job's log prints, with the exact command. The check answers with the
+pipeline and the commit that built the image, and fails for an image this project's pipeline did not
+sign. A private registry needs `docker login <registry>` first. Deploy by digest, which a tag moved
+later cannot change. Sigstore's public instance trusts the identities of GitLab.com; on a
+self-managed instance the signing fails until cosign is pointed at a Sigstore instance that trusts its
+issuer.
 
 <!--#endif-->
 ## Before you go live

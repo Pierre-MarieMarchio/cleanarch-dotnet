@@ -90,7 +90,8 @@ its Compose stack. The leg that sets `coverage`, the worker, MCP and Blazor WebA
 external sign-in and every example, then runs the generated project's `coverage`, every suite
 again under coverage, against the `coverage.minimum` it carries, which every shape shares and nothing
 lowers to pass; its suites take under a minute, so the step adds about two minutes to a leg of about
-seven and a half. The defaults leg, the local-auth leg without examples and the external-auth leg
+seven and a half. The same leg generates `--code-host gitlab` and checks the GitLab files it writes,
+as [code hosts](#code-hosts) says. The defaults leg, the local-auth leg without examples and the external-auth leg
 without examples also run the generator round trip: `add feature` writes an owner feature, a shared one, an aggregate one and an
 aggregate one on `get,list,create` in turn, the first and the third with `--fields` naming a field of
 every type, nullable ones and bounds among them, the aggregates after `add use-case` adds a command, a
@@ -170,7 +171,7 @@ hosts.
 | defaults | none |
 | several hosts, local auth, notes | `--presentation blazor-server --presentation mcp --presentation worker --examples notes --files false --aspire true`, the API brought by the MCP server's access keys |
 | local auth, no files, no ci, no sonar | `--auth local --examples none --files false --ci false --sonar false --presentation api --presentation worker` |
-| worker, mcp and blazor wasm, external auth, all examples | `--presentation api --presentation mcp --presentation worker --auth external --examples all --files true --web blazor-wasm` |
+| worker, mcp and blazor wasm, external auth, all examples | `--presentation api --presentation mcp --presentation worker --auth external --examples all --files true --web blazor-wasm --code-host gitlab` |
 | sql server, avalonia, external auth, all examples | `--database sqlserver --auth external --examples all --files true --presentation avalonia` |
 | no api, blazor server, mcp and worker, external auth, no agent files | `--presentation blazor-server --presentation mcp --presentation worker --auth external --examples notes --files false --agent-files false` |
 | external auth, no examples, no files | `--auth external --examples none --files false`, then `cleanarch-presentation --framework avalonia` |
@@ -240,6 +241,7 @@ same name, `Template acceptance (<leg>)`, the check the `develop` ruleset requir
 | `.template.config/starters/blazor-server`, `.template.config/starters/avalonia`, `.template.config/starters/wpf`, `.template.config/starters/mcp`, the `cleanarch-presentation` item template | the legs that pass that `--presentation`, or add the project with the item template |
 | `.template.config/starters/worker` | the legs that pass `--presentation worker` |
 | a `.template.config/variants/database-<name>` overlay | that provider's legs |
+| the `.template.config/variants/code-host-gitlab` overlay | the leg that passes `--code-host gitlab` |
 | `src/AppHost`, its integration tests and `LocalStackParityTests` | the leg that passes `--aspire true` |
 | anything else: `src`, `tests`, the shared pages, `tools`, the props, `template.json`, the other variants | every leg, the Windows ones included |
 
@@ -358,15 +360,15 @@ A project carries the files of one code host, or none
 `.github` folder at the root, and the project's own issue forms and pull request template in
 `.template.config/variants/project/.github`, run by this repository's CI and held by
 `WorkflowPinningTests`, `IssueFormTests` and `PullRequestTemplateTests`. Every source that writes
-under `.github` carries `githubHost`, or `githubCi` for a workflow, so `--code-host none` writes no
-`.github` path, and the web app's workflows follow the project's `--code-host` and `--ci`, which
+under `.github` carries `githubHost`, or `githubCi` for a workflow, so `--code-host gitlab` and
+`none` write no `.github` path, and the web app's workflows follow the project's `--code-host` and `--ci`, which
 `add web-app` and `add presentation` pass from `cleanarch.json`.
 
 | Symbol | Reads |
 |---|---|
-| `codeHost` | the host chosen: `github` by default, or `none` |
+| `codeHost` | the host chosen: `github` by default, `gitlab`, or `none` |
 | `githubHost` | `codeHost == "github"`: the `.github` folder, Dependabot, the issue forms, the pull request template |
-| `gitlabHost` | `codeHost == "gitlab"`: the overlay under `.template.config/variants/code-host-gitlab/`; never true while `gitlab` is not a choice |
+| `gitlabHost` | `codeHost == "gitlab"`: the overlay under `.template.config/variants/code-host-gitlab/`, Renovate, the merge request and issue templates |
 | `anyCodeHost` | `codeHost != "none"`: a host whose pipelines `--ci` can write |
 | `githubCi` | `ci && githubHost`: the GitHub Actions workflows |
 | `sonarWorkflow` | `githubCi && sonar`: the Sonar steps of `ci.yml` |
@@ -382,7 +384,9 @@ its own, and until every overlay folder is written once, under a `<value>Host` s
 receive it, yet the package carries it, since `dotnet new` refuses a template whose source folder is
 missing. Its rule in `rules.json` runs the `defaults` leg, whose project a condition gone wrong would
 change, until the change that offers the value gives it the tag of the leg that generates it. Its pipeline holds the same gate as `ci.yml`, and is proved by the options of a leg that
-fits it rather than a leg of its own.
+fits it rather than a leg of its own. GitLab's overlay is complete and `gitlab` a choice: its rule
+runs the leg "worker, mcp and blazor wasm, external auth, all examples", which generates
+`--code-host gitlab`.
 
 GitLab's overlay holds the merge request and issue templates under `.gitlab`:
 `merge_request_templates/Default.md`, which GitLab fills a new merge request's description with, asks
@@ -401,18 +405,124 @@ The overlay's `.template.config/variants/code-host-gitlab/.gitlab-ci.yml` is Git
 modifier of the overlay's source leaves it out unless `gitlabCi`, and `template.json` excludes
 `GitLabPipelinePinningTests` under `(!gitlabCi)`. It holds the gate of `ci.yml`: the `build-test`,
 `hygiene` and `vulnerable-packages` jobs, on the .NET SDK image the Dockerfiles build with, the
-integration tests on a Docker-in-Docker service, the Sonar steps under `sonarPipeline`, and GitLab's
-SAST and Secret Detection templates in place of CodeQL, the only includes allowed to float.
+Sonar steps under `sonarPipeline`, and GitLab's SAST and Secret Detection templates in place of
+CodeQL, the only includes allowed to float. Under `api` it holds the other jobs of `ci.yml` too:
+`docker`, `load`, `end-to-end`, which needs `compose`, and `compose` in every shape. Every job that
+runs containers extends the hidden `.docker`: the `docker:<version>-dind` service over TLS, with
+`TESTCONTAINERS_HOST_OVERRIDE`, `STACK_PUBLISH_ADDRESS` set to `0.0.0.0` and `STACK_HOST` set to
+`docker`. The Compose files publish every port on `${STACK_PUBLISH_ADDRESS:-127.0.0.1}` and the
+end-to-end suite and the browser smoke reach the stack on `STACK_HOST`, `localhost` and `127.0.0.1`
+without it, so a developer's stack is unchanged and the service's is reached through its host name;
+`StackAddressTests` holds both in every project, and the browser smoke's own test the host it reads.
+`load` and `end-to-end`, which run the Docker CLI on the SDK image, extend `.docker-client`, which
+installs the CLI, the Compose plugin and the Buildx plugin Compose builds with, from Docker's static
+release, each pinned by version and SHA-256. `docker` and `web-image` run on the
+`docker:<version>-cli` image. Under `files`, `end-to-end` sets `STORAGE_PUBLIC_ENDPOINT` to the
+service's host, since the object store signs the host it is reached on, and `.dockerignore` leaves
+out the `.cache` folder the browser is cached in, which GitLab's cache keeps inside the project.
+
+`.template.config/variants/code-host-gitlab/.gitlab/ci/web.yml` is the counterpart of `web.yml`: the
+`web` job, on the SDK image with Node.js from its release archive at the version
+`src/Web/.node-version` names and pnpm from corepack, as the web images get it; `web-image`, which
+finds the apps by folder as `web-apps` does and builds them one after the other, since a pipeline
+cannot fan a job out over the folders it finds; and the part of `end-to-end` a web app adds, the
+workspace and Chromium for the browser smoke, which GitLab merges into the root file's job of the
+same name. The root file includes it under `rules: exists`, so a project without a web app holds
+none and the item template adds it, under `(workspace && gitlabCi)`, without editing the root file;
+the overlay's source leaves it out under `(!anyWeb)`, as `template.json` does `web.yml`. The item
+templates define `gitlabHost` and `gitlabCi` as the project template does, so offering the value adds
+the choice alone.
+
+`.template.config/variants/code-host-gitlab/.gitlab/ci/release.yml` is the counterpart of
+`release.yml`, present where it is: the overlay's source leaves it out under `(!serverDatabase)`, and
+the root file includes it under the same marker, with a workflow rule that lets a `v*.*.*` tag run.
+Its jobs run on a tag alone, pushed or picked in Run pipeline, which stands for the workflow's `tag`
+input; every job of the gate extends the hidden `.gate`, whose rules keep it off a tag, as `ci.yml`
+runs on none, so a release runs the gate once, in `verify`. `migration-bundle` keeps the bundles as
+artifacts for the 90 days `retention-days` keeps them, and `container-image` fans out over a
+`parallel: matrix:` of `COMPONENT` and `DOCKERFILE`, as the workflow's matrix does, which the worker's
+join edits as it edits `release.yml`. It builds on the Docker-in-Docker service with the binfmt,
+BuildKit and SBOM scanner images `release.yml` pins, pushes to `$CI_REGISTRY_IMAGE/<component>` with
+the tags and labels `docker/metadata-action` computes (but the licence, which GitLab does not expose),
+and stands for `attest-build-provenance` with a keyless `cosign sign` of the index digest, which
+carries BuildKit's SBOM and provenance, through Sigstore and the job's `SIGSTORE_ID_TOKEN`. The
+workflow's GitHub Actions cache has no counterpart: a release builds without one rather than push a
+cache image beside the release's.
+
+`.template.config/variants/code-host-gitlab/.gitlab/renovate.jsonc` is the counterpart of
+`.github/dependabot.yml` and of `web-node-version.yml`: Renovate reads `.gitlab/renovate.jsonc` on
+GitLab alone, and a `.jsonc` file takes the `//` comments and the trailing commas the template markers
+leave. Each Dependabot ecosystem is a manager, `gitlabci` standing for `github-actions`; each group is
+a `packageRules` entry with its `groupName` and its patterns, then its exclusions negated, in
+`matchPackageNames`; the folders Dependabot reads alone, those of the Dockerfiles and of the Compose
+files, are a rule that disables the manager and one that enables it in `matchFileNames`, which the
+worker's and the web workspace's README edits extend as they extend `dependabot.yml`. The schedule
+opens Monday at 06:00 Paris time and stays open until 10:00, for a run that starts late; the limits
+are added up into `prConcurrentLimit`, since Renovate counts every open merge request against one;
+`separateMajorMinor` is off, as Dependabot opens one pull request per dependency or group at its
+newest version; `prHourlyLimit` is off and the dashboard too. `applies-to: version-updates` needs no
+counterpart: Renovate leaves a vulnerability fix out of every group by default, and on GitLab it gets
+none, since its vulnerability alerts read GitHub's and `osvVulnerabilityAlerts` is experimental. The
+`templateMaintenance` lines of `dependabot.yml`, `target-branch: develop`, have none either, since no
+GitLab project is this repository. Two rules go past Dependabot, each because CI fails without it: the
+`node` group moves the web images' `node`, `src/Web/.node-version` through the `nodenv` manager, and
+`@types/node`, within the major and across it in another merge request, which is the job
+`web-node-version.yml` does on GitHub; and the .NET SDK image moves in every Dockerfile and the
+pipeline together, since `GitLabPipelinePinningTests` holds them to one image. Three take less:
+`global.json`'s SDK band, pnpm's `packageManager` and the `overrides` of `pnpm-workspace.yaml` stay
+by hand, and so does every image or archive a pipeline script names, as on GitHub. Renovate cannot
+update a checksum it has not computed, so the Node.js archive of `.gitlab/ci/web.yml` is bumped by hand
+in the `node` merge request, which `GitLabPipelinePinningTests` fails until it is.
+`RenovateParityTests`, template-only, resolves the markers of both files for every combination of the
+symbols they read and fails until each ecosystem, folder, group, pattern, exclusion, label, commit
+prefix, schedule and limit of `dependabot.yml` has its counterpart and nothing more, through a reader
+of `packageRules` that applies them in order, as Renovate does; it also holds the README edits to the
+blocks the worker and the web workspace write. `RenovateConfigurationTests`, which a GitLab project
+receives under `(gitlabHost)`, holds the `node` group and the SDK image to the files the project
+holds. `renovate-config-validator`, run on a generated project's file, is the schema's check; the
+project runs Renovate through the Mend-hosted app on GitLab.com or the `renovate-runner` template from
+a project of its own, so its pipeline holds no Renovate job.
+
 `AGitLabProject_RunsEveryCommandOfTheGitHubGate`, in `TemplatePackagingTests`, reads the `dotnet`
-commands of those three jobs of `ci.yml`, past its `templateMaintenance` blocks, and fails until the
-GitLab job of the same name runs each one, so the two gates cannot drift; `GitLabPipelinePinningTests`
-holds the images, services and includes of a GitLab project's pipeline, and its SDK image to the
-Dockerfiles', reading the overlay in this checkout; `tools/CheckGitLabCi.cs` checks the rest. This
-repository's CI never runs the pipeline: its schema, that gate and a local runner stand in until a
-first run on GitLab.com. Still missing before `gitlab` is a choice: the image, Compose, end-to-end,
-load, web and release jobs, Renovate in place of Dependabot, a Docker CLI in `build-test` for the
-app host's `LocalStackTests` under `--aspire true`, which the SDK image lacks, and the steps of
-`docs/getting-started/existing-repository.md` that move the pipeline to the git root.
+commands of the three gate jobs of `ci.yml`, past its `templateMaintenance` blocks, and fails until
+the GitLab job of the same name runs each one, so the two gates cannot drift.
+`AGitLabProject_RunsEveryCommandOfTheGitHubStackWebAndReleaseJobs` does the same for `docker`, `load`,
+`end-to-end` and `compose` of `ci.yml`, every job of `web.yml` and every job of `release.yml`: each command of a `run:` step whose
+program it pairs, its literal assignments, such as k6's version and checksum, `continue-on-error` and
+`needs`, a matrix's entries, and, for an action, what it stands for: the SDK image for `setup-dotnet`,
+the Node.js of `.node-version` for `setup-node`, corepack for `pnpm/action-setup`, the cached folder
+for `actions/cache`, the `docker build` that `build-push-action` runs, or the `docker buildx build`
+with its platforms, SBOM and provenance when it pushes, the binfmt image for `setup-qemu-action`, the
+BuildKit image of a builder that pushes for `setup-buildx-action`, a registry login for
+`login-action`, each tag and label for `metadata-action`, the artifact's name, paths and retention
+for `upload-artifact`, and a checked cosign and its `sign` under a Sigstore ID token for
+`attest-build-provenance`; an action it does not know fails it.
+`AGitLabProject_RunsOnATag_WhatTheGitHubWorkflowsRunOnOne` reads the tags each workflow's `on:` names
+and fails until the root file's workflow rules let each one run, as a regular expression, and a run
+from Run pipeline for a workflow with `workflow_dispatch`, until every job paired with `release.yml`
+runs on a tag alone, and until every job paired with `ci.yml` or `web.yml` runs on none, its own
+`rules:` read before those it extends, as GitLab reads them. `GitLabPipelinePinningTests` holds the
+images, services and includes of a GitLab project's pipeline and of every file under its `.gitlab/ci`
+folder, an image a script runs with `docker run` or names in an `image=` or `generator=` option among
+them, its local includes to a file or an `exists:` guard, and its SDK image to the Dockerfiles',
+reading the overlay in this checkout; `tools/CheckGitLabCi.cs` checks the rest, the included files
+merged into the root file as GitLab merges them, and that the job that signs keylessly with cosign,
+and it alone, takes a `SIGSTORE_ID_TOKEN` for the `sigstore` audience. This repository's CI never runs the pipeline, so the leg that generates
+`--code-host gitlab` checks the GitLab files it writes instead: `tools/CheckGitLabCi.cs` on the
+project, `check-jsonschema` against the schema GitLab publishes for its pipeline files,
+`renovate-config-validator` on `.gitlab/renovate.jsonc`, and `gitlab-ci-local --preview` and `--list`,
+which merge every include and job as GitLab does, on a committed copy of the project. Its rule in
+`rules.json` covers `tools/CheckGitLabCi.cs` too. Under `--aspire true`, GitLab's `build-test`
+removes the app host's integration test project from the solution before `dotnet test`: the app host
+reaches the containers it starts through the Docker host's loopback, which a Docker-in-Docker service
+keeps to itself, and a class filter would leave the project with no test, which the test platform
+fails. A project's `cleanarch.json` records `codeHost` as it was chosen, and
+`adopt` reads `gitlab` back from `.gitlab-ci.yml` or a `.gitlab` folder at the root.
+
+Two limits stay with the project: a GitLab project creates its `bug` and `enhancement` labels itself,
+as `docs/getting-started/first-run.md` says, and a keyless `cosign sign` needs a Sigstore instance
+that trusts the issuer of the job's ID token, which the public one does for GitLab.com alone, as
+`docs/guides/deployment.md` says.
 
 ## Adding an option
 
@@ -1352,8 +1462,8 @@ project on the thread and fails on any glyph above Latin-1 outside the WGL4 list
 | `--examples` | `all` with `Features/TodoLists` in the application project, `notes` with `Features/Notes` alone, `none` otherwise |
 | `--files` | the `Infrastructure.Storage` project |
 | `--database` | the provider package `Infrastructure.Core` references: SQL Server, SQLite, PostgreSQL otherwise |
-| `--code-host` | `github` with a `.github` folder at the root, `none` otherwise |
-| `--ci`, `--agent-files` | `.github/workflows/ci.yml`, `AGENTS.md` |
+| `--code-host` | `github` with a `.github` folder at the root, `gitlab` with `.gitlab-ci.yml` or a `.gitlab` folder there, `none` otherwise |
+| `--ci`, `--agent-files` | `.github/workflows/ci.yml` or `.gitlab-ci.yml`, `AGENTS.md` |
 | `--agent-files-example` | nothing: recorded `false`, the lines it writes being the team's to replace |
 | `--has-api` | the `src/Presentation/<Initials>.Api` folder |
 | `--scope`, `--workspace` | the name in `src/Web/package.json`, the project's name in kebab case without one; `src/Web` |

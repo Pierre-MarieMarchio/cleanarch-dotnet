@@ -66,6 +66,10 @@ ex.env
 #if (gitlabHost)
 .gitlab/
 #endif
+#if (gitlabCi)
+# The browser the end-to-end job keeps in its cache, inside the project as GitLab's cache asks.
+.cache/
+#endif
 
 # ---------------------------------------------------------------------------
 # Build output. Copying host bin/obj into the image poisons the container build

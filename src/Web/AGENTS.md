@@ -75,3 +75,8 @@ only the browser smoke runs the page.
 `.github/workflows/web.yml` runs the same three and fails when the committed client differs from what
 `pnpm api` writes.
 <!--#endif-->
+<!--#if (gitlabCi)-->
+The `web` job of `.gitlab/ci/web.yml` runs the same three and fails when the committed client differs
+from what `pnpm api` writes. A Node.js version moves in `src/Web/.node-version`, every `FROM node:` and
+the archive `.gitlab/ci/web.yml` installs, with its SHA-256, together.
+<!--#endif-->

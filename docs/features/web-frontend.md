@@ -179,7 +179,7 @@ reference from the API's last build instead. `add feature`, `add field` and `add
 `openapi-typescript` writes the schema from the API's own document, because types written by hand
 drift from what the API returns: a change to the contract is a type error in every app that relied
 on the old one, found at build time.
-<!--#if (githubCi)-->
+<!--#if (githubCi || gitlabCi)-->
 CI regenerates the schema and fails on any difference.
 <!--#endif-->
 Every framework calls the API through the same wrapper, rather than each solving HTTP, errors and
@@ -396,6 +396,12 @@ leaving those in place already, records the app in `cleanarch.json` with the val
 the port its `compose.yml` holds (`--port` states it, and is refused when it differs), then creates
 the app for a framework app. A placeholder needs `pnpm install` instead; commit the app with the
 lockfile.
+<!--#if (gitlabCi)-->
+CI and Renovate find apps by folder.
+<!--#endif-->
+<!--#if (gitlabHost && !ci)-->
+Renovate finds apps by folder.
+<!--#endif-->
 `--rendering ssr` with `--framework angular` or `react-router` renders the app on its own Node
 server instead, as [images and headers](#images-and-headers) describes; the other frameworks are
 single-page apps only, and `--rendering spa` is the default.
@@ -439,7 +445,14 @@ A project generated without a web app adds its first one with the same command p
 project already. `add web-app` then makes the lines `src/Web/README.md` lists for the workspace
 before the app's, and records both; create the app as above.
 <!--#endif-->
-<!--#if (!githubCi)-->
+<!--#if (gitlabCi)-->
+A project generated without a web app adds its first one with the same command plus
+`--workspace`, `--project-name <Project>` and `--scope`, which also creates `src/Web` and
+`.gitlab/ci/web.yml`, which `.gitlab-ci.yml` includes once it exists; the API side is in every
+project already. `add web-app` then makes the lines `src/Web/README.md` lists for the workspace
+before the app's, and records both; create the app as above.
+<!--#endif-->
+<!--#if (!githubCi && !gitlabCi)-->
 A project generated without a web app adds its first one with the same command plus
 `--workspace`, `--project-name <Project>` and `--scope`, which also creates `src/Web`; the API side
 is in every project already. `add web-app` then makes the lines `src/Web/README.md` lists for the
@@ -527,4 +540,14 @@ The web job installs with the frozen lockfile, lints, tests and builds every app
 each app under `src/Web/apps` holding a `Dockerfile` and a `package.json`, and checks that it runs as
 a user other than root and exposes only 8080. Details are in
 [Build and CI](../guides/build-and-ci.md).
+<!--#endif-->
+<!--#if (gitlabCi)-->
+
+## CI
+
+The `web` job of `.gitlab/ci/web.yml` installs with the frozen lockfile, audits, lints, tests and
+builds every app and package, runs `pnpm api` and fails when the generated client differs from the
+committed one. The `web-image` job builds each app under `src/Web/apps` holding a `Dockerfile` and a
+`package.json`, one after the other, and checks that it runs as a user other than root and exposes
+only 8080. Details are in [Build and CI](../guides/build-and-ci.md).
 <!--#endif-->

@@ -28,10 +28,18 @@ dotnet new cleanarch-presentation -n Worker --framework worker --project-name Ap
 dotnet cleanarch add presentation --name Worker
 ```
 
+<!--#if (gitlabHost)-->
+Pass the project's `--auth`, `--examples`, `--files`, `--database`, `--code-host` and `--ci` too when
+they are not the defaults: the project's files are written for them. The item template refuses the
+worker with `--database sqlite`, whose file serves one process, and in a project without the API,
+whose jobs run in a worker already.
+<!--#endif-->
+<!--#if (!gitlabHost)-->
 Pass the project's `--auth`, `--examples`, `--files`, `--database` and `--ci` too when they are not
 the defaults: the project's files are written for them. The item template refuses the worker with
 `--database sqlite`, whose file serves one process, and in a project without the API, whose jobs run
 in a worker already.
+<!--#endif-->
 
 It writes this folder and its tests. The command then moves the API's
 `Common/Jobs` and `Features/*/Jobs` folders into this project, and the `Features/*/Jobs` folders of
@@ -75,6 +83,20 @@ the other passes are idempotent. The edits, to make by hand where the command st
   ```
 
 <!--#endif-->
+<!--#if (gitlabHost)-->
+- in `.gitlab/renovate.jsonc`, after the line:
+
+  ```jsonc
+          "src/Presentation/AT.Api/*",
+  ```
+
+  add:
+
+  ```jsonc
+          "src/Presentation/AT.Worker/*",
+  ```
+
+<!--#endif-->
 <!--#if (githubCi)-->
 - in `.github/workflows/release.yml`, replace the line:
 
@@ -101,6 +123,35 @@ the other passes are idempotent. The edits, to make by hand where the command st
   ```yaml
             - component: worker
               dockerfile: src/Presentation/AT.Worker/Dockerfile
+  ```
+
+<!--#endif-->
+<!--#if (gitlabCi)-->
+- in `.gitlab/ci/release.yml`, replace the line:
+
+  ```yaml
+    # One image, the API, which also runs the periodic jobs.
+  ```
+
+  with:
+
+  ```yaml
+    # Two images from one commit: the API, and the worker that runs the periodic jobs.
+  ```
+
+<!--#endif-->
+<!--#if (gitlabCi)-->
+- in `.gitlab/ci/release.yml`, after the line:
+
+  ```yaml
+          DOCKERFILE: src/Presentation/AT.Api/Dockerfile
+  ```
+
+  add:
+
+  ```yaml
+        - COMPONENT: worker
+          DOCKERFILE: src/Presentation/AT.Worker/Dockerfile
   ```
 
 <!--#endif-->

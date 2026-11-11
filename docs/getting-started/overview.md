@@ -145,7 +145,7 @@ setting, table or test names it.
 | `--code-host` | `github` | GitHub's files under `.github`: Dependabot, the issue forms, the pull request template and, with `--ci`, the workflows |
 | <!--#endif--> |
 | <!--#if (gitlabHost)--> |
-| `--code-host` | `gitlab` | GitLab's files under `.gitlab`: the merge request and issue templates and, with `--ci`, the pipeline |
+| `--code-host` | `gitlab` | GitLab's files: Renovate's configuration and the merge request and issue templates under `.gitlab` and, with `--ci`, the pipeline |
 | <!--#endif--> |
 | <!--#if (!anyCodeHost)--> |
 | `--code-host` | `none` | no code host's files: no workflow, no Dependabot, no issue form and no pull request template |
@@ -162,11 +162,17 @@ setting, table or test names it.
 | <!--#if (githubCi && !anyWeb && sqlite)--> |
 | `--ci` | `true` | the build and code-scanning workflows; no release, as SQLite is a development database |
 | <!--#endif--> |
-| <!--#if (gitlabCi)--> |
-| `--ci` | `true` | the pipeline that runs the gate, with GitLab's SAST and Secret Detection |
+| <!--#if (gitlabCi && serverDatabase)--> |
+| `--ci` | `true` | the pipeline that runs the gate, with GitLab's SAST and Secret Detection, and the release on a tag |
 | <!--#endif--> |
-| <!--#if (!githubCi && !gitlabCi)--> |
+| <!--#if (gitlabCi && sqlite)--> |
+| `--ci` | `true` | the pipeline that runs the gate, with GitLab's SAST and Secret Detection; no release, as SQLite is a development database |
+| <!--#endif--> |
+| <!--#if (!githubCi && !gitlabHost)--> |
 | `--ci` | `false` | no workflow |
+| <!--#endif--> |
+| <!--#if (gitlabHost && !ci)--> |
+| `--ci` | `false` | no pipeline |
 | <!--#endif--> |
 | <!--#if (sonarWorkflow || sonarPipeline)--> |
 | `--sonar` | `true` | the Sonar analysis, locally and in CI |
@@ -261,7 +267,14 @@ To change a value, remove the part by hand or add it:
   the defaults; then `dotnet cleanarch add web-app --name PlaceholderSite` makes the lines the
   workspace's `README.md` and the app's list outside their folders, records the app and creates it.
 <!--#endif-->
-<!--#if (!anyWeb && !githubHost)-->
+<!--#if (!anyWeb && gitlabHost)-->
+- `dotnet new cleanarch-webapp -n PlaceholderSite --framework vite-react --project-name AppTemplate --scope app-template --workspace --code-host gitlab`
+  adds a first web app and its workspace (`vite-vue`, `vite-svelte`, `react-router`,
+  `angular` or `placeholder` work too). Pass this project's `--auth`, `--examples` and `--ci` when they are not
+  the defaults; then `dotnet cleanarch add web-app --name PlaceholderSite` makes the lines the
+  workspace's `README.md` and the app's list outside their folders, records the app and creates it.
+<!--#endif-->
+<!--#if (!anyWeb && !anyCodeHost)-->
 - `dotnet new cleanarch-webapp -n PlaceholderSite --framework vite-react --project-name AppTemplate --scope app-template --workspace --code-host none --ci false`
   adds a first web app and its workspace (`vite-vue`, `vite-svelte`, `react-router`,
   `angular` or `placeholder` work too). Pass this project's `--auth` and `--examples` when they are not
@@ -280,11 +293,20 @@ To change a value, remove the part by hand or add it:
   `dotnet cleanarch add presentation`, run at the project's root, ask for the same parts and add
   them to this project.
 <!--#endif-->
+<!--#if (!gitlabHost)-->
 - `dotnet new cleanarch-presentation -n <Name> --framework blazor-server --project-name AppTemplate`
   adds a presentation project (`mcp`, `avalonia`, `wpf`, or `worker` with `-n Worker`, work too). Pass this project's `--auth`,
   `--examples`, `--files` and `--database` when they are not the defaults; then
   `dotnet cleanarch add presentation --name <Name>` makes the lines the README it writes in the new
   project's folder lists outside it, records the project and creates its pages.
+<!--#endif-->
+<!--#if (gitlabHost)-->
+- `dotnet new cleanarch-presentation -n <Name> --framework blazor-server --project-name AppTemplate --code-host gitlab`
+  adds a presentation project (`mcp`, `avalonia`, `wpf`, or `worker` with `-n Worker`, work too). Pass this project's `--auth`,
+  `--examples`, `--files`, `--database` and `--ci` when they are not the defaults; then
+  `dotnet cleanarch add presentation --name <Name>` makes the lines the README it writes in the new
+  project's folder lists outside it, records the project and creates its pages.
+<!--#endif-->
 
 ## Why it starts like this
 

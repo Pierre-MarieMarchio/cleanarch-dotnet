@@ -132,7 +132,10 @@ It does not install itself: the tool that runs it is the one this project pins i
 | <!--#if (githubCi)--> |
 | `openapi --no-web` | leaves the web workspace's schema out, on a machine without Node.js and pnpm; the web workflow checks it |
 | <!--#endif--> |
-| <!--#if (!githubCi)--> |
+| <!--#if (gitlabCi)--> |
+| `openapi --no-web` | leaves the web workspace's schema out, on a machine without Node.js and pnpm; the pipeline's `web` job checks it |
+| <!--#endif--> |
+| <!--#if (!githubCi && !gitlabCi)--> |
 | `openapi --no-web` | leaves the web workspace's schema out, on a machine without Node.js and pnpm; `verify`, on a machine with them, checks it |
 | <!--#endif--> |
 | `run` | `dotnet run` of the API |

@@ -80,7 +80,11 @@ dotnet cleanarch add web-app --name PlaceholderSite --framework <framework>
 <!--#if (githubHost)-->
 Pass the project's `--auth`, `--ci` and `--agent-files` too when they are not the defaults.
 <!--#endif-->
-<!--#if (!githubHost)-->
+<!--#if (gitlabHost)-->
+Pass the project's `--auth`, `--code-host`, `--ci` and `--agent-files` too when they are not the
+defaults.
+<!--#endif-->
+<!--#if (!githubHost && !gitlabHost)-->
 Pass the project's `--auth`, `--code-host` and `--agent-files` too when they are not the defaults.
 <!--#endif-->
 
@@ -91,7 +95,14 @@ the web apps' end-to-end tests, `docs/features/web-frontend.md` and, unless `--c
 project already. The lines `--web` writes in files the item template cannot edit are listed below,
 then those of the app's own `README.md`.
 <!--#endif-->
-<!--#if (!githubCi)-->
+<!--#if (gitlabCi)-->
+`--workspace` writes this folder, the shared packages, the browser smoke among them, the API client,
+the web apps' end-to-end tests, `docs/features/web-frontend.md` and, unless `--ci false`,
+`.gitlab/ci/web.yml`, which `.gitlab-ci.yml` includes once it exists and which brings the browser
+the end-to-end job drives. The API side is in every project already. The lines `--web` writes in
+files the item template cannot edit are listed below, then those of the app's own `README.md`.
+<!--#endif-->
+<!--#if (!githubCi && !gitlabCi)-->
 `--workspace` writes this folder, the shared packages, the browser smoke among them, the API client,
 the web apps' end-to-end tests and `docs/features/web-frontend.md`. The API side is in every project
 already. The lines `--web` writes in files the item template cannot edit are listed below, then
@@ -278,6 +289,116 @@ its `pnpm-lock.yaml`.
             - vitest
             - "@playwright/*"
 
+  ```
+
+<!--#endif-->
+<!--#if (gitlabHost)-->
+- in `.gitlab/renovate.jsonc`, after the line:
+
+  ```jsonc
+      "dockerfile",
+  ```
+
+  add:
+
+  ```jsonc
+      "npm",
+      "nodenv",
+  ```
+
+- in `.gitlab/renovate.jsonc`, replace the line:
+
+  ```jsonc
+    "prConcurrentLimit": 18,
+  ```
+
+  with:
+
+  ```jsonc
+    "prConcurrentLimit": 23,
+  ```
+
+- in `.gitlab/renovate.jsonc`, before the lines:
+
+  ```jsonc
+        ],
+        "enabled": true,
+      },
+      {
+        "groupName": "container-images",
+        "matchManagers": ["dockerfile"],
+  ```
+
+  add:
+
+  ```jsonc
+          "src/Web/apps/*/*",
+  ```
+
+- in `.gitlab/renovate.jsonc`, before the line:
+
+  ```jsonc
+      // docker-compose.yml's images and those of the files beside it.
+  ```
+
+  add:
+
+  ```jsonc
+      // The web workspace: the npm manager reads src/Web/pnpm-lock.yaml for every app and package.
+      {
+        "matchManagers": ["npm"],
+        "labels": ["dependencies", "javascript"],
+      },
+      {
+        "matchManagers": ["npm"],
+        "matchDepTypes": ["devDependencies"],
+        "semanticCommitScope": "deps-dev",
+      },
+      // pnpm's own version, which packageManager names with its hash, and the overrides pnpm-workspace.yaml holds against an advisory are moved by hand.
+      {
+        "matchManagers": ["npm"],
+        "matchDepTypes": ["packageManager", "pnpm-workspace.overrides"],
+        "enabled": false,
+      },
+      {
+        "groupName": "web-lint",
+        "matchManagers": ["npm"],
+        "matchPackageNames": [
+          "eslint",
+          "@eslint/*",
+          "typescript-eslint",
+          "globals",
+        ],
+      },
+      {
+        "groupName": "web-api-client",
+        "matchManagers": ["npm"],
+        "matchPackageNames": [
+          "openapi-fetch",
+          "openapi-typescript",
+        ],
+      },
+      {
+        "groupName": "web-tooling",
+        "matchManagers": ["npm"],
+        "matchPackageNames": [
+          "typescript",
+          "vitest",
+          "@playwright/*",
+        ],
+      },
+      // The web images' Node.js, src/Web/.node-version and @types/node move in one merge request within the major and in another across it, as NodeVersionTests holds them; the Node.js archive a pipeline job installs, and its checksum, are bumped by hand in it.
+      {
+        "groupName": "node",
+        "matchManagers": ["dockerfile", "nodenv", "npm"],
+        "matchPackageNames": [
+          "node",
+          "@types/node",
+        ],
+        "separateMajorMinor": true,
+        "labels": ["dependencies", "docker", "javascript"],
+        "semanticCommitScope": "deps",
+      },
   ```
 
 <!--#endif-->
@@ -594,8 +715,8 @@ its `pnpm-lock.yaml`.
   `src/Web/packages/api-client/src/generated/schema.ts` with what `openapi-typescript` writes from the
   OpenAPI reference, so a contract change without `pnpm api` fails and the message names that command,
   then `pnpm audit`, and, once `cleanarch.json` records the workspace, `pnpm lint`, `pnpm test` and
-  `pnpm build` as the web workflow does. Those steps need Node.js and pnpm: without pnpm, `verify`
-  stops before them and says how to install it, and no option skips them.
+  `pnpm build`. Those steps need Node.js and pnpm: without pnpm, `verify` stops before them and says
+  how to install it, and no option skips them.
   ```
 
 <!--#if (githubCi)-->
@@ -641,6 +762,54 @@ its `pnpm-lock.yaml`.
   ```
 
 <!--#endif-->
+<!--#if (gitlabCi)-->
+- in `docs/guides/build-and-ci.md`, after the line:
+
+  ```markdown
+  | `compose` | the Compose manifest against `.env.example`, and its healthchecks on `/health` |
+  ```
+
+  add:
+
+  ```markdown
+  | `web` | in `src/Web`: frozen install, audit, lint, test, build, and a failure when the API client differs from the API's document |
+  | `web-image` | one image per app under `src/Web/apps`, unprivileged and exposing 8080 only |
+  ```
+
+<!--#endif-->
+<!--#if (gitlabCi)-->
+- in `docs/guides/build-and-ci.md`, before the line:
+
+  ```markdown
+  The load smoke never fails the pipeline: its thresholds describe a broken system, and a `429` counts
+  ```
+
+  add:
+
+  ```markdown
+  `.gitlab/ci/web.yml` holds the `web` and `web-image` jobs, and the browser `end-to-end` drives:
+  `.gitlab-ci.yml` includes it while it exists, so the file a web app brings edits nothing else. A
+  pipeline cannot fan a job out over the folders it finds, so `web-image` builds the apps one after
+  the other on a Docker-in-Docker service, and judges each even when another fails.
+
+  ```
+
+<!--#endif-->
+<!--#if (gitlabCi)-->
+- in `docs/guides/build-and-ci.md`, before the line:
+
+  ```markdown
+  GitLab's SAST and Secret Detection templates are the only includes not in this repository: they follow
+  ```
+
+  add:
+
+  ```markdown
+  Node.js is pinned the same way, and pnpm comes from corepack, at the version and checksum
+  `packageManager` names in `src/Web/package.json`.
+  ```
+
+<!--#endif-->
 - in `docs/guides/removing-features.md`, after the line:
 
   ```markdown
@@ -659,7 +828,10 @@ its `pnpm-lock.yaml`.
   <!--#if (githubHost)-->
   | Container images and actions | their digest or commit SHA, beside the tag |
   <!--#endif-->
-  <!--#if (!githubHost)-->
+  <!--#if (gitlabCi)-->
+  | Container images, and a tool a pipeline job downloads | their digest, beside the tag; the tool's version and its SHA-256 |
+  <!--#endif-->
+  <!--#if (!githubHost && !gitlabCi)-->
   | Container images | their digest, beside the tag |
   <!--#endif-->
   ```
@@ -685,7 +857,18 @@ its `pnpm-lock.yaml`.
   A new major arrives from Dependabot too, and stays red, held by `NodeVersionTests`, until it is done
   by hand: `src/Web/.node-version`, `engines.node`, `@types/node` and every `FROM node:` move together.
   <!--#endif-->
-  <!--#if (!githubHost)-->
+  <!--#if (gitlabHost)-->
+  Renovate's `node` group moves the web images' `node`, `src/Web/.node-version` and `@types/node` in
+  one merge request within the major, and in another across it, which stays red, held by
+  `NodeVersionTests`, until `engines.node` follows by hand. pnpm's own version, in `packageManager`,
+  and the `overrides` of `src/Web/pnpm-workspace.yaml` are moved by hand.
+  <!--#endif-->
+  <!--#if (gitlabCi)-->
+  `GitLabPipelinePinningTests` holds that merge request red too until `.gitlab/ci/web.yml` installs the
+  same Node.js: set `node` and `node_sha256` there from the release's `SHASUMS256.txt`, since no bot
+  computes a checksum.
+  <!--#endif-->
+  <!--#if (!githubHost && !gitlabHost)-->
   No bot proposes a newer Node.js: a patch, a minor or a major is taken by hand, and
   `src/Web/.node-version`, `engines.node`, `@types/node` and every `FROM node:` move together, or
   `NodeVersionTests` fails.
@@ -702,8 +885,19 @@ its `pnpm-lock.yaml`.
 
   ```markdown
 
+  <!--#if (githubCi)-->
   `pnpm audit` holds the web packages to the same rule: `verify` and the web workflow run it, and any
-  advisory fails, whatever its severity. The answer is the same too: raise the dependency, or pin a
+  advisory fails, whatever its severity.
+  <!--#endif-->
+  <!--#if (gitlabCi)-->
+  `pnpm audit` holds the web packages to the same rule: `verify` and the pipeline's `web` job run it,
+  and any advisory fails, whatever its severity.
+  <!--#endif-->
+  <!--#if (!githubCi && !gitlabCi)-->
+  `pnpm audit` holds the web packages to the same rule: `verify` runs it, and any advisory fails,
+  whatever its severity.
+  <!--#endif-->
+  The answer is the same too: raise the dependency, or pin a
   patched release under `overrides` in `src/Web/pnpm-workspace.yaml` with a comment saying when it can go;
   a package that cannot take the pinned release as it is gets a pnpm patch in `src/Web/patches/`.
   ```
@@ -799,7 +993,9 @@ its `pnpm-lock.yaml`.
   After the end-to-end suite, `end-to-end` drives every web app in Chromium, through
   `pnpm --filter "*browser-smoke" smoke` in `src/Web`. The package reads the apps `cleanarch.json` records
   and each one's port from `WEB_<APP>_HOST_PORT`, in the environment and then in `.env.example`, so an app
-  added later is driven without an edit. For each app, one test:
+  added later is driven without an edit. It opens each app on `127.0.0.1`, or on the host `STACK_HOST`
+  names, which Chromium then treats as a secure origin, as it treats the loopback. For each app, one
+  test:
 
   - loads `/`, which answers with a success status and renders text;
   - fails on any `securitypolicyviolation` the page raises, any console error and any uncaught exception;
@@ -832,6 +1028,10 @@ its `pnpm-lock.yaml`.
   <!--#if (githubCi)-->
   CI installs Chromium in the `end-to-end` job and caches it by the Playwright release the lockfile
   resolves.
+  <!--#endif-->
+  <!--#if (gitlabCi)-->
+  CI installs Chromium in the `end-to-end` job and caches it by the browser smoke's `package.json`,
+  which pins the Playwright release.
   <!--#endif-->
 
   ```

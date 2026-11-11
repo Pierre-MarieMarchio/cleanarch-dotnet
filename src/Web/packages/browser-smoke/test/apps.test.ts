@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { discoverApps, findProjectRoot, standInProvider } from '../src/apps.ts';
+import { chromiumArguments, discoverApps, findProjectRoot, standInProvider } from '../src/apps.ts';
 
 describe('the apps the smoke drives', () => {
   let root = '';
@@ -36,6 +36,20 @@ describe('the apps the smoke drives', () => {
     project(['BackOffice'], 'WEB_BACK_OFFICE_HOST_PORT=8082\n');
 
     expect(discoverApps(root, { WEB_BACK_OFFICE_HOST_PORT: '9000' })[0]?.origin).toBe('http://127.0.0.1:9000');
+  });
+
+  it('are reached on the host the environment names, and on 127.0.0.1 without one', () => {
+    project(['BackOffice'], 'WEB_BACK_OFFICE_HOST_PORT=8082\n');
+
+    expect(discoverApps(root, { STACK_HOST: 'docker' })[0]?.origin).toBe('http://docker:8082');
+    expect(discoverApps(root, { STACK_HOST: '' })[0]?.origin).toBe('http://127.0.0.1:8082');
+  });
+
+  it('are treated as secure origins only on the host the environment names', () => {
+    const apps = [{ name: 'Storefront', origin: 'http://docker:9300', signsInFromThePage: false }];
+
+    expect(chromiumArguments(apps, { STACK_HOST: 'docker' })).toEqual(['--unsafely-treat-insecure-origin-as-secure=http://docker:9300']);
+    expect(chromiumArguments(apps, {})).toEqual([]);
   });
 
   it('read the file the stack was started from, ahead of .env.example', () => {

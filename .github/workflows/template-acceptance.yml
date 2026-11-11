@@ -268,6 +268,27 @@ jobs:
         with:
           node-version-file: src/Web/.node-version
 
+      # The pipeline and the Renovate configuration as GitLab and Renovate read them, without a GitLab instance or Docker-in-Docker: the structure tools/CheckGitLabCi.cs holds, GitLab's schema, gitlab-ci-local's merge of every include and job, which reads a committed tree, and Renovate's own validator. Each tool is pinned: bump a version and its digest together.
+      - name: Validate the GitLab pipeline and Renovate configuration (GitLab leg)
+        if: matrix.gitlab == 'true'
+        run: |
+          set -euo pipefail
+          generated="${{ runner.temp }}/generated"
+          dotnet run tools/CheckGitLabCi.cs "$generated"
+          pipx run --spec check-jsonschema==0.39.0 check-jsonschema --builtin-schema vendor.gitlab-ci --data-transform gitlab-ci \
+            "$generated/.gitlab-ci.yml" "$generated"/.gitlab/ci/*.yml
+          docker run --rm --volume "$generated/.gitlab:/config:ro" --entrypoint renovate-config-validator \
+            ghcr.io/renovatebot/renovate:44.206.2@sha256:d515a99f5d14d1c62b792ee61339d165dd9d20ee82ca9d5379daf639050bab51 \
+            --strict --no-global /config/renovate.jsonc
+          committed="${{ runner.temp }}/gitlab-pipeline"
+          cp -a "$generated" "$committed"
+          cd "$committed"
+          git init --quiet
+          git add -A
+          git -c user.name=acceptance -c user.email=acceptance@localhost commit --quiet -m generated
+          npx --yes gitlab-ci-local@4.77.0 --preview > /dev/null
+          npx --yes gitlab-ci-local@4.77.0 --list
+
       # A project generated without a web app takes its first one, and the workspace around it, from the item template; dotnet cleanarch add completes it below.
       - name: Add the first app with cleanarch-webapp --workspace
         if: matrix.first_app

@@ -93,8 +93,8 @@ With a web workspace it then runs `pnpm install --frozen-lockfile` and compares
 `src/Web/packages/api-client/src/generated/schema.ts` with what `openapi-typescript` writes from the
 OpenAPI reference, so a contract change without `pnpm api` fails and the message names that command,
 then `pnpm audit`, and, once `cleanarch.json` records the workspace, `pnpm lint`, `pnpm test` and
-`pnpm build` as the web workflow does. Those steps need Node.js and pnpm: without pnpm, `verify`
-stops before them and says how to install it, and no option skips them.
+`pnpm build`. Those steps need Node.js and pnpm: without pnpm, `verify` stops before them and says
+how to install it, and no option skips them.
 <!--#endif-->
 
 On a machine short of memory, `-m:<N>` caps `restore`, `build`, `test`, `coverage` and `verify` at
@@ -240,6 +240,10 @@ runs, as a `container:`, a service, a `docker://` step or the BuildKit driver, w
 
 `.gitlab-ci.yml` runs on a merge request to `main`, `develop` or the default branch, on a push to one
 of them, and on a manual run. A newer pipeline cancels the older one, except on those three branches.
+<!--#if (serverDatabase)-->
+A `v*.*.*` tag, or a manual run on a tag, runs the [release](#release) instead, and none of the jobs
+below.
+<!--#endif-->
 
 | Job | Does |
 |---|---|
@@ -251,19 +255,63 @@ of them, and on a manual run. A newer pipeline cancels the older one, except on 
 | <!--#endif--> |
 | `hygiene` | the documentation index check `verify` runs first |
 | `vulnerable-packages` | the vulnerability listing |
+| <!--#if (api)--> |
+| `docker` | the API image, built and never pushed, unprivileged and exposing 8080 only |
+| `load` | the load smoke against the stack started from `.env.example`; it never fails the pipeline |
+| `end-to-end` | once `compose` passes, the end-to-end suite against the stack, then the browser smoke with a web app |
+| <!--#endif--> |
+| `compose` | the Compose manifest against `.env.example`, and its healthchecks on `/health` |
+| <!--#if (anyWeb)--> |
+| `web` | in `src/Web`: frozen install, audit, lint, test, build, and a failure when the API client differs from the API's document |
+| `web-image` | one image per app under `src/Web/apps`, unprivileged and exposing 8080 only |
+| <!--#endif--> |
 | GitLab's SAST and Secret Detection jobs | the scanners of GitLab's own templates; their reports are the jobs' artifacts |
 
 The test summary and the coverage floor run whatever the tests answered, and any of the three
-failing fails `build-test`. Its integration tests start their containers through Testcontainers on a
-Docker-in-Docker service over TLS, which needs a runner that allows a privileged service, as
-GitLab.com's do. GitLab's SAST runs on every tier, but the merge request widget that lists its
-findings is Ultimate's.
+failing fails `build-test`. GitLab's SAST runs on every tier, but the merge request widget that lists
+its findings is Ultimate's.
+
+Every job that runs containers runs them on a Docker-in-Docker service over TLS, which needs a runner
+that allows a privileged service, as GitLab.com's do, and reaches their ports through the service's
+host name, `docker`: `build-test` sets `TESTCONTAINERS_HOST_OVERRIDE` for the integration tests.
+<!--#if (api)-->
+`load` and `end-to-end` set `STACK_PUBLISH_ADDRESS` to `0.0.0.0`, so that the stack publishes its
+ports on every address of the service, and `STACK_HOST` to `docker`, the host the end-to-end suite
+and k6 reach them on, and the browser smoke with a web app.
+<!--#endif-->
+<!--#if (api && files)-->
+`end-to-end` also sets `STORAGE_PUBLIC_ENDPOINT`, since the object store's signed URLs name the host
+they are reached on.
+<!--#endif-->
+<!--#if (anyWeb)-->
+
+`.gitlab/ci/web.yml` holds the `web` and `web-image` jobs, and the browser `end-to-end` drives:
+`.gitlab-ci.yml` includes it while it exists, so the file a web app brings edits nothing else. A
+pipeline cannot fan a job out over the folders it finds, so `web-image` builds the apps one after
+the other on a Docker-in-Docker service, and judges each even when another fails.
+<!--#endif-->
+<!--#if (api)-->
+
+The load smoke never fails the pipeline: its thresholds describe a broken system, and a `429` counts
+as a pass, because a shared runner's timings say nothing about this code. Run it against your own
+stack with `k6 run -e BASE_URL=http://localhost:8080 tests/Load/smoke.js`.
+<!--#endif-->
 
 Every image is pinned to a digest, and the .NET jobs run the SDK image every Dockerfile builds with.
+<!--#if (api)-->
+Docker's command-line client with its Compose and Buildx plugins, and k6, are pinned to a version
+and its checksum.
+<!--#endif-->
+<!--#if (anyWeb)-->
+Node.js is pinned the same way, and pnpm comes from corepack, at the version and checksum
+`packageManager` names in `src/Web/package.json`.
+<!--#endif-->
 GitLab's SAST and Secret Detection templates are the only includes not in this repository: they follow
 the instance's version, and nothing pins them on every instance. `GitLabPipelinePinningTests` reads
-`.gitlab-ci.yml` and fails on an image or a service without its digest, on an include that is neither
-a local file nor one of those two templates, and on an SDK image other than the Dockerfiles'.
+`.gitlab-ci.yml` and the files it includes, and fails on an image or a service without its digest,
+an image a script runs among them, on an include that is neither a local file nor one of those two
+templates, on a local include of a missing file that no `rules: exists` guards, on a pipeline file
+nothing includes, and on an SDK image other than the Dockerfiles'.
 <!--#endif-->
 <!--#if (sonar)-->
 
@@ -305,7 +353,7 @@ It builds into `artifacts/sonar`, leaving your `bin/` and `obj/` alone. It runs 
 only, so it reports less coverage than CI, and, the scanner running on Linux, names and leaves out
 [the ones that run on Windows alone](#tests-that-run-on-windows-alone).
 <!--#endif-->
-<!--#if (githubCi && serverDatabase)-->
+<!--#if ((githubCi || gitlabCi) && serverDatabase)-->
 
 ## Release
 
@@ -325,6 +373,34 @@ a signed provenance attestation, and uploads the migration bundles built from th
 needs no secret beyond `GITHUB_TOKEN`. Applying the bundles is yours:
 [deployment](deployment.md#migrations-at-release).
 <!--#endif-->
+<!--#if (gitlabCi && serverDatabase && api)-->
+Push a tag such as `v1.2.3`, or run the pipeline on an existing tag. `.gitlab/ci/release.yml`, which
+`.gitlab-ci.yml` includes, re-runs the gate in `verify`, then `container-image` publishes the API's
+image to the project's container registry, and the worker's when the project holds one, each as
+`1.2.3`, `1.2`, `1` and `latest` (a prerelease tag never moves `latest`), multi-arch, with BuildKit's
+SBOM and provenance, signed by cosign with the pipeline's identity, keyless, through Sigstore; and
+`migration-bundle` keeps the bundles built from the same commit as its artifacts for 90 days. It needs
+no variable beyond those GitLab gives every job. Applying the bundles is yours:
+[deployment](deployment.md#migrations-at-release), which also says how to verify an image.
+<!--#endif-->
+<!--#if (gitlabCi && serverDatabase && !api)-->
+Push a tag such as `v1.2.3`, or run the pipeline on an existing tag. `.gitlab/ci/release.yml`, which
+`.gitlab-ci.yml` includes, re-runs the gate in `verify`, then `container-image` publishes the worker's
+image to the project's container registry as `1.2.3`, `1.2`, `1` and `latest` (a prerelease tag never
+moves `latest`), multi-arch, with BuildKit's SBOM and provenance, signed by cosign with the pipeline's
+identity, keyless, through Sigstore; and `migration-bundle` keeps the bundles built from the same
+commit as its artifacts for 90 days. It needs no variable beyond those GitLab gives every job. Applying
+the bundles is yours: [deployment](deployment.md#migrations-at-release), which also says how to verify
+an image.
+<!--#endif-->
+<!--#if (gitlabCi && serverDatabase)-->
+
+The release's binfmt, BuildKit and SBOM scanner images are pinned by digest, and cosign to a version
+and its checksum.
+Sigstore's public instance trusts the pipelines of GitLab.com alone: on a self-managed instance the
+signing fails until cosign is pointed at a Sigstore instance that trusts it, as
+[verifying an image](deployment.md#verifying-an-image) says.
+<!--#endif-->
 
 ## Supply chain
 
@@ -335,7 +411,14 @@ lets a later feature band of the same major version run, and each Dockerfile pin
 builds with.
 The toolchain, the pinning and Dependabot are rows of [the stack](../architecture/README.md#the-stack).
 <!--#endif-->
-<!--#if (!githubHost)-->
+<!--#if (gitlabHost)-->
+Every dependency but the SDK is at an exact version, and Renovate proposes updates weekly from
+`.gitlab/renovate.jsonc`, in the bands Dependabot uses on GitHub; nothing is ignored. The SDK is a
+floor: `global.json` names the lowest version and lets a later feature band of the same major version
+run, and each Dockerfile pins the SDK image it builds with.
+The toolchain, the pinning and Renovate are rows of [the stack](../architecture/README.md#the-stack).
+<!--#endif-->
+<!--#if (!githubHost && !gitlabHost)-->
 Every dependency but the SDK is at an exact version. The SDK is a floor: `global.json` names the
 lowest version and lets a later feature band of the same major version run, and each Dockerfile pins
 the SDK image it builds with.
@@ -352,7 +435,10 @@ The toolchain and the pinning are rows of [the stack](../architecture/README.md#
 | <!--#if (githubHost)--> |
 | Container images and actions | their digest or commit SHA, beside the tag |
 | <!--#endif--> |
-| <!--#if (!githubHost)--> |
+| <!--#if (gitlabCi)--> |
+| Container images, and a tool a pipeline job downloads | their digest, beside the tag; the tool's version and its SHA-256 |
+| <!--#endif--> |
+| <!--#if (!githubHost && !gitlabCi)--> |
 | Container images | their digest, beside the tag |
 | <!--#endif--> |
 | <!--#if (anyWeb)--> |
@@ -377,10 +463,50 @@ A patch or a minor arrives in Dependabot's pull request on the images; write its
 A new major arrives from Dependabot too, and stays red, held by `NodeVersionTests`, until it is done
 by hand: `src/Web/.node-version`, `engines.node`, `@types/node` and every `FROM node:` move together.
 <!--#endif-->
-<!--#if (anyWeb && !githubHost)-->
+<!--#if (anyWeb && gitlabHost)-->
+Renovate's `node` group moves the web images' `node`, `src/Web/.node-version` and `@types/node` in
+one merge request within the major, and in another across it, which stays red, held by
+`NodeVersionTests`, until `engines.node` follows by hand. pnpm's own version, in `packageManager`,
+and the `overrides` of `src/Web/pnpm-workspace.yaml` are moved by hand.
+<!--#endif-->
+<!--#if (anyWeb && gitlabCi)-->
+`GitLabPipelinePinningTests` holds that merge request red too until `.gitlab/ci/web.yml` installs the
+same Node.js: set `node` and `node_sha256` there from the release's `SHASUMS256.txt`, since no bot
+computes a checksum.
+<!--#endif-->
+<!--#if (anyWeb && !githubHost && !gitlabHost)-->
 No bot proposes a newer Node.js: a patch, a minor or a major is taken by hand, and
 `src/Web/.node-version`, `engines.node`, `@types/node` and every `FROM node:` move together, or
 `NodeVersionTests` fails.
+<!--#endif-->
+<!--#if (gitlabHost)-->
+
+### Turning Renovate on
+
+Renovate runs outside the project and reads `.gitlab/renovate.jsonc` from the default branch; until
+it runs, nothing is proposed. On GitLab.com, install the Mend-hosted Renovate app from the Mend
+Developer Platform and give it this project: Mend holds the token and keeps Renovate current. On a
+self-managed instance, a project of its own includes the template of Renovate's runner project on
+GitLab.com and runs it on a pipeline schedule, with a bot's access token holding the `api`,
+`read_user` and `write_repository` scopes in its `RENOVATE_TOKEN` variable and this project's path in
+`RENOVATE_EXTRA_FLAGS`, as that template's README says; pin the template's `ref`, and its
+`CI_RENOVATE_IMAGE` by digest. This project's pipeline runs no Renovate job, so the bot's token
+reaches no job of its own.
+
+Renovate opens merge requests on Monday from 06:00 to 10:00, Paris time, a window wide enough for a
+run that starts late, within Dependabot's limits added up, since it counts every open merge request
+against one limit. It keeps a digest written beside a tag and moves the two together, groups what
+Dependabot groups, shows no dashboard and merges nothing by itself. The SDK band of `global.json` is
+raised by hand, as on GitHub.
+<!--#endif-->
+<!--#if (gitlabCi)-->
+The .NET SDK image moves in every Dockerfile and the pipeline in one merge request, which
+`RenovateConfigurationTests` holds, since one SDK runs the gate and builds the images. An image or a
+tool that a pipeline script names is bumped by hand, beside the comment that says so.
+<!--#endif-->
+<!--#if (gitlabHost)-->
+Renovate proposes no fix for an advisory on GitLab, since its vulnerability alerts read GitHub's:
+`NuGetAudit` fails the build on one, as the next section says.
 <!--#endif-->
 
 ### An advisory fails the build
@@ -416,8 +542,19 @@ Never lower the level, switch the audit to `direct`, or put the code in a `<NoWa
 zero whatever it finds, so `verify` and CI read what it prints.
 <!--#if (anyWeb)-->
 
+<!--#if (githubCi)-->
 `pnpm audit` holds the web packages to the same rule: `verify` and the web workflow run it, and any
-advisory fails, whatever its severity. The answer is the same too: raise the dependency, or pin a
+advisory fails, whatever its severity.
+<!--#endif-->
+<!--#if (gitlabCi)-->
+`pnpm audit` holds the web packages to the same rule: `verify` and the pipeline's `web` job run it,
+and any advisory fails, whatever its severity.
+<!--#endif-->
+<!--#if (!githubCi && !gitlabCi)-->
+`pnpm audit` holds the web packages to the same rule: `verify` runs it, and any advisory fails,
+whatever its severity.
+<!--#endif-->
+The answer is the same too: raise the dependency, or pin a
 patched release under `overrides` in `src/Web/pnpm-workspace.yaml` with a comment saying when it can go;
 a package that cannot take the pinned release as it is gets a pnpm patch in `src/Web/patches/`.
 <!--#endif-->
