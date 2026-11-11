@@ -40,9 +40,7 @@ internal static class UseCasePlan
                     + $"    public async Task AnEmpty{parameter.Name}_IsRefused() =>\n"
                     + $"        (await _validator.ValidateAsync(AWellFormed{(spec.IsCommand ? "Command" : "Query")}() with {{ {parameter.Name} = {parameter.Empty} }}, TestToken))\n"
                     + "            .IsValid.ShouldBeFalse();\n")),
-            ["Values"] = string.Join(", ", spec.Parameters.Select(parameter => parameter.Valid)) is { Length: <= 60 } values
-                ? values
-                : "\n" + string.Join(",\n", spec.Parameters.Select(parameter => "            " + parameter.Valid)),
+            ["Values"] = string.Join(", ", spec.Parameters.Select(parameter => parameter.Valid)),
             ["Malformed"] = spec.Ruled.Length == 0 ? string.Empty : $"{spec.Ruled[0].Name} = {spec.Ruled[0].Empty}",
         };
     }
@@ -142,11 +140,8 @@ internal static class UseCasePlan
     {
         string[] members = [.. declared];
 
-        return members.Length switch
-        {
-            0 => $"public sealed record {type}{implemented};",
-            1 => $"public sealed record {type}({members[0]}){implemented};",
-            _ => $"public sealed record {type}(\n{string.Join(",\n", members.Select(member => "    " + member))}){implemented};",
-        };
+        return members.Length == 0
+            ? $"public sealed record {type}{implemented};"
+            : $"public sealed record {type}(\n{string.Join(",\n", members.Select(member => "    " + member))}){implemented};";
     }
 }
