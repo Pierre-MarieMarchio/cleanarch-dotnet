@@ -70,8 +70,8 @@ expose one by one.
   3. A command that keeps a file in step takes `--check`, which fails where it would write instead.
      `verify` is the chain of those checks with the build and the tests.
   4. A generator takes `--dry-run`, and a command that deletes reports by default and writes only
-     with `--apply`. `adopt` and `eject` create a file once rather than keep one in step, so they
-     take `--dry-run` as a generator does, and no `--check`.
+     with `--apply`. `adopt`, `eject` and `templates copy` create a file once rather than keep one
+     in step, so they take `--dry-run` as a generator does, and no `--check`.
   5. `help` lists only what the project file makes true. A command that does not apply to the
      project is refused, with the reason.
 - **Each task becomes a command or a step.** `new-feature`, `new-use-case`, `new-field`,
@@ -87,7 +87,7 @@ expose one by one.
   missing, so it also finishes an addition that the IDE started through an item template. The
   initial migrations are a step of `bootstrap`, and the repository checks are a step of `verify`.
 - **A team changes the tool at four depths**, each one costlier than the last:
-  1. **Configuration**, planned and not offered yet: the project file would add steps to a
+  1. **Configuration**, not offered: the project file would add steps to a
      command, before or after it, and steps to `verify`; removing a step of `verify` would take a
      project ADR, which the project file names, and a test would refuse the removal without it,
      since `verify` is the gate the CI runs. The project file carries no steps today.
@@ -102,8 +102,8 @@ expose one by one.
   4. **Ejection.** `dotnet cleanarch eject <command>` copies a command's source into `tools/`,
      where the third depth takes it over. That one command stops following the tool's releases.
      `help`, `eject` and `adopt` are not ejected, since they say what the project's own commands
-     are, make them, and run before the tool knows the project. Nor are `add` and `remove`: they
-     run on CleanArch.Tooling, the library they share with the launcher, on Spectre.Console and on
+     are, make them, and run before the tool knows the project. Nor are `add` and `remove`, nor
+     `templates`, which copies the templates they read: they run on CleanArch.Tooling, the library they share with the launcher, on Spectre.Console and on
      Roslyn, none of which a file-based app carries; the code a generator writes changes through
      the code templates of the second depth.
 - **The template's own tasks and gates stay here.** `tools/CheckComments.cs`,
