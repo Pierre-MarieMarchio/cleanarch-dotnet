@@ -122,7 +122,7 @@ public sealed class TemplatesCommandTests : IDisposable
     public void ACopyOfAGeneratorWithoutARefusal_WorksWithoutAuthentication(string generator)
     {
         using var unauthenticated = new SampleProject(SampleProject.Minimal);
-        var templates = ToolTemplates.Of(generator);
+        var templates = ToolTemplates.Of(generator).Where(template => template.Key != ToolTemplates.Report).ToDictionary();
 
         Run(["templates", "copy", generator], unauthenticated.Root).ShouldBe(CleanArchCommand.Succeeded, _error.ToString());
 

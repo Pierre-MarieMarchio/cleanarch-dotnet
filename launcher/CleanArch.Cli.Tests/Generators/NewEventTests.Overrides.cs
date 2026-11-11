@@ -162,7 +162,7 @@ public sealed partial class NewEventTests
         string plain = NewTree(scratch);
         string copied = NewTree(scratch);
         int copy = Copy(copied);
-        string listed = string.Concat(ToolTemplates.Of(EventPlan.TemplateFolder).Keys.Order(StringComparer.Ordinal).Select(reference => $"\n  {OverridePath(reference)}"));
+        string listed = string.Concat(ToolTemplates.Of(EventPlan.TemplateFolder).Keys.Where(reference => reference != ToolTemplates.Report).Order(StringComparer.Ordinal).Select(reference => $"\n  {OverridePath(reference)}"));
 
         var expected = Invoke(plain, _consumedEvent);
         var result = Invoke(copied, _consumedEvent);

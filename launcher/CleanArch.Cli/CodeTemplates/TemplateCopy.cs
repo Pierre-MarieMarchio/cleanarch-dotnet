@@ -62,6 +62,7 @@ internal static class TemplateCopy
 
     private static IEnumerable<string> Selected(TemplateCopyRequest request) =>
         ToolTemplates.Of(request.Generator).Keys
+            .Where(reference => reference != ToolTemplates.Report)
             .Where(reference => request.Templates.Count == 0 || request.Templates.Any(name => Names(name, reference)))
             .Order(StringComparer.Ordinal);
 

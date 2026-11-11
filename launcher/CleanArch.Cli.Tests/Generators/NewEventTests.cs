@@ -608,7 +608,7 @@ public sealed partial class NewEventTests
         string[] unwritten =
         [
             .. ToolTemplates.Of(EventPlan.TemplateFolder).Keys
-                .Where(reference => !written.Contains(ProjectFolders.PathOf("Acme", reference, tokens)))
+                .Where(reference => reference != ToolTemplates.Report && !written.Contains(ProjectFolders.PathOf("Acme", reference, tokens)))
                 .Select(reference => ToolTemplates.PathOf(EventPlan.TemplateFolder, reference))
                 .Order(StringComparer.Ordinal),
         ];

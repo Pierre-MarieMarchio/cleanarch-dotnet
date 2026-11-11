@@ -987,7 +987,8 @@ their paths for the event `PlaceholderNotedDomainEvent` of `Placeholders`, consu
 with the reaction `NotifyListeners`: `EventPlan` names each, `EventFlags` holds its one flag and
 `EventBlocks` its list of fields, whose `Sample` differs from a feature's. The reference names of
 every generator are one list in `Template`, a longer name before a name it starts with or holds;
-the edits of `ApplicationModule.cs` and `DomainEventTests.cs` and the report stay code. Its draft
+the edits of `ApplicationModule.cs` and `DomainEventTests.cs` stay code, and its report is a
+template, as [reports](#reports) says. Its draft
 reads the overrides of `code-templates/add-event` alone through `TemplateOverrides.Read`, refuses
 on their problems, and its report lists those used; it records none in the feature's manifest, whose
 `templates` are `add feature`'s, the one record `add field` compares.
@@ -1146,6 +1147,19 @@ per generation, not once per field. A field token may write a `%Token%` of the f
         %field.Type% %field.Parameter%
 //#end ") : base(id)"
 ```
+
+### Reports
+
+A generator whose report is a template holds it as `report.txt` at the root of its folder under
+`launcher/CleanArch.Cli/code-templates`, embedded with its other templates and named
+`ToolTemplates.Report`; `add event` is one. `TemplateOverrides.WriteReport` renders it after the
+run, through `Template.RenderReport`: a line that is exactly a `%Token%` whose value is empty is
+dropped, then `Template.RenderText` runs the directives, the reference names and the tokens, and
+neither prunes usings nor tidies blank lines, which carry the report's layout. A report's vocabulary
+is `ReportFlags.For` the generator's flags, the mode flags `applied`, `dryrun` and `refused`, of
+which one holds, and the report's own shape flags, which its report class names, as
+`EventReport.Shapes`. What the tool computes, the files written, the paths edited, a count, is a
+token whose lines the class builds with `ReportLines.Of`; a report repeats no block.
 
 | Guarantee | Test |
 |---|---|
