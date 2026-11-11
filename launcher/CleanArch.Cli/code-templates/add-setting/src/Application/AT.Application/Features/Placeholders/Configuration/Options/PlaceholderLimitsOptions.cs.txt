@@ -1,0 +1,32 @@
+using Microsoft.Extensions.Options;
+
+namespace AppTemplate.Application.Features.Placeholders.Configuration.Options;
+
+public sealed class PlaceholderLimitsOptions
+{
+    public const string SectionName = "PlaceholderLimits";
+//#each key
+
+    public %key.Type% %key.Name% { get; set; } = %key.Default%;
+//#end
+}
+
+internal sealed class PlaceholderLimitsOptionsValidator : IValidateOptions<PlaceholderLimitsOptions>
+{
+    public ValidateOptionsResult Validate(string? name, PlaceholderLimitsOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        var failures = new List<string>();
+        string section = PlaceholderLimitsOptions.SectionName;
+//#each key where validated
+
+        if (%key.Condition%)
+        {
+            failures.Add($"'{section}:%key.Name%' %key.Message%");
+        }
+//#end
+
+        return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);
+    }
+}

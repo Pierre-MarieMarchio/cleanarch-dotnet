@@ -41,6 +41,9 @@ public sealed class NewSettingTests
     [Fact]
     public void Output() => Expectations.Hold(OutputCases);
 
+    [Fact]
+    public void EveryTemplateIsWritten() => Expectations.Hold(EveryTemplateIsWrittenCases);
+
     private const string _module = "src/Application/A.Application/ApplicationModule.cs";
 
     private const string _api = "src/Presentation/A.Api/appsettings.json";
@@ -649,6 +652,26 @@ public sealed class NewSettingTests
         }
 
         expect(restored, "An edit that could not be written did not put back the files edited before it and remove the files written.");
+    }
+
+    private static void EveryTemplateIsWrittenCases(string scratch, Action<bool, string> expect)
+    {
+        string root = NewTree(scratch);
+        var result = Invoke(root, "Invoices", "Limits", "--keys", "Max:int(1..9)=1");
+        var tokens = new Dictionary<string, string>(StringComparer.Ordinal) { ["F"] = "Invoices", ["Section"] = "Limits" };
+        string[] unwritten =
+        [
+            .. ToolTemplates.Of(SettingPlan.TemplateFolder).Keys
+                .Where(reference => !File.Exists(Path.Combine(root, ProjectFolders.PathOf("Acme", reference, tokens))))
+                .Select(reference => ToolTemplates.PathOf(SettingPlan.TemplateFolder, reference))
+                .Order(StringComparer.Ordinal),
+        ];
+
+        expect(result.Code == 0, $"add setting refused the run that writes its templates: {result.Error}");
+        expect(
+            unwritten.Length == 0,
+            $"add setting wrote none of these templates into a tree with an application test project, so each is text no generation reads: "
+            + $"write it from the plan, or delete it. {string.Join(", ", unwritten)}");
     }
 
     private static readonly (string Group, string[][] Runs)[] _outputRuns =
