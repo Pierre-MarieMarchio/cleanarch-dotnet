@@ -367,7 +367,7 @@ public sealed partial class NewFeatureTests
 
     private const string _removalRefusal = "remove feature refuses to remove this feature while another owner feature still uses these files.";
 
-    private static (int Code, string Output, string Error) Invoke(string root, params string[] args) => Invoke(root, _ => 0, args);
+    internal static (int Code, string Output, string Error) Invoke(string root, params string[] args) => Invoke(root, _ => 0, args);
 
     private static (int Code, string Output, string Error) Invoke(string root, Func<TextEdits.Command, int> run, params string[] args)
     {
@@ -1691,7 +1691,7 @@ public sealed partial class NewFeatureTests
         "Title:string(120), Nickname:string(40)?, Notes:text?, Summary:text(500), Count:int>=0<=1000, Total:long?>-5, "
         + "Budget:decimal(12,2)>=0, Ratio:decimal(5,4)?, Paid:bool, Due:DateOnly, StartsAt:DateTimeOffset, Reference:Guid?";
 
-    private static string FieldTree(string scratch)
+    internal static string FieldTree(string scratch)
     {
         string root = NewTree(scratch);
 

@@ -1,10 +1,14 @@
-﻿namespace CleanArch.Cli.Generators.Shared;
+﻿using System.Text.RegularExpressions;
+
+namespace CleanArch.Cli.Generators.Shared;
 
 internal sealed record UsedTemplate(string Path, string Sha256);
 
 internal sealed class TemplateOverrides
 {
     private readonly string _generator;
+
+    private static readonly Regex _block = new(@"(?://|/\*)#each\b", RegexOptions.None, TimeSpan.FromSeconds(2));
 
     private readonly FlagSet _vocabulary;
 
@@ -30,6 +34,9 @@ internal sealed class TemplateOverrides
     internal IReadOnlyList<UsedTemplate> Used => [.. _used.Select(used => new UsedTemplate(used.Key, used.Value))];
 
     internal IReadOnlyList<string> Problems => _problems;
+
+    internal IEnumerable<string> InUse =>
+        _overrides.ContainsKey(ToolTemplates.Report) ? _used.Keys.Append(ToolTemplates.PathOf(_generator, ToolTemplates.Report)) : _used.Keys;
 
     internal static TemplateOverrides Read(string root, string generator, FlagSet vocabulary, FlagSet reportVocabulary)
     {
@@ -74,12 +81,14 @@ internal sealed class TemplateOverrides
 
     internal void WriteReport(TextWriter output, ReportMode mode, HashSet<string> flags, Dictionary<string, string> tokens)
     {
-        string template = ToolTemplates.Of(_generator)[ToolTemplates.Report];
+        string tool = ToolTemplates.Of(_generator)[ToolTemplates.Report];
 
-        if (Template.TokensOf(template).FirstOrDefault(token => !tokens.ContainsKey(token)) is { } unset)
+        if (Template.TokensOf(tool).FirstOrDefault(token => !tokens.ContainsKey(token)) is { } unset)
         {
             throw new InvalidOperationException($"{ToolTemplates.PathOf(_generator, ToolTemplates.Report)} names %{unset}%, which {Spoken} does not set in every run.");
         }
+
+        string template = _overrides.TryGetValue(ToolTemplates.Report, out var custom) ? custom.Text : tool;
 
         foreach (string line in Template.RenderReport(template, _reportVocabulary, [.. flags, ReportFlags.Of(mode)], tokens).Split('\n'))
         {
@@ -137,6 +146,39 @@ internal sealed class TemplateOverrides
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             Refuse($"{path}: cannot be read ({exception.Message}).");
+
+            return;
+        }
+
+        if (reference == ToolTemplates.Report && ReportProblem(_overrides[reference].Text) is { } problem)
+        {
+            Refuse($"{path}: {problem}");
+        }
+    }
+
+    private string? ReportProblem(string text)
+    {
+        if (_block.Match(text) is { Success: true } block)
+        {
+            return $"'{block.Value}' opens a block, which a report never repeats: each list it shows is a token the tool writes.";
+        }
+
+        string tool = ToolTemplates.Of(_generator)[ToolTemplates.Report];
+
+        if (Template.TokensOf(text).Except(Template.TokensOf(tool), StringComparer.Ordinal).FirstOrDefault() is { } unknown)
+        {
+            return $"'%{unknown}%' is not a token of the report of {Spoken}, which names those of the tool's own report.txt alone.";
+        }
+
+        try
+        {
+            Directives.Apply(text, new HashSet<string>(StringComparer.Ordinal), _reportVocabulary);
+
+            return null;
+        }
+        catch (InvalidOperationException exception)
+        {
+            return exception.Message;
         }
     }
 

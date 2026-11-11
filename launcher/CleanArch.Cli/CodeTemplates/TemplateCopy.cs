@@ -62,7 +62,6 @@ internal static class TemplateCopy
 
     private static IEnumerable<string> Selected(TemplateCopyRequest request) =>
         ToolTemplates.Of(request.Generator).Keys
-            .Where(reference => reference != ToolTemplates.Report)
             .Where(reference => request.Templates.Count == 0 || request.Templates.Any(name => Names(name, reference)))
             .Order(StringComparer.Ordinal);
 
@@ -106,7 +105,7 @@ internal static class TemplateCopy
         output.WriteLine();
         output.WriteLine(request.DryRun
             ? "--dry-run: nothing was written."
-            : $"{TemplatesCommand.Generators[request.Generator].Writes} those files from them.");
+            : $"{TemplatesCommand.Generators[request.Generator].Writes} from them.");
     }
 
     private static string Listed(string generator, IEnumerable<string> references) =>

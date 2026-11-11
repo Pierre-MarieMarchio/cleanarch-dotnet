@@ -42,7 +42,7 @@ public sealed partial class NewEventTests
 
     private const string _list = "tests/Architecture/A.Architecture.Tests/Rules/DomainEventTests.cs";
 
-    private static string NewTree(string scratch)
+    internal static string NewTree(string scratch)
     {
         string root = Path.Combine(scratch, Guid.CreateVersion7().ToString("N"));
 
@@ -108,7 +108,7 @@ public sealed partial class NewEventTests
         return root;
     }
 
-    private static (int Code, string Output, string Error) Invoke(string root, params string[] args) =>
+    internal static (int Code, string Output, string Error) Invoke(string root, params string[] args) =>
         GeneratorRun.Invoke(AddEventCommand.Build(GeneratorRun.Project(root), _ => new FakeExecutor(_ => 0)), args);
 
     private static void RecordedEditsUndo(string root, Dictionary<string, string> before, Action<bool, string> expect)

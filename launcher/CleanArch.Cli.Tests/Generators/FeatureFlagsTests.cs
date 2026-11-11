@@ -1,4 +1,5 @@
 ﻿using CleanArch.Cli.Generators.AddEvent;
+using CleanArch.Cli.Generators.AddField;
 using CleanArch.Cli.Generators.AddSetting;
 using CleanArch.Cli.Generators.AddUseCase;
 using CleanArch.Cli.Generators.Shared;
@@ -28,16 +29,58 @@ public sealed class FeatureFlagsTests
     public void TheGuideToCodeTemplates_ListsEachFlagOfAddSetting_WithItsMeaning_AndNoOther() =>
         ListsEachFlag("add setting", SettingFlags.Vocabulary);
 
+    [Fact]
+    public void TheGuideToCodeTemplates_ListsEachFlagOfEveryReport_WithItsMeaning_AndNoOther() =>
+        ListsEachFlag("every report", ReportFlags.Modes);
+
+    [Theory]
+    [MemberData(nameof(Reports))]
+    public void TheGuideToCodeTemplates_ListsTheFlagsAndTokensOfEachReport_AndNoOther(string generator)
+    {
+        var (spoken, shapes) = _reports[generator];
+        string heading = $"### The report of {spoken}";
+        string section = Section(heading, $"the flags and tokens of the report of {spoken}");
+        string[] named = [.. Template.TokensOf(ToolTemplates.Of(generator)[ToolTemplates.Report]).Order(StringComparer.Ordinal)];
+
+        string[] listed = [.. Template.TokensOf(section).Order(StringComparer.Ordinal)];
+
+        Compare(heading, Rows(section), [.. shapes.Meanings.Select(Row)], $"the report flags of {spoken}");
+        listed.ShouldBe(
+            named,
+            $"The section '{heading}' of {_page} lists the tokens of {ToolTemplates.PathOf(generator, ToolTemplates.Report)}, each and no other.");
+    }
+
+    public static TheoryData<string> Reports => [.. _reports.Keys];
+
+    private static readonly Dictionary<string, (string Spoken, FlagSet Shapes)> _reports = new(StringComparer.Ordinal)
+    {
+        ["add-feature"] = ("add feature", FeatureFlags.ReportShapes),
+        ["add-field"] = ("add field", FieldReport.Shapes),
+        ["add-use-case"] = ("add use-case", UseCaseReport.Shapes),
+        ["add-event"] = ("add event", EventReport.Shapes),
+        ["add-setting"] = ("add setting", SettingReport.Shapes),
+    };
+
+    private static string Row(KeyValuePair<string, string> flag) => $"| `{flag.Key}` | {flag.Value} |";
+
+    private static string Section(string heading, string listed) =>
+        MarkdownSection.Of(Path.Combine(Repository.Root, _page), heading)
+            .ShouldNotBeNull($"{_page} has no section '{heading}', where {listed} are listed.");
+
+    private static string[] Rows(string section) =>
+        [.. section.ReplaceLineEndings("\n").Split('\n').Where(line => line.StartsWith("| `", StringComparison.Ordinal))];
+
     private static void ListsEachFlag(string generator, FlagSet flags)
     {
         string heading = $"### The flags of {generator}";
-        string section = MarkdownSection.Of(Path.Combine(Repository.Root, _page), heading)
-            .ShouldNotBeNull($"{_page} has no section '{heading}', where the flags of {generator} are listed.");
-        string[] listed = [.. section.ReplaceLineEndings("\n").Split('\n').Where(line => line.StartsWith("| `", StringComparison.Ordinal))];
-        string[] vocabulary = [.. flags.Meanings.Select(flag => $"| `{flag.Key}` | {flag.Value} |")];
+        string[] listed = Rows(Section(heading, $"the flags of {generator}"));
 
         listed.ShouldNotBeEmpty($"The section '{heading}' of {_page} holds no row, so this comparison reads nothing.");
+        Compare(heading, listed, [.. flags.Meanings.Select(Row)], generator);
+    }
 
+    private static void Compare(string heading, string[] listed, string[] vocabulary, string generator)
+    {
         string[] offenders =
         [
             .. vocabulary.Except(listed, StringComparer.Ordinal).Select(row => $"missing from the page, or listed with another meaning: {row}"),

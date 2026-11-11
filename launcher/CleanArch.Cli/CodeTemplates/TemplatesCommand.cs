@@ -9,10 +9,11 @@ internal static class TemplatesCommand
 
     internal static IReadOnlyDictionary<string, TemplatedGenerator> Generators { get; } = new Dictionary<string, TemplatedGenerator>(StringComparer.Ordinal)
     {
-        ["add-feature"] = new(project => GeneratorCommand.AuthenticationRefusal(project, "feature"), "add feature and add field now write"),
-        ["add-use-case"] = new(_ => null, "add use-case now writes"),
-        ["add-event"] = new(_ => null, "add event now writes"),
-        ["add-setting"] = new(_ => null, "add setting now writes"),
+        ["add-feature"] = new(project => GeneratorCommand.AuthenticationRefusal(project, "feature"), "add feature and add field now write those files"),
+        ["add-field"] = new(project => GeneratorCommand.AuthenticationRefusal(project, "field"), "add field now writes its report"),
+        ["add-use-case"] = new(_ => null, "add use-case now writes those files"),
+        ["add-event"] = new(_ => null, "add event now writes those files"),
+        ["add-setting"] = new(_ => null, "add setting now writes those files"),
     };
 
     public static readonly CommandRegistration Registration = new(ProjectCommand.Refusal, Build);
