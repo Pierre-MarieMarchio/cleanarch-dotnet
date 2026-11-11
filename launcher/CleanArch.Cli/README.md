@@ -55,8 +55,7 @@ dotnet cleanarch add setting Invoices InvoiceLimits --keys "MaxItems:int(1..100)
 dotnet cleanarch add event Invoices InvoicePaidDomainEvent --unconsumed "Nothing reacts to it yet"
 dotnet cleanarch templates copy add-feature      # copy the templates of add feature and add field into code-templates/
 dotnet cleanarch templates copy add-feature PlaceholdersController.cs --dry-run # list what it would copy, and write nothing
-dotnet cleanarch templates copy add-event        # copy the templates of add event, in any project
-dotnet cleanarch templates copy add-setting      # copy the templates of add setting in any project
+dotnet cleanarch templates copy add-use-case     # copy the templates of add use-case, in any project
 dotnet cleanarch remove feature Widgets          # report what removing it involves, writing nothing
 dotnet cleanarch remove feature Widgets --apply  # remove it, as its manifest records it
 dotnet cleanarch adopt       # write cleanarch.json for a project generated before the tool
@@ -144,18 +143,16 @@ only reports unless given `--apply`. `add feature` and `add field` do not apply 
 project file records `auth: none`, since every feature they write needs an authenticated
 caller, and are refused with that reason.
 
-`templates copy add-feature [<template>...]` copies the templates `add feature` and `add field`
-write from into the project's `code-templates/add-feature/`, each at the path of the file it writes
-in the reference feature with `.txt` after it, and records each copy's source, the tool's version
-and digest, in `code-templates/manifest.json`. The `.txt` copies are the team's to edit, and both
-generators then write from them. It never overwrites a copy, so it takes `--dry-run` and no `--check`,
-and it is refused where `add feature` is. `templates copy add-use-case [<template>...]` copies those
-of `add use-case` into `code-templates/add-use-case/` the same way, in every project, and
-`templates copy add-event [<template>...]` those of `add event` into `code-templates/add-event/`, and
-`templates copy add-setting [<template>...]` those of `add setting` into `code-templates/add-setting/`. Once a newer
-tool changes a template the project holds a copy of, each generator keeps writing from the copy and
-prints a `warning:` naming it; committing a copy untouched before editing it lets git carry the
-team's changes onto a fresh copy.
+`templates copy <generator> [<template>...]` copies the code templates a generator writes from into
+the project's `code-templates/<generator>/`, each at the path of the file it writes for the
+generator's reference with `.txt` after it, and records each copy's source, the tool's version and
+digest, in `code-templates/manifest.json`. `<generator>` is `add-feature`, for `add feature` and
+`add field` and refused where `add feature` is, or `add-use-case`, `add-event` or `add-setting`, in
+every project. The `.txt` copies are the team's to edit, and the generator then writes from them.
+It never overwrites a copy, so it takes `--dry-run` and no `--check`. Once a newer tool changes a
+template the project holds a copy of, the generator keeps writing from the copy and prints a
+`warning:` naming it; committing a copy untouched before editing it lets git carry the team's
+changes onto a fresh copy.
 
 `adopt` is for a project generated before the tool, which has no project file yet: it finds the
 folder that holds one solution beside the task launcher a project of that time carried, reads the options, the web workspace and

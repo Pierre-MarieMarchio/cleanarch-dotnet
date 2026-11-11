@@ -8,14 +8,26 @@ description: How this project changes the code a generator writes, through code 
 
 ## When
 
+<!--#if (canAddFeature)-->
 Every feature `add feature` writes should carry something the tool's code does not: an attribute on
 each record, a header, a test of a house rule, a different layout of a class. Rewriting it by hand
 after each run is the change this guide replaces. At the end, `add feature` and `add field` write
 those files from code templates this project holds and edits, and every other file as before.
+`add use-case`, `add event` and `add setting` take code templates the same way, each from its own
+folder.
+<!--#endif-->
+<!--#if (!canAddFeature)-->
+Every use case `add use-case` writes should carry something the tool's code does not: an attribute
+on each message, a header, a test of a house rule, a different layout of a class. Rewriting it by
+hand after each run is the change this guide replaces. At the end, `add use-case` writes those files
+from code templates this project holds and edits, and every other file as before. `add event` and
+`add setting` take code templates the same way, each from its own folder.
+<!--#endif-->
 
 ## Steps
 
-1. List the code templates of `add feature`, the path each file is written from:
+1. List the code templates of the generator, the path each file is written from:
+   <!--#if (canAddFeature)-->
 
    ```bash
    dotnet cleanarch templates copy add-feature --dry-run
@@ -23,15 +35,34 @@ those files from code templates this project holds and edits, and every other fi
 
    Each one lies at its path in the reference feature, `Placeholders` of the type `Placeholder`, with
    `.txt` appended: the controller's is the template that ends in `PlaceholdersController.cs.txt`.
+   <!--#endif-->
+   <!--#if (!canAddFeature)-->
+
+   ```bash
+   dotnet cleanarch templates copy add-use-case --dry-run
+   ```
+
+   Each one lies at its path for the reference command `ApprovePlaceholder` or query
+   `GetPlaceholderTotals` of the feature `Placeholders`, with `.txt` appended: the command's is the
+   template that ends in `ApprovePlaceholder.cs.txt`.
+   <!--#endif-->
 
 2. Copy the ones to change, by their path or the end of it after a `/`; without a name, the command
    copies them all:
+   <!--#if (canAddFeature)-->
 
    ```bash
    dotnet cleanarch templates copy add-feature PlaceholdersController.cs PlaceholderRecord.cs
    ```
+   <!--#endif-->
+   <!--#if (!canAddFeature)-->
 
-   Each copy lands at `code-templates/add-feature/<reference path>.txt`, and
+   ```bash
+   dotnet cleanarch templates copy add-use-case ApprovePlaceholder.cs
+   ```
+   <!--#endif-->
+
+   Each copy lands at `code-templates/<generator>/<reference path>.txt`, and
    `code-templates/manifest.json` records the version of the tool it came from and the SHA-256 of
    that text. The command never overwrites a file: a template copied already is listed as kept.
 
@@ -40,16 +71,24 @@ those files from code templates this project holds and edits, and every other fi
    [taking the tool's change](#when-the-tool-changes-a-template) says.
 
 4. Run the generator, `--dry-run` first:
+   <!--#if (canAddFeature)-->
 
    ```bash
    dotnet cleanarch add feature <Features> <Feature> --access shared --dry-run
    ```
+   <!--#endif-->
+   <!--#if (!canAddFeature)-->
+
+   ```bash
+   dotnet cleanarch add use-case <Features> <UseCase> --kind command --dry-run
+   ```
+   <!--#endif-->
 
    It writes each file from this project's copy where there is one, and from the tool's text
    otherwise. A copy left as it was copied writes the same bytes as the tool's text.
 
-A team that wants every file `add feature` writes from its own text copies them all; one that wants
-a single file changed copies that one, and the others follow the tool from version to version.
+A team that wants every file a generator writes from its own text copies them all; one that wants a
+single file changed copies that one, and the others follow the tool from version to version.
 
 ## What a copy changes
 
@@ -59,17 +98,19 @@ A copy changes the text of one file, and nothing else:
 |---|---|
 | the text of the file it writes: its usings, members, attributes, comments, tests | which files a generation writes, their paths and their names |
 | which lines each option keeps, through its directives | the options, their defaults and their refusals |
-| how the fields are written, through its blocks | the fields' grammar and the code each token holds |
-| | the edits of files the feature does not own: the composition, the context, the indexes of pages |
+| how the fields, parameters or keys are written, through its blocks | their grammar and the code each token holds |
+| | the edits of files no template writes: the composition, the context, the indexes of pages |
+| <!--#if (canAddFeature)--> |
 | | the feature's page, written from `docs/_page-templates/feature.md` |
+| <!--#endif--> |
 
 The edits go into files no template writes, so a copy cannot move them; a copy that renames a type
-or a namespace an edit names breaks the build `add feature` runs next, which names the line.
+or a namespace an edit names breaks the next build, which names the line.
 
 ## The language
 
 A copy is the C# of the reference feature with four additions, read in this order: directives, the
-reference names, blocks over fields, and tokens. Text outside them is written as it stands.
+reference names, blocks, and tokens. Text outside them is written as it stands.
 
 ### Directives
 
@@ -79,8 +120,55 @@ A line whose first non-blank characters are `#if <condition>`, `#elif <condition
 a directive in a branch that does not hold is still read, so a typo there is refused too.
 
 A condition is read as C# reads one: a flag, `!`, `&&`, `||` and parentheses, `&&` binding tighter
-than `||`, as `#if record && (create || update)`. A flag is one of the table below and nothing else,
-so a generated file cannot carry a real `#if DEBUG`.
+than `||`, as `#if configured && !required` in a template of `add setting`. A flag is one of its
+generator's table below and nothing else, so a generated file cannot carry a real `#if DEBUG`.
+
+### Reference names
+
+A copy names its generator's reference, and each name becomes the generation's wherever it appears,
+inside a word or in prose; the reference project's name, which a copy holds where this project's
+name stands in its namespaces and its paths, becomes this project's. Each generator's section below
+lists its reference names.
+
+### Blocks
+
+A block repeats its body once per item of its generator's list, `field`, `parameter` or `key`, in the
+order the command gives them. On lines of their own:
+
+```text
+//#each <list> [where <trait>] [separator "<text>"]
+    <body>
+//#end ["<tail>"]
+```
+
+Inside a line, the same block is `/*#each <list> ...*/<body>/*#end*/`. `where <trait>` keeps the
+items that have the trait; `separator "<text>"` joins them with the text, `\n` standing for a line
+break, where a line block otherwise joins them with a line break and an inline one with nothing; a
+quoted tail after `#end` follows the last item. A block that keeps no item writes nothing, its tail
+included. Blocks do not nest, and a directive inside one is decided once per generation, not once
+per item. Inside a block, `%<list>.<Token>%` is a value of the item, from its generator's table.
+
+### Tokens
+
+A `%Token%` outside a block is code the generator computes for the whole generation, in the middle
+of a line, where a directive cannot stand: the arguments of a call, the key a test breaks. A copy
+moves or drops the ones it holds, and may use any its generator's templates hold; a token the
+generation does not set is refused rather than written as code.
+
+A using marked `//?<Type>|<Type>` at the end of its line is kept only when the code after the
+namespace names one of those types, so a branch can drop the last use of a namespace without
+leaving an unused using.
+<!--#if (canAddFeature)-->
+
+## The templates of add feature
+
+`add feature` and `add field` write a feature's files from the templates under
+`code-templates/add-feature`, each at its path in the reference feature.
+
+### Reference names of add feature
+
+`Placeholders` becomes the feature's folder, `Placeholder` its type, and `placeholder` the type
+lowered. A copy that needs the word `placeholder` for itself cannot have it.
 
 ### The flags of add feature
 
@@ -116,39 +204,16 @@ says what the feature does:
 | `trimsText` | Create or update takes a text the service trims: a field is a string. |
 | `constants` | A limit of the content is declared as a constant: a field is a string, a text or a decimal, or has a bound. |
 
-### Reference names
-
-A copy names the reference feature, and each name becomes the generation's wherever it appears,
-inside a word or in prose: `Placeholders` the feature's folder, `Placeholder` its type, `placeholder`
-the type lowered, and the reference project's name, which a copy holds where this project's name
-stands, in its namespaces and its paths. A copy that needs the word `placeholder` for itself cannot
-have it.
-
 ### Blocks over fields
 
-A block repeats its body once per field of the feature, in the order `--fields` gives them. On lines
-of its own:
-
-```text
-//#each field [where <trait>] [separator "<text>"]
-    <body>
-//#end ["<tail>"]
-```
-
-Inside a line, the same block is `/*#each field ...*/<body>/*#end*/`. `where <trait>` keeps the
-fields that have the trait; `separator "<text>"` joins them with the text, `\n` standing for a line
-break, where a line block otherwise joins them with a line break and an inline one with nothing; a
-quoted tail after `#end` follows the last field. A block that keeps no field writes nothing, its tail
-included. Blocks do not nest, and a directive inside one is decided once per generation, not once
-per field. This block writes a constructor's parameters, one per line:
+A block of `add feature` repeats over `field`, the fields of the feature in the order `--fields`
+gives them. This block writes a constructor's parameters, one per line:
 
 ```text
 //#each field separator ",\n"
         %field.Type% %field.Parameter%
 //#end ") : base(id)"
 ```
-
-Inside a block, `%field.<Token>%` is a value of the field:
 
 | Token | Writes |
 |---|---|
@@ -170,8 +235,6 @@ Inside a block, `%field.<Token>%` is a value of the field:
 | `Sample` | a valid value for a test |
 | `Sorting`, `CursorKey`, `KeysetMethod` | how the list sorts by it, its cursor's key, and the keyset method |
 
-A trait selects fields with `where`:
-
 | Trait | Holds for a field that |
 |---|---|
 | `string` | is a `string(n)` |
@@ -182,47 +245,27 @@ A trait selects fields with `where`:
 | `summary` | the list's summary carries, every field but a `text` |
 | `sortable` | the list sorts by |
 | `keyset` | the list pages through by cursor |
-
-### Tokens
-
-A `%Token%` outside a block is code the generator computes for the whole feature, in the middle of a
-line, where a directive cannot stand: the arguments of a call, an owner's clause, a list's input. A
-copy moves or drops the ones it holds, and may use any the tool's templates of `add feature` hold;
-a token the generation does not set is refused rather than written as code.
-
-A using marked `//?<Type>|<Type>` at the end of its line is kept only when the code after the
-namespace names one of those types, so a branch can drop the last use of a namespace without
-leaving an unused using.
+<!--#endif-->
 
 ## The templates of add use-case
 
-`add use-case` writes its files from templates in the same language. A command's are those of the
-reference command `ApprovePlaceholder` of the feature `Placeholders`, a query's those of the
-reference query `GetPlaceholderTotals`, which answers `PlaceholderTotalsDto`: the use case, its
+`add use-case` writes its files from templates under `code-templates/add-use-case`. A command's are
+those of the reference command `ApprovePlaceholder` of the feature `Placeholders`, a query's those of
+the reference query `GetPlaceholderTotals`, which answers `PlaceholderTotalsDto`: the use case, its
 validator, the validator's tests, the handler's test and the request contract, and for the query its
 DTO and its response contract. The tool decides which of them a run writes: the validator and its
 tests only with a rule, the handler's test only where the application's tests hold the
 `ValidatedHandler` double, the DTO unless the feature declares it, the contracts only where the API
 serves the feature. The controller's action and the route's row are edits, which no template writes.
 
-`dotnet cleanarch templates copy add-use-case --dry-run` lists them, and the command copies them as
-[the steps](#steps) say, by their path or the end of it after a `/`, such as the reference
-command's file name; a project without authentication has them too, since `add use-case` serves
-it. A copy lies at `code-templates/add-use-case/<reference path>.txt`, and `add use-case` writes
-that file from it as `add feature` does, and warns as `add feature` does
-[when the tool changes it](#when-the-tool-changes-a-template): it reads every copy before writing anything, refuses a
-broken one as [below](#refusals), and lists the copies it wrote from under `Written from this
-project's code templates:`. The feature's manifest records the files it wrote, never the copies:
-only `add field` reads them back.
-
 ### Reference names of add use-case
 
 `ApprovePlaceholder` and `GetPlaceholderTotals` become the use case's name, `PlaceholderTotals` the
-name its DTO and its response start with, `Placeholders` the feature's folder, `Placeholder` the
-aggregate where the use case carries its id, and the reference project's name this project's. Prose
-takes three tokens instead, since a name written in words is not a reference name: `%Spoken%` is
-the use case's name in words, `approve invoice`; `%SpokenAggregate%` the aggregate's, where the use
-case carries its id; `%SpokenAnswer%` the answer's, in a query.
+name its DTO and its response start with, `Placeholders` the feature's folder, and `Placeholder` the
+aggregate where the use case carries its id. Prose takes three tokens instead, since a name written
+in words is not a reference name: `%Spoken%` is the use case's name in words, `approve invoice`;
+`%SpokenAggregate%` the aggregate's, where the use case carries its id; `%SpokenAnswer%` the
+answer's, in a query.
 
 ### The flags of add use-case
 
@@ -258,10 +301,9 @@ A block of `add use-case` repeats over `parameter`, the values the message carri
 
 ## The templates of add event
 
-`add event` writes its files from templates of its own, under `code-templates/add-event`, in the
-language above, and `dotnet cleanarch templates copy add-event` copies them, in a project without
-authentication too. Each lies at its path for the event `PlaceholderNotedDomainEvent` of `Placeholders`,
-consumed by `Listeners` whose reaction is `NotifyListeners`:
+`add event` writes its files from templates under `code-templates/add-event`, each at its path for
+the event `PlaceholderNotedDomainEvent` of `Placeholders`, consumed by `Listeners` whose reaction is
+`NotifyListeners`:
 
 | Template | Written |
 |---|---|
@@ -272,16 +314,8 @@ consumed by `Listeners` whose reaction is `NotifyListeners`:
 
 Its reference names are `PlaceholderNoted`, the event's name without `DomainEvent`, `Placeholders`
 the folder of the feature that raises it, `Listeners` the folder of the feature that consumes it,
-`NotifyListeners` the reaction, and the reference project's name. The registration in
-`ApplicationModule.cs`, the entry of an unconsumed event in `DomainEventTests.cs` and the report
-stay the tool's.
-
-A copy at its path under `code-templates/add-event` writes its own file and no other, as one of
-`add feature` does: `add event` reads only that folder, refuses a broken copy or one naming no
-template with the same messages and writes nothing, and its report lists the copies it wrote from
-under `Written from this project's code templates:`, and it warns, as `add feature` does, when the
-tool has changed a template copied since. The feature's manifest records the event's
-files and edits, and no copy: its `templates` stay those of `add feature`, which `add field` reads.
+and `NotifyListeners` the reaction. The registration in `ApplicationModule.cs`, the entry of an
+unconsumed event in `DomainEventTests.cs` and the report stay the tool's.
 
 ### The flags of add event
 
@@ -299,18 +333,17 @@ its local.
 
 ## The templates of add setting
 
-`add setting` writes its two files from code templates too, which
-`dotnet cleanarch templates copy add-setting` copies into `code-templates/add-setting/`:
-the options class with its validator, whose template ends in `PlaceholderLimitsOptions.cs.txt`, and
-their tests, whose template ends in `PlaceholderLimitsOptionsTests.cs.txt` and which it writes only
-where the application's unit test project exists. Its edits stay the tool's: the registration, each
+`add setting` writes its two files from templates under `code-templates/add-setting`: the options
+class with its validator, whose template ends in `PlaceholderLimitsOptions.cs.txt`, and their
+tests, whose template ends in `PlaceholderLimitsOptionsTests.cs.txt` and which it writes only where
+the application's unit test project exists. Its edits stay the tool's: the registration, each
 host's `appsettings.json`, the configuration reference, Compose and `.env.example`.
 
-The reference names are the section `PlaceholderLimits`, the feature's folder `Placeholders` and the
-reference project's name. Keep `SectionName` set to the section's name: `add setting` and
-`remove feature` find a section by that constant in a file whose name ends in Options.cs. A
-`%Token%` outside a block is `%Broken%`, the key the test of a section out of range breaks, the first
-validated one, and `%BrokenValue%`, the value it breaks it with.
+The reference names are the section `PlaceholderLimits` and the feature's folder `Placeholders`.
+Keep `SectionName` set to the section's name: `add setting` and `remove feature` find a section by
+that constant in a file whose name ends in Options.cs. A `%Token%` outside a block is `%Broken%`,
+the key the test of a section out of range breaks, the first validated one, and `%BrokenValue%`, the
+value it breaks it with.
 
 ### The flags of add setting
 
@@ -321,9 +354,9 @@ validated one, and `%BrokenValue%`, the value it breaks it with.
 
 ### Blocks over keys
 
-A block over keys reads as a block over fields, with `key` for `field`, and repeats its body once per
-key, in the order `--keys` gives them. A key's code differs by its type, and a directive is decided
-once per generation, so that code is a token: `%key.<Token>%` is
+A block of `add setting` repeats over `key`, the keys in the order `--keys` gives them. A key's code
+differs by its type, and a directive is decided once per generation, so that code is a token:
+`%key.<Token>%` is
 
 | Token | Writes |
 |---|---|
@@ -344,28 +377,29 @@ once per generation, so that code is a token: `%key.<Token>%` is
 
 ## Refusals
 
-`add feature`, `add field`, `add use-case` and `add setting` read every copy of theirs before writing anything, and
-refuse, writing nothing, with a message that starts with the copy's path, and the line's number
-where there is one:
+A generator reads every copy of its own before writing anything, and refuses, writing nothing, with
+a message that starts with the copy's path, and the line's number where there is one:
 
 - a file under `code-templates/<generator>` whose path names no template of that generator; a file
   whose name starts with a dot is not read;
 - a condition naming a flag outside its generator's table, empty, left dangling or unbalanced;
 - an `#elif`, `#else` or `#endif` without its `#if`, an `#if` never closed, text after `#else` or
   `#endif`;
-- a block over another list than the generator's, `field`, `parameter` or `key`, naming an unknown
-  token or trait, left open, or a `%field.<Token>%`, `%parameter.<Token>%` or `%key.<Token>%` outside
-  any block;
+- a block over another list than the generator's, naming an unknown token or trait, left open, or a
+  `%<list>.<Token>%` outside any block;
 - a `%Token%` the generation does not set.
 
 Fix the copy, or delete it, and run the same command again.
 
 ## What the feature records
 
-The feature's manifest, `.feature-manifest/<Features>.json`, records under `templates` each copy the
-run wrote from, with the SHA-256 of its text, and the report of `add feature` lists them under
-`Written from this project's code templates:`. A feature written from the tool's text alone records
-none.
+A generator's report lists each copy the run wrote from under `Written from this project's code
+templates:`, under `--dry-run` too, and lists none when it refuses.
+<!--#if (canAddFeature)-->
+
+The feature's manifest, `.feature-manifest/<Features>.json`, records under `templates` each copy
+`add feature` wrote from, with the SHA-256 of its text. A feature written from the tool's text alone
+records none.
 
 `add field` renders the feature before and after its new fields from the same copies, so the two
 renders it compares never come from different texts. When a copy is not the text the manifest
@@ -373,20 +407,26 @@ records, changed, added or deleted since, it warns, starting with `warning: `, a
 member the difference reaches reads as changed by hand, and is refused as one. Once written, the
 manifest records the copies that run used.
 
-`add setting` records no `templates` in the manifest, since no later run renders its files again,
-and its report lists the copies it wrote from under the same line.
+`add use-case`, `add event` and `add setting` record no copy in the feature's manifest, since only
+`add field` reads that record back, to render the files of `add feature` again.
+<!--#endif-->
+<!--#if (!canAddFeature)-->
 
-`remove feature` removes what the manifest records, whatever text it was written from, and leaves
-`code-templates/` as it is.
+`add use-case`, `add event` and `add setting` record no copy in a feature's manifest, since no later
+run renders their files again: `code-templates/manifest.json` alone records the copies.
+<!--#endif-->
+
+`remove feature` removes what a feature's manifest records, whatever text it was written from, and
+leaves `code-templates/` as it is.
 
 ## When the tool changes a template
 
-A copy keeps its text when a newer version of the tool changes the template it was copied from.
-`add feature` and `add field` then warn, on every run that writes from the copy, `--dry-run`
-included, with `warning: <path> overrides a template the tool has changed since version <version>,
-which it was copied from`, and still write from the copy: a warning, never a refusal, and the exit
-code does not change. A `code-templates/manifest.json` the tool cannot read is one warning too. A copy with no record in `code-templates/manifest.json`, written by hand
-rather than copied, is never compared.
+A copy keeps its text when a newer version of the tool changes the template it was copied from. The
+generator then warns, on every run that writes from the copy, `--dry-run` included, with
+`warning: <path> overrides a template the tool has changed since version <version>, which it was
+copied from`, and still writes from the copy: a warning, never a refusal, and the exit code does not
+change. A `code-templates/manifest.json` the tool cannot read is one warning too. A copy with no
+record in `code-templates/manifest.json`, written by hand rather than copied, is never compared.
 
 To take the change, move the copy aside, copy the template again, and carry this project's changes
 over. When the untouched copy was committed before it was edited, that commit holds the base of a
@@ -394,14 +434,19 @@ three-way merge: `git merge-file` merges this project's text and the tool's new 
 
 ## Check
 
-`add feature --dry-run` lists every copy it would write from under `Written from this project's code
-templates:`, and refuses a broken copy naming its path and line. After a real run,
-`dotnet cleanarch check` builds the feature and runs its tests, and the feature's manifest records
-each copy under `templates`.
+A generator's `--dry-run` lists every copy it would write from under `Written from this project's
+code templates:`, and refuses a broken copy naming its path and line. After a real run,
+`dotnet cleanarch check` builds what it wrote and runs its tests.
+<!--#if (canAddFeature)-->
+The manifest of a feature `add feature` wrote records each copy under `templates`.
+<!--#endif-->
 
 ## Undo
 
-Delete the copy, or the whole `code-templates/` folder. The next run writes from the tool's text;
-the features written already keep their code, and the next `add field` on one of them warns once that
-its copies changed. `code-templates/manifest.json` is the tool's file: an entry for a deleted copy
-is harmless, and copying the template again replaces it.
+Delete the copy, or the whole `code-templates/` folder. The next run writes from the tool's text,
+and the code written already keeps its text.
+<!--#if (canAddFeature)-->
+The next `add field` on a feature written from a copy warns once that its copies changed.
+<!--#endif-->
+`code-templates/manifest.json` is the tool's file: an entry for a deleted copy is harmless, and
+copying the template again replaces it.
