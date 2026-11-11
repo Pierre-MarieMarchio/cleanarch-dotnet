@@ -60,7 +60,14 @@ Each rule has one home, and a test holds it wherever a test can.
   recommended; bots such as Dependabot or release-please keep their own messages as they write them,
   emoji included, since a bot did write them.
 <!--#endif-->
-<!--#if (!githubHost)-->
+<!--#if (gitlabHost)-->
+- Commits and merge requests name their human author only, with no `Co-Authored-By` or "Generated
+  with" line naming an AI tool; the author answers for every line and can explain it. Where a tool
+  wrote code, an `Assisted-by: <tool>:<model>` trailer and the Assistance section of the merge
+  request, from `.gitlab/merge_request_templates/Default.md`, are recommended; a bot keeps its own
+  messages as it writes them, emoji included, since a bot did write them.
+<!--#endif-->
+<!--#if (!anyCodeHost)-->
 - Commits and pull requests name their human author only, with no `Co-Authored-By` or "Generated
   with" line naming an AI tool; the author answers for every line and can explain it. Where a tool
   wrote code, an `Assisted-by: <tool>:<model>` trailer is recommended; a bot keeps its own messages

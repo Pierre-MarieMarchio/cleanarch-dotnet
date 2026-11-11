@@ -252,8 +252,8 @@ resolves.
 What maintains the template stays here: `docs/template/`, this repository's `README.md`, the
 changelog, the plans, the package project `.template.config/TemplatePackage.csproj`,
 `template-acceptance.yml`, `template-release.yml`, the issue forms under `.github/ISSUE_TEMPLATE`,
-`CODE_OF_CONDUCT.md`, `SUPPORT.md`, and the three tree-auditing gates `tools/CheckDocPaths.cs`, `tools/CheckWorkflows.cs` and
-`tools/CheckComments.cs`.
+`CODE_OF_CONDUCT.md`, `SUPPORT.md`, and the four tree-auditing gates `tools/CheckDocPaths.cs`, `tools/CheckWorkflows.cs`,
+`tools/CheckGitLabCi.cs` and `tools/CheckComments.cs`.
 
 ## Item templates
 

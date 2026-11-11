@@ -13,7 +13,7 @@ internal static class FormatCommand
 
     private static readonly string[] _skippedDirectories = ["bin", "obj", "node_modules", "plans", "code-templates"];
 
-    private static readonly string[] _keptDotDirectories = [".github", ".template.config"];
+    private static readonly string[] _keptDotDirectories = [".github", ".gitlab", ".template.config"];
 
     private static readonly Regex _namingViolation = new(
         @"^(?<file>.+?)\((?<line>\d+),\d+\): (?:error|warning) IDE1006: (?<message>.+?) \[[^\]]+\]\s*$",

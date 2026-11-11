@@ -144,6 +144,9 @@ it once it has the rich shape, and `--dry-run` shows what it would write.
 <!--#if (githubCi)-->
   `.github/workflows/ci.yml` runs the same gate on every pull request.
 <!--#endif-->
+<!--#if (gitlabCi)-->
+  `.gitlab-ci.yml` runs the same gate on every merge request.
+<!--#endif-->
 - Without Docker, or when a gate stops on the machine rather than on a test, run what can run
   (`test --no-integration`, the failing step by hand) and say what did not run and why.
 - The report names what ran, with its result, and the test that holds each guarantee: a change that
@@ -184,9 +187,9 @@ This repository is also the `dotnet new` template the project pages describe; pa
 `docs/template/` are about the template and never reach a generated project.
 
 - `verify` also runs the template's gates: `tools/CheckDocPaths.cs`, `tools/CheckComments.cs`,
-  `tools/CheckWorkflows.cs` and `dotnet run tools/WebLockfiles.cs --check`. Each runs alone
-  with `dotnet run`; a generated project keeps none of them, and `DocumentationCitationTests` holds
-  its citations.
+  `tools/CheckWorkflows.cs`, `tools/CheckGitLabCi.cs` and `dotnet run tools/WebLockfiles.cs --check`.
+  Each runs alone with `dotnet run`; a generated project keeps none of them, and
+  `DocumentationCitationTests` holds its citations.
 - This repository runs the tool from its source: where a page says `dotnet cleanarch <command>`, run
   `dotnet run --project launcher/CleanArch.Cli -- <command>` here.
 - A shared file conditions a sentence on an option only where the option changes what is true, a

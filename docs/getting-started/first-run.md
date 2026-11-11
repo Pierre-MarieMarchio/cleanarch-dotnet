@@ -113,7 +113,7 @@ refuses to start.
 Without a migration, no schema can be created, the migration drift tests fail, and `verify` refuses
 to start.
 <!--#endif-->
-<!--#if (githubCi)-->
+<!--#if (githubCi || gitlabCi)-->
 It is also the first step of CI, so a first push would fail.
 <!--#endif-->
 

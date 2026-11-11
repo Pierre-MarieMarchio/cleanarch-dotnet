@@ -36,7 +36,7 @@ internal static class CheckComments
           allowed  <!--#...--> template conditionals; refused: every other <!-- -->.
 
         Configuration files: appsettings*.json, .env.example, docker-compose*.yml|yaml,
-        .github/workflows/*.yml|yaml, .github/dependabot.yml, .editorconfig, Directory.*.props,
+        .github/workflows/*.yml|yaml, .github/dependabot.yml, .gitlab-ci.yml, .editorconfig, Directory.*.props,
         Directory.*.targets, coverage.runsettings, coverage.minimum, Dockerfile, *.Dockerfile,
         tests/Load/*.js, and
         in the web workspace src/Web: compose*.yml|yaml, nginx.conf, pnpm-workspace.yaml and the
@@ -221,7 +221,8 @@ internal static class CheckComments
             || name.StartsWith("Dockerfile.", StringComparison.Ordinal)
             || Regex.IsMatch(name, @"^docker-compose.*\.ya?ml$")
             || Regex.IsMatch(relative, @"(?:^|/)\.github/workflows/[^/]+\.ya?ml$")
-            || Regex.IsMatch(relative, @"(?:^|/)\.github/dependabot\.ya?ml$"))
+            || Regex.IsMatch(relative, @"(?:^|/)\.github/dependabot\.ya?ml$")
+            || Regex.IsMatch(relative, @"(?:^|/)\.gitlab-ci\.ya?ml$"))
         {
             return Syntax.Hash;
         }
@@ -1184,6 +1185,8 @@ internal static class CheckComments
         new("template conditionals in a project file", "src/App/App.csproj", "<Project>\n<!--#if (files)-->\n<ItemGroup />\n<!--#endif-->\n</Project>\n", 0),
         new("two guidance lines in a workflow", ".github/workflows/ci.yml", "# one\n# two\nname: ci\n", 1),
         new("two guidance lines in the Dependabot file", ".github/dependabot.yml", "# one\n# two\nversion: 2\n", 1),
+        new("two guidance lines in the GitLab pipeline", ".gitlab-ci.yml", "# one\n# two\nstages: []\n", 1),
+        new("two guidance lines in the GitLab overlay's pipeline", ".template.config/variants/code-host-gitlab/.gitlab-ci.yml", "# one\n# two\nstages: []\n", 1),
         new("two guidance lines split by a blank line", "docker-compose.yml", "# one\n\n# two\nservices:\n", 1),
         new("two guidance lines in appsettings", "src/App/appsettings.json", "{\n  // one\n  // two\n  \"A\": 1\n}\n", 1),
         new("a two-line comment in a targets file", "Directory.Build.targets", "<Project>\n  <!-- one\n       two -->\n</Project>\n", 1),
@@ -1197,6 +1200,7 @@ internal static class CheckComments
         new("two line comments in a web script", "src/Web/packages/api-client/scripts/generate.mjs", "// one\n// two\nconsole.log(1);\n", 1),
         new("a narrating guidance line", ".env.example", "# The previous version was wrong.\nKEY=1\n", 1),
         new("one guidance line per setting in a workflow", ".github/workflows/ci.yml", "# Replace with your registry.\nenv:\n  # The image name.\n  IMAGE: x\n", 0),
+        new("one guidance line per job in the GitLab pipeline", ".gitlab-ci.yml", "# The gate.\nbuild:\n  # The SDK.\n  image: x\n", 0),
         new("guidance lines split by template markers", "docker-compose.yml", "#if (files)\n# The object store.\n#endif\n# The mail catcher.\nmail:\n", 0),
         new(
             "a guidance line under a JSON marker",

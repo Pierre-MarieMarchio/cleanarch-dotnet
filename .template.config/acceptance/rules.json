@@ -28,6 +28,7 @@
         "LICENSE",
         "launcher/**",
         "tools/CheckWorkflows.cs",
+        "tools/CheckGitLabCi.cs",
         "tools/CheckComments.cs",
         "tests/Architecture/AT.Architecture.Tests/Rules/TemplatePackagingTests.cs",
         "tests/Architecture/AT.Architecture.Tests/Rules/AcceptanceSelectionTests.cs",
@@ -57,6 +58,10 @@
         ".template.config/variants/project-file-web/**"
       ],
       "tags": ["web", "presentation-avalonia", "presentation-blazor-server", "presentation-mcp", "presentation-wpf"]
+    },
+    {
+      "paths": [".template.config/variants/code-host-gitlab/**"],
+      "tags": ["defaults"]
     },
     {
       "paths": [".template.config/variants/no-aspire/**"],

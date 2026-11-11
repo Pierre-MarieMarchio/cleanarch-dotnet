@@ -99,6 +99,9 @@ features grow beside them, and the documentation grows with them.
 | <!--#endif--> |
 | <!--#if (githubCi)--> |
 | CI | GitHub Actions workflows under `.github/workflows` |
+| <!--#endif--> |
+| <!--#if (gitlabCi)--> |
+| CI | a GitLab CI/CD pipeline, `.gitlab-ci.yml` |
 <!--#endif-->
 
 ## How this project was generated
@@ -141,7 +144,10 @@ setting, table or test names it.
 | <!--#if (githubHost)--> |
 | `--code-host` | `github` | GitHub's files under `.github`: Dependabot, the issue forms, the pull request template and, with `--ci`, the workflows |
 | <!--#endif--> |
-| <!--#if (!githubHost)--> |
+| <!--#if (gitlabHost)--> |
+| `--code-host` | `gitlab` | GitLab's files under `.gitlab`: the merge request and issue templates and, with `--ci`, the pipeline |
+| <!--#endif--> |
+| <!--#if (!anyCodeHost)--> |
 | `--code-host` | `none` | no code host's files: no workflow, no Dependabot, no issue form and no pull request template |
 | <!--#endif--> |
 | <!--#if (githubCi && anyWeb && serverDatabase)--> |
@@ -156,13 +162,16 @@ setting, table or test names it.
 | <!--#if (githubCi && !anyWeb && sqlite)--> |
 | `--ci` | `true` | the build and code-scanning workflows; no release, as SQLite is a development database |
 | <!--#endif--> |
-| <!--#if (!githubCi)--> |
+| <!--#if (gitlabCi)--> |
+| `--ci` | `true` | the pipeline that runs the gate, with GitLab's SAST and Secret Detection |
+| <!--#endif--> |
+| <!--#if (!githubCi && !gitlabCi)--> |
 | `--ci` | `false` | no workflow |
 | <!--#endif--> |
-| <!--#if (sonarWorkflow)--> |
+| <!--#if (sonarWorkflow || sonarPipeline)--> |
 | `--sonar` | `true` | the Sonar analysis, locally and in CI |
 | <!--#endif--> |
-| <!--#if (sonar && !sonarWorkflow)--> |
+| <!--#if (sonar && !sonarWorkflow && !sonarPipeline)--> |
 | `--sonar` | `true` | the Sonar analysis, locally |
 | <!--#endif--> |
 | <!--#if (!sonar)--> |

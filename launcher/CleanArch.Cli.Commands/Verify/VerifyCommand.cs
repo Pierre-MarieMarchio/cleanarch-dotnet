@@ -10,7 +10,7 @@ internal static class VerifyCommand
 
     public static readonly CommandRegistration Registration = new(ProjectCommand.Refusal, Create);
 
-    private static readonly string[] _templateGates = ["CheckDocPaths.cs", "CheckWorkflows.cs", "CheckComments.cs"];
+    private static readonly string[] _templateGates = ["CheckDocPaths.cs", "CheckWorkflows.cs", "CheckGitLabCi.cs", "CheckComments.cs"];
 
     private static readonly string[][] _webChecks = [["audit"], ["install", "--frozen-lockfile"], ["lint"], ["test"], ["build"]];
 

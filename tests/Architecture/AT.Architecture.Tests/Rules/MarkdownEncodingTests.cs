@@ -8,7 +8,11 @@ public sealed class MarkdownEncodingTests
 {
     private static readonly string[] _skippedDirectories = ["bin", "obj", "node_modules", "plans", "code-templates"];
 
+    /*#if (gitlabHost)*/
+    private static readonly string[] _keptDotDirectories = [".github", ".gitlab", ".template.config"];
+    /*#else
     private static readonly string[] _keptDotDirectories = [".github", ".template.config"];
+    #endif*/
 
     [Fact]
     public void EveryMarkdownFile_IsUtf8WithoutABom_WithLfEndings()
