@@ -18,6 +18,8 @@ internal static class Template
 
     private static readonly Regex _tokenPattern = new("%([A-Za-z]+)%", RegexOptions.None, TimeSpan.FromSeconds(2));
 
+    private static readonly Regex _lineToken = new("^%([A-Za-z]+)%$", RegexOptions.None, TimeSpan.FromSeconds(2));
+
     private static readonly Regex _markedUsing = new(
         @"^using (?<namespace>[^;]+);\s*//\?(?<types>.+)$",
         RegexOptions.None,
@@ -53,9 +55,22 @@ internal static class Template
         return EveryTokenSet(Substitute(expanded, tokens));
     }
 
+    internal static string RenderReport(string template, FlagSet vocabulary, HashSet<string> flags, Dictionary<string, string> tokens)
+    {
+        string[] lines = template.ReplaceLineEndings("\n").Split('\n');
+
+        return RenderText(string.Join('\n', lines.Where(line => !IsEmptyToken(line, tokens))), vocabulary, flags, tokens);
+    }
+
+    internal static IEnumerable<string> TokensOf(string text) =>
+        _tokenPattern.Matches(text).Select(match => match.Groups[1].Value).Distinct(StringComparer.Ordinal);
+
     internal static string ReplaceReferenceNames(string text, Dictionary<string, string> tokens) =>
         _referenceName.Replace(text, match =>
             tokens.TryGetValue(_referenceNames.Single(reference => reference.Name == match.Value).Token, out string? value) ? value : match.Value);
+
+    private static bool IsEmptyToken(string line, Dictionary<string, string> tokens) =>
+        _lineToken.Match(line) is { Success: true } token && tokens.TryGetValue(token.Groups[1].Value, out string? value) && value.Length == 0;
 
     private static string EveryTokenSet(string text) =>
         _tokenPattern.Match(text) is { Success: true } unset

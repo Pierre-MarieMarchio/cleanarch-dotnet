@@ -17,7 +17,7 @@ internal static class EventPlan
     private const string _consumerTests =
         "tests/Application/AT.Application.UnitTests/Features/Listeners/Services/Consumers/PlaceholderNoted/NotifyListenersOnPlaceholderNotedConsumerTests.cs";
 
-    internal static TemplateOverrides Overrides(string root) => TemplateOverrides.Read(root, TemplateFolder, EventFlags.Vocabulary);
+    internal static TemplateOverrides Overrides(string root) => TemplateOverrides.Read(root, TemplateFolder, EventFlags.Vocabulary, EventReport.Vocabulary);
 
     internal static List<Emission> Emissions(EventSpec spec, string root, TemplateOverrides templates)
     {

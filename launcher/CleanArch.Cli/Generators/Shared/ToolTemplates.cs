@@ -8,6 +8,8 @@ internal static class ToolTemplates
 
     internal const string Extension = ".txt";
 
+    internal const string Report = "report";
+
     private static readonly Lazy<Dictionary<string, Dictionary<string, string>>> _generators = new(Load);
 
     internal static IReadOnlyDictionary<string, string> Of(string generator) =>
