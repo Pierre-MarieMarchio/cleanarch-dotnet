@@ -59,8 +59,14 @@ is [the project tool](../reference/cli.md).
    and the part here was created already, so take what the new descriptor brings by hand.
 8. Set `template.version` in `cleanarch.json` to the newer version, then pin the project's tool at
    that version with `dotnet tool update CleanArch.Cli --local --version <newer version>`.
-9. Run `dotnet cleanarch format`, which orders the using directives as bootstrap did,
-   then `dotnet cleanarch verify`.
+9. Run with `--dry-run` each generator whose code templates this project copied under
+   `code-templates/`: a copy whose template the newer tool changed warns, starting with `warning: `,
+   and still writes from the copy. Take the tool's change by copying the template again and merging
+   this project's text into it with `git merge-file`, from the untouched copy committed before it
+   was edited, as [changing generated code](changing-generated-code.md#when-the-tool-changes-a-template)
+   shows.
+10. Run `dotnet cleanarch format`, which orders the using directives as bootstrap did,
+    then `dotnet cleanarch verify`.
 
 ## A project whose root folders are capitalised
 
@@ -104,6 +110,10 @@ workflows and the pages, and check the move with `dotnet build`.
   recorded without one is a file to complete by hand, with the number its
   `src/Web/apps/<App>/compose.yml` gives `WEB_<NAME>_HOST_PORT`, as `ProjectFileTests` asks. Their
   joins are not replayed, so a file a join edits reads under Merge, with a note.
+- **Code templates are this project's own.** The files under `code-templates/` lie in neither
+  generation, so the report counts them with the project's own files and compares none: the
+  templates they were copied from come with the tool, which step 8 updates, and the generators
+  warn about a copy whose template changed.
 - **Nothing from a package runs.** A version whose templates declare a post-action beyond printing
   instructions is refused, and so is a value `cleanarch.json` records that the newer version no
   longer offers: both leave the comparison to you.

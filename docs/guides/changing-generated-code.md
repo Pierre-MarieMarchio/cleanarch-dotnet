@@ -549,7 +549,21 @@ record in `code-templates/manifest.json`, written by hand rather than copied, is
 
 To take the change, move the copy aside, copy the template again, and carry this project's changes
 over. When the untouched copy was committed before it was edited, that commit holds the base of a
-three-way merge: `git merge-file` merges this project's text and the tool's new one from it.
+three-way merge, and `git merge-file` merges this project's text and the tool's new one from it:
+
+```bash
+mv <path> <aside>
+dotnet cleanarch templates copy <generator> <template>
+git commit -m "<message>" -- <path> code-templates/manifest.json
+git show <commit>:<path> > <base>
+git merge-file <aside> <base> <path>
+mv <aside> <path>
+```
+
+`<path>` is the copy's path and `<commit>` the commit that holds it untouched. Copying again records
+the newer version in `code-templates/manifest.json`, so the warning stops, and committing the new
+copy untouched keeps the base of the next merge. `git merge-file` writes the merge into `<aside>`
+and marks each conflict; resolve them before moving it back.
 
 ## Check
 
