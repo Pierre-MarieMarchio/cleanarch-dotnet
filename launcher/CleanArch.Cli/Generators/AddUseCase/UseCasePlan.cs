@@ -44,7 +44,7 @@ internal sealed class UseCasePlan
         _useCase = $"UseCases/{spec.Folder}/{_name}";
     }
 
-    internal static TemplateOverrides Overrides(string root) => TemplateOverrides.Read(root, NewUseCase.TemplateFolder, UseCaseFlags.Vocabulary);
+    internal static TemplateOverrides Overrides(string root) => TemplateOverrides.Read(root, NewUseCase.TemplateFolder, UseCaseFlags.Vocabulary, UseCaseReport.Vocabulary);
 
     internal static List<Emission> Plan(UseCaseSpec spec, string root, TemplateOverrides templates, out string? skippedTests) =>
         new UseCasePlan(spec, root, templates).Application(out skippedTests);
@@ -52,7 +52,7 @@ internal sealed class UseCasePlan
     internal static List<Emission> Contracts(UseCaseSpec spec, string root, TemplateOverrides templates) =>
         Directory.Exists(Full(root, UseCaseHttp.ApiFolder(spec))) ? new UseCasePlan(spec, root, templates).Api() : [];
 
-    private static Dictionary<string, string> Tokens(UseCaseSpec spec)
+    internal static Dictionary<string, string> Tokens(UseCaseSpec spec)
     {
         var tokens = new Dictionary<string, string>(StringComparer.Ordinal)
         {

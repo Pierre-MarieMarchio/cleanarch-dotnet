@@ -56,7 +56,7 @@ internal sealed class UseCaseGeneration(UseCaseSpec spec, GenerationContext cont
         return true;
     }
 
-    protected override void Report(ReportMode mode) => UseCaseReport.Write(Output, Root, spec, _plan, _contracts, _skipped, mode);
+    protected override void Report(ReportMode mode) => UseCaseReport.Write(Output, Templates, Root, spec, _plan, _contracts, _skipped, mode);
 
     protected override int Finish() =>
         _contracts.Count == 0 && _editor.Applied.Count == 0
