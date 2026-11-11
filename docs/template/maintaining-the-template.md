@@ -1203,11 +1203,14 @@ The vocabulary of `add feature`, which `add field` renders again, is `FeatureFla
 `launcher/CleanArch.Cli/Generators/Shared/FeatureFlags.cs`, and `FeatureCode.Flags` sets the flags
 that hold for a generation. Its flags are the words of the options where an option decides one,
 and otherwise say what the feature does. That of `add use-case` is `UseCaseFlags.Vocabulary`, in
-`launcher/CleanArch.Cli/Generators/AddUseCase/UseCaseFlags.cs`, which sets them too. A project's
-team writes conditions with them, so the table of each flag with its meaning is in the project's
-guide, [the flags of add feature](../guides/changing-generated-code.md#the-flags-of-add-feature)
-and [the flags of add use-case](../guides/changing-generated-code.md#the-flags-of-add-use-case): a
-flag renamed, added, removed or reworded changes both.
+`launcher/CleanArch.Cli/Generators/AddUseCase/UseCaseFlags.cs`, which sets them too, as
+`EventFlags` in `launcher/CleanArch.Cli/Generators/AddEvent/EventFlags.cs` and `SettingFlags` in
+`launcher/CleanArch.Cli/Generators/AddSetting/SettingFlags.cs` do for theirs; each report adds to
+its generator's flags the modes of `ReportFlags` and its own. A project's team writes conditions with them, so the
+table of each flag with its meaning is in the project's guide, one per generator from
+[the flags of add feature](../guides/changing-generated-code.md#the-flags-of-add-feature) on, and
+`FeatureFlagsTests` holds each table to its vocabulary: a flag renamed, added, removed or reworded
+changes both.
 
 ### The templates of add setting
 
