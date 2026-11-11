@@ -217,12 +217,17 @@ creates files once rather than keeping them in step. `<generator>` is one of:
 
 <!--#if (canAddFeature)-->
 - `add-feature`, the templates `add feature` and `add field` write a feature's files from, at the
-  paths of the reference feature `Placeholders`;
+  paths of the reference feature `Placeholders`, and the report of `add feature`;
+- `add-field`, the report of `add field`, its one template;
 <!--#endif-->
 - `add-use-case`, those of `add use-case`, at the paths of the reference command
-  `ApprovePlaceholder` and query `GetPlaceholderTotals`;
-- `add-event`, those `add event` writes an event, its consumer and their tests from;
-- `add-setting`, the two `add setting` writes an options class and its tests from.
+  `ApprovePlaceholder` and query `GetPlaceholderTotals`, and its report;
+- `add-event`, those `add event` writes an event, its consumer and their tests from, and its report;
+- `add-setting`, the two `add setting` writes an options class and its tests from, and its report.
+
+Each generator's report is `report.txt` at the root of its folder: a copy changes what the
+generator prints after a run, and [reports](../guides/changing-generated-code.md#reports) says what
+it holds.
 
 `code-templates/manifest.json` records each copy's path, the tool's version and the digest of the
 tool's text when it was copied: it is the tool's to write, while the `.txt` copies are the team's to
@@ -231,8 +236,8 @@ edit. A manifest the tool cannot read refuses the copy until it is repaired or m
 When a newer tool changes the text of a template this project holds a copy of, the generator still
 writes from the copy and warns on the error output, under `--dry-run` too, without changing its exit
 code; [changing generated code](../guides/changing-generated-code.md#when-the-tool-changes-a-template)
-says how to take the change. The report of each generator lists the copies it wrote from, except
-when it refuses.
+says how to take the change. The report of each generator lists the copies it wrote its files from,
+except when it refuses.
 
 ## Ejecting a command
 

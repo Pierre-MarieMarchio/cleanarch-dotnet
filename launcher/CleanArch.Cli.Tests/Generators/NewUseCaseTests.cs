@@ -59,7 +59,7 @@ public sealed partial class NewUseCaseTests
     [Fact]
     public void Reports() => Expectations.Hold(ReportsCases);
 
-    private static string NewTree(string scratch, params string[] repositories)
+    internal static string NewTree(string scratch, params string[] repositories)
     {
         string root = Path.Combine(scratch, Guid.CreateVersion7().ToString("N"));
 
@@ -138,7 +138,7 @@ public sealed partial class NewUseCaseTests
 
         """;
 
-    private static (int Code, string Output, string Error) Invoke(string root, params string[] args) => Invoke(root, _ => 0, args);
+    internal static (int Code, string Output, string Error) Invoke(string root, params string[] args) => Invoke(root, _ => 0, args);
 
     private static (int Code, string Output, string Error) Invoke(string root, Func<TextEdits.Command, int> run, params string[] args) =>
         GeneratorRun.Invoke(AddUseCaseCommand.Build(GeneratorRun.Project(root), _ => new FakeExecutor(run)), args);

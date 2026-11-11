@@ -1117,6 +1117,34 @@ same way, warns through `TemplateCopies.Stale` and lists the overrides it used i
 records none in the feature's manifest: only `add field` reads that record, to render add feature's
 files again.
 
+### Reports
+
+The report of each `add` generator is a template, `report.txt` at the root of its folder under
+`launcher/CleanArch.Cli/code-templates`, embedded with its other templates and named
+`ToolTemplates.Report`. `add field` writes its files from the templates of `add feature`, so its
+folder, `add-field`, holds its `report.txt` alone, which `FieldReport.Overrides` reads.
+`TemplateOverrides.WriteReport` renders a report after the run, through `Template.RenderReport`: a
+line that is exactly a `%Token%` whose value is empty is dropped, then `Template.RenderText` runs
+the directives, the reference names and the tokens, and neither prunes usings nor tidies blank
+lines, which carry the report's layout. A report's vocabulary is `ReportFlags.For` the generator's
+flags, the mode flags `applied`, `dryrun` and `refused`, of which one holds, and the report's own
+shape flags, which its report class names, as `EventReport.Shapes`, or `FeatureFlags.ReportShapes`
+for `add feature`. What the tool computes, the files written, the paths edited, a count, a step, a
+note on compatibility, is a token whose lines the class builds; a report repeats no block.
+
+A project overrides a report with its own `code-templates/<generator>/report.txt`, which `templates
+copy <generator>` copies with the generator's files, and `templates copy add-field` alone for `add
+field`, refused where `add feature` is. A report renders after the files are written, so
+`TemplateOverrides.Read` checks the copy before anything is: no block, every `%Token%` one the
+tool's own `report.txt` names, every flag one of the report's vocabulary, the directives balanced; a
+broken one is a problem that starts with its path. `WriteReport` throws when the tool's `report.txt`
+names a token its generator does not set in every run, so a copy, held to those tokens, never names
+one unset. A report is recorded in no feature's manifest, nor listed under `Written from this
+project's code templates`, which follows it and stays code with the refusals, the warnings, the
+`--dry-run` line, the steps a run takes and its exit code; `TemplateCopies.Stale` reads
+`TemplateOverrides.InUse`, the overrides used and the report's, so a stale copy of `report.txt`
+warns as any copy does. `remove feature` and `templates copy` print no template.
+
 ### Blocks over fields
 
 A block repeats its body once per field of the feature, so the loops, separators and indentation
@@ -1148,21 +1176,6 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 //#end ") : base(id)"
 ```
 
-### Reports
-
-The report of each `add` generator is a template, `report.txt` at the root of its folder under
-`launcher/CleanArch.Cli/code-templates`, embedded with its other templates and named
-`ToolTemplates.Report`. `add field` writes its files from the templates of `add feature`, so its
-folder, `add-field`, holds its `report.txt` alone, which `FieldReport.Overrides` reads.
-`TemplateOverrides.WriteReport` renders a report after the run, through `Template.RenderReport`: a
-line that is exactly a `%Token%` whose value is empty is dropped, then `Template.RenderText` runs
-the directives, the reference names and the tokens, and neither prunes usings nor tidies blank
-lines, which carry the report's layout. A report's vocabulary is `ReportFlags.For` the generator's
-flags, the mode flags `applied`, `dryrun` and `refused`, of which one holds, and the report's own
-shape flags, which its report class names, as `EventReport.Shapes`, or `FeatureFlags.ReportShapes`
-for `add feature`. What the tool computes, the files written, the paths edited, a count, a step, a
-note on compatibility, is a token whose lines the class builds; a report repeats no block.
-
 | Guarantee | Test |
 |---|---|
 | A condition reads as C# reads it, `&&` binding tighter than `||`, with or without parentheses | `ConditionTests.ACondition_ReadsAsCSharpDoes_AndBindsAndTighterThanOr` |
@@ -1182,6 +1195,12 @@ note on compatibility, is a token whose lines the class builds; a report repeats
 | `add setting` warns, under `--dry-run` or not, over a copy the tool has changed since, and still writes | `NewSettingTests.AddSettingWarnsWhenTheToolChangedACopiedTemplate` |
 | `templates copy add-setting` applies to a project without authentication, which `add setting` serves | `TemplatesCommandTests.ACopyOfAGeneratorWithoutARefusal_WorksWithoutAuthentication` |
 | A file under `code-templates/add-setting` naming no template, and an override naming a flag of another generator, an unknown key token or trait, or an unknown token, is refused, the message starting with its path, and nothing is written | `NewSettingTests.ABrokenOverrideIsRefusedNamingIt` |
+| A project's `report.txt` changes the report of each `add` generator by its text alone: the files, the manifests and the error output stay those of a run without it, and the report is not listed under `Written from` | `ReportOverrideTests.ACopyOfTheReport_ChangesTheReportOnly` |
+| A `report.txt` naming an unknown flag is refused, naming its path and line, before each `add` generator writes anything | `ReportOverrideTests.ABrokenReport_IsRefusedNamingIt_BeforeAnythingIsWritten` |
+| A `report.txt` holding a block, a token the tool's report does not name, a flag of another generator, or an `#if` never closed is refused; one naming a mode flag, a report flag, a flag of its generator and a token of the tool's report is read | `ReportOverrideTests.ACopyOfTheReport_HoldsWhatAReportReads_AndNothingElse` |
+| Each `add` generator warns over a copy of its `report.txt` the tool has changed since, and still writes | `ReportOverrideTests.ACopyOfTheReport_WarnsOnceTheToolChangesIt` |
+| `templates copy add-field` copies the report of `add field`, its one template | `TemplatesCommandTests.CopyOfAddField_WritesItsReport` |
+| The guide lists the mode flags of every report, and the flags and tokens of each generator's report, and no other | `FeatureFlagsTests.TheGuideToCodeTemplates_ListsEachFlagOfEveryReport_WithItsMeaning_AndNoOther`, `FeatureFlagsTests.TheGuideToCodeTemplates_ListsTheFlagsAndTokensOfEachReport_AndNoOther` |
 | The output of `add feature` and `add field` does not change when a template changes its form | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
 | The output of `add setting` does not change when a template changes its form, every type of key, a range from 0, a default at its minimum and a secret checked first included | `NewSettingTests.Output` |
 | Each template of `add setting` is written by a run into a tree with an application test project | `NewSettingTests.EveryTemplateIsWritten` |
