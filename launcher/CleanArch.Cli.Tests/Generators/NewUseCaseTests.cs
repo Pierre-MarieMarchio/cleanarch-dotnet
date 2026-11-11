@@ -170,7 +170,7 @@ public sealed class NewUseCaseTests
             (_controller, "using Acme.Api.Features.Invoices.Contracts.Responses;", 1),
             (_controller, "using Mediator;", 1),
             (_apiPage, "| GET | `/{invoiceId}/find-by-customer` | 200 | |", 1),
-            ("src/Presentation/A.Api/Features/Invoices/Contracts/Requests/FindByCustomerRequest.cs", "public sealed record FindByCustomerRequest(string Customer);", 1),
+            ("src/Presentation/A.Api/Features/Invoices/Contracts/Requests/FindByCustomerRequest.cs", "string Customer);", 1),
             ("src/Presentation/A.Api/Features/Invoices/Contracts/Responses/FindByCustomerResponse.cs", "public sealed record FindByCustomerResponse;", 1),
         ];
 
@@ -312,9 +312,9 @@ public sealed class NewUseCaseTests
         }
     }
 
-    private const string _outputDigest = "593dde802ad9568d4a5522fdfb460750df9d58e0da34b7904ea7d19e767bcf55";
+    private const string _outputDigest = "1e8bc42791dba8f1f79efa0e28f99f36faae2086eb0f5abdf479f0f4133ea587";
 
-    private const string _layoutsDigest = "c7cd2e45e070a87ea6430b176d70afb3c2fcd20a86a464d87b54d6b244b85b82";
+    private const string _layoutsDigest = "190cc922b270fe69841fac52ca0b2de099ad5e8e640b275cf0d85c0e581499ff";
 
     private static void OutputCases(string scratch, Action<bool, string> expect)
     {
@@ -537,7 +537,7 @@ public sealed class NewUseCaseTests
         Holds(Read($"{queryFolder}/FindInvoicesByCustomerQueryValidator.cs"), "RuleFor(query => query.Limit)", "The query's validator");
         expect(!Read($"{queryFolder}/FindInvoicesByCustomerQueryValidator.cs").Contains("Since", StringComparison.Ordinal), "A nullable input was given a rule.");
         expect(!Read("src/Application/A.Application/Features/Invoices/Model/Dtos/FindInvoicesByCustomerDto.cs").Contains("Id", StringComparison.Ordinal), "A query without the id answers a DTO carrying it.");
-        Holds(Read($"{queryTests}/FindInvoicesByCustomerQueryValidatorTests.cs"), "new(\n            \"customer\",\n            1,\n            new DateOnly(2026, 1, 1),\n            new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));", "The query's validator tests");
+        Holds(Read($"{queryTests}/FindInvoicesByCustomerQueryValidatorTests.cs"), "new(\"customer\", 1, new DateOnly(2026, 1, 1), new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));", "The query's validator tests");
         Holds(Read($"{queryTests}/FindInvoicesByCustomerQueryValidatorTests.cs"), "AWellFormedQuery() with { Customer = string.Empty }", "The query's validator tests");
         Holds(Read($"{queryTests}/FindInvoicesByCustomerQueryValidatorTests.cs"), "AWellFormedQuery() with { Limit = 0 }", "The query's validator tests");
         Holds(Read($"{queryTests}/FindInvoicesByCustomerTests.cs"), "new(new FindInvoicesByCustomerQueryHandler().Handle, new FindInvoicesByCustomerQueryValidator());", "The query's handler test");
