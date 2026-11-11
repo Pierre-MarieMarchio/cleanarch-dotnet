@@ -146,9 +146,11 @@ write from into the project's `code-templates/add-feature/`, each at the path of
 in the reference feature with `.txt` after it, and records each copy's source, the tool's version
 and digest, in `code-templates/manifest.json`. The `.txt` copies are the team's to edit, and both
 generators then write from them. It never overwrites a copy, so it takes `--dry-run` and no `--check`,
-and it is refused where `add feature` is. Once a newer tool changes a template the project holds a
-copy of, both generators keep writing from the copy and print a `warning:` naming it; committing a
-copy untouched before editing it lets git carry the team's changes onto a fresh copy.
+and it is refused where `add feature` is. `templates copy add-use-case [<template>...]` copies those
+of `add use-case` into `code-templates/add-use-case/` the same way, in every project. Once a newer
+tool changes a template the project holds a copy of, each generator keeps writing from the copy and
+prints a `warning:` naming it; committing a copy untouched before editing it lets git carry the
+team's changes onto a fresh copy.
 
 `adopt` is for a project generated before the tool, which has no project file yet: it finds the
 folder that holds one solution beside the task launcher a project of that time carried, reads the options, the web workspace and

@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using System.Text.Json.Nodes;
-using CleanArch.Cli.CodeTemplates;
 using CleanArch.Cli.Generators.Shared;
 using Shouldly;
 using Xunit;
@@ -23,7 +22,7 @@ public sealed class TemplatesCommandTests : IDisposable
 
     private static string ControllerReference => Templates.Keys.Single(reference => reference.EndsWith("/" + _controller, StringComparison.Ordinal));
 
-    public static TheoryData<string> GeneratorsWithTemplates => [.. TemplatesCommand.Generators.Keys];
+    public static TheoryData<string> GeneratorsRefusingAProjectWithoutAuthentication => ["add-feature"];
 
     public void Dispose()
     {
@@ -79,7 +78,7 @@ public sealed class TemplatesCommandTests : IDisposable
     }
 
     [Theory]
-    [InlineData("add-widget", "add-widget has no code templates to copy: add-feature has them.")]
+    [InlineData("add-widget", "add-widget has no code templates to copy; the generators that have some are add-feature, add-use-case.")]
     [InlineData("add-feature Widget.cs", "Widget.cs names no template of add feature: dotnet cleanarch templates copy add-feature --dry-run lists them.")]
     [InlineData("add-feature Model/Entities", "Model/Entities names no template of add feature: dotnet cleanarch templates copy add-feature --dry-run lists them.")]
     public void CopyRefusesAnUnknownGeneratorOrTemplate(string arguments, string refusal)
@@ -116,9 +115,26 @@ public sealed class TemplatesCommandTests : IDisposable
         Directory.Exists(Path.Combine(_project.Root, ToolTemplates.Folder)).ShouldBeFalse();
     }
 
+    [Fact]
+    public void CopyAddUseCase_WithoutAuthentication()
+    {
+        using var unauthenticated = new SampleProject(SampleProject.Minimal);
+        var templates = ToolTemplates.Of("add-use-case");
+
+        Run(["templates", "copy", "add-use-case"], unauthenticated.Root).ShouldBe(CleanArchCommand.Succeeded, _error.ToString());
+
+        foreach (var (reference, text) in templates)
+        {
+            File.ReadAllText(Path.Combine(unauthenticated.Root, ToolTemplates.PathOf("add-use-case", reference))).ShouldBe(text + "\n", reference);
+        }
+
+        _output.ToString().ShouldStartWith($"Wrote {templates.Count} templates of add use-case from version {GeneratorCommand.Version} of the tool");
+        _output.ToString().ShouldEndWith($"{Environment.NewLine}add use-case now writes those files from them.{Environment.NewLine}");
+    }
+
     [Theory]
-    [MemberData(nameof(GeneratorsWithTemplates))]
-    public void EveryGeneratorWithTemplatesHasItsRefusal(string generator)
+    [MemberData(nameof(GeneratorsRefusingAProjectWithoutAuthentication))]
+    public void EveryGeneratorRefusingAProjectRefusesToCopyItsTemplatesThere(string generator)
     {
         using var unauthenticated = new SampleProject(SampleProject.Minimal);
         ToolTemplates.Of(generator).ShouldNotBeEmpty();
