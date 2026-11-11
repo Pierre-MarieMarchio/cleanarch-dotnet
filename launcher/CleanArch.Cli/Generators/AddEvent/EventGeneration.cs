@@ -14,6 +14,6 @@ internal sealed class EventGeneration(EventSpec spec, GenerationContext context)
 
     protected override void Report(ReportMode mode)
     {
-        EventReport.Write(Output, spec, Emissions, Editor.Changed.Select(sheet => sheet.Path), mode == ReportMode.DryRun);
+        EventReport.Write(Output, Templates, spec, Emissions, Editor.Changed.Select(sheet => sheet.Path), mode);
     }
 }

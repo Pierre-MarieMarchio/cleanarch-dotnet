@@ -1,0 +1,30 @@
+#if dryrun
+Dry run: nothing was written.
+#else
+Wrote the event PlaceholderNotedDomainEvent of Placeholders.
+#endif
+
+#if dryrun
+Would write %Count% file(s):
+#else
+Wrote %Count% file(s):
+#endif
+%Files%
+
+#if dryrun
+Would edit:
+#else
+Edited:
+#endif
+%Edited%
+
+What is left to you:
+  - Raise it: call RaiseDomainEvent(new PlaceholderNotedDomainEvent(...)) in the aggregate method that makes the fact true; nothing publishes an event no aggregate raises.
+  - Test that method: the event is among the aggregate's DomainEvents after the call, with the values it was given.
+#if consumed
+  - Write NotifyListenersOnPlaceholderNotedConsumer: it throws NotImplementedException until you do, and the dispatcher would log that and drop every event. So its generated test TheReaction_IsWritten fails, and verify and CI stay red until you replace it with the tests of the reaction.
+    It re-derives its precondition when it runs, so running twice is running once (ADR 0002); a fact whose loss would matter has a sweep.
+    Listeners reaches Placeholders only through its events: use AppTemplate.Domain.Features.Placeholders.Model.Events and nothing else of it.
+#else
+  - The reason nothing listens is in DomainEventTests beside the name; when a consumer is written later, delete that entry (NoEventIsListedAsUnconsumed_WhileSomethingConsumesIt fails until you do).
+#endif

@@ -8,16 +8,19 @@ internal sealed class TemplateOverrides
 
     private readonly FlagSet _vocabulary;
 
+    private readonly FlagSet _reportVocabulary;
+
     private readonly Dictionary<string, (string Text, string Sha256)> _overrides = new(StringComparer.Ordinal);
 
     private readonly SortedDictionary<string, string> _used = new(StringComparer.Ordinal);
 
     private readonly List<string> _problems = [];
 
-    private TemplateOverrides(string generator, FlagSet vocabulary)
+    private TemplateOverrides(string generator, FlagSet vocabulary, FlagSet reportVocabulary)
     {
         _generator = generator;
         _vocabulary = vocabulary;
+        _reportVocabulary = reportVocabulary;
     }
 
     internal string Generator => _generator;
@@ -28,9 +31,12 @@ internal sealed class TemplateOverrides
 
     internal IReadOnlyList<string> Problems => _problems;
 
-    internal static TemplateOverrides Read(string root, string generator, FlagSet vocabulary)
+    internal static TemplateOverrides Read(string root, string generator, FlagSet vocabulary) =>
+        Read(root, generator, vocabulary, ReportFlags.For(vocabulary, new FlagSet(vocabulary.Generator, new Dictionary<string, string>())));
+
+    internal static TemplateOverrides Read(string root, string generator, FlagSet vocabulary, FlagSet reportVocabulary)
     {
-        var templates = new TemplateOverrides(generator, vocabulary);
+        var templates = new TemplateOverrides(generator, vocabulary, reportVocabulary);
         string folder = ProjectFolders.Full(root, $"{ToolTemplates.Folder}/{generator}");
 
         if (Directory.Exists(folder))
@@ -66,6 +72,16 @@ internal sealed class TemplateOverrides
             Refuse($"{path}: {exception.Message}");
 
             return string.Empty;
+        }
+    }
+
+    internal void WriteReport(TextWriter output, ReportMode mode, HashSet<string> flags, Dictionary<string, string> tokens)
+    {
+        string template = ToolTemplates.Of(_generator)[ToolTemplates.Report];
+
+        foreach (string line in Template.RenderReport(template, _reportVocabulary, [.. flags, ReportFlags.Of(mode)], tokens).Split('\n'))
+        {
+            output.WriteLine(line);
         }
     }
 
