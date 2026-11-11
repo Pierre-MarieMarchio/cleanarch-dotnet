@@ -297,18 +297,64 @@ event's test gives it: a local `guid<n>` for a `Guid`, its index among the field
 a literal otherwise. Its one trait, `guid`, holds for a field of type `Guid`, whose test declares
 its local.
 
+## The templates of add setting
+
+`add setting` writes its two files from code templates too, under `code-templates/add-setting/`:
+the options class with its validator, whose template ends in `PlaceholderLimitsOptions.cs.txt`, and
+their tests, whose template ends in `PlaceholderLimitsOptionsTests.cs.txt` and which it writes only
+where the application's unit test project exists. Its edits stay the tool's: the registration, each
+host's `appsettings.json`, the configuration reference, Compose and `.env.example`.
+
+The reference names are the section `PlaceholderLimits`, the feature's folder `Placeholders` and the
+reference project's name. Keep `SectionName` set to the section's name: `add setting` and
+`remove feature` find a section by that constant in a file whose name ends in Options.cs. A
+`%Token%` outside a block is `%Broken%`, the key the test of a section out of range breaks, the first
+validated one, and `%BrokenValue%`, the value it breaks it with.
+
+### The flags of add setting
+
+| Flag | Holds when |
+|---|---|
+| `configured` | The feature's `Add<Features>` method takes the configuration, so the tests pass it the one they build. |
+| `required` | A key is required: a `secret`, or a `string` without a default, so a valid section gives it a value. |
+
+### Blocks over keys
+
+A block over keys reads as a block over fields, with `key` for `field`, and repeats its body once per
+key, in the order `--keys` gives them. A key's code differs by its type, and a directive is decided
+once per generation, so that code is a token: `%key.<Token>%` is
+
+| Token | Writes |
+|---|---|
+| `Name` | the key's name, `MaxItems` |
+| `Type` | its C# type |
+| `Default` | its property's initial value |
+| `Condition`, `Message` | the validator's check that fails, and what the failure says after the key |
+| `PassingCases`, `Passing`, `PassingParameter`, `PassingValue` | the attributes of the test of a valid value, the end of its name, its parameter and the value it sets |
+| `FailingCases`, `Failing`, `Parameter`, `Value` | the cases of the test of an invalid value, the end of its name, its parameter and the value it sets |
+| `Valid` | the value a valid section gives a required key |
+| `Setting`, `Expected` | a value in range other than the default, as configuration text and as the bound property's value |
+
+| Trait | Holds for a key that |
+|---|---|
+| `validated` | the validator checks: every type but `bool` |
+| `required` | is a `secret`, or a `string` without a default |
+| `supplied` | is required and is not `%Broken%`, so the test of a section out of range gives it a value |
+
 ## Refusals
 
-`add feature` and `add field` read every copy before writing anything, and refuse, writing nothing,
-with a message that starts with the copy's path, and the line's number where there is one:
+`add feature`, `add field`, `add use-case` and `add setting` read every copy of theirs before writing anything, and
+refuse, writing nothing, with a message that starts with the copy's path, and the line's number
+where there is one:
 
 - a file under `code-templates/<generator>` whose path names no template of that generator; a file
   whose name starts with a dot is not read;
-- a condition naming a flag outside the table, empty, left dangling or unbalanced;
+- a condition naming a flag outside its generator's table, empty, left dangling or unbalanced;
 - an `#elif`, `#else` or `#endif` without its `#if`, an `#if` never closed, text after `#else` or
   `#endif`;
-- a block over another list than the generator's, `field` or `parameter`, naming an unknown token
-  or trait, left open, or a `%field.<Token>%` or `%parameter.<Token>%` outside any block;
+- a block over another list than the generator's, `field`, `parameter` or `key`, naming an unknown
+  token or trait, left open, or a `%field.<Token>%`, `%parameter.<Token>%` or `%key.<Token>%` outside
+  any block;
 - a `%Token%` the generation does not set.
 
 Fix the copy, or delete it, and run the same command again.
@@ -325,6 +371,9 @@ renders it compares never come from different texts. When a copy is not the text
 records, changed, added or deleted since, it warns, starting with `warning: `, and still writes: a
 member the difference reaches reads as changed by hand, and is refused as one. Once written, the
 manifest records the copies that run used.
+
+`add setting` records no `templates` in the manifest, since no later run renders its files again,
+and its report lists the copies it wrote from under the same line.
 
 `remove feature` removes what the manifest records, whatever text it was written from, and leaves
 `code-templates/` as it is.
