@@ -56,6 +56,7 @@ dotnet cleanarch add event Invoices InvoicePaidDomainEvent --unconsumed "Nothing
 dotnet cleanarch templates copy add-feature      # copy the templates of add feature and add field into code-templates/
 dotnet cleanarch templates copy add-feature PlaceholdersController.cs --dry-run # list what it would copy, and write nothing
 dotnet cleanarch templates copy add-event        # copy the templates of add event, in any project
+dotnet cleanarch templates copy add-setting      # copy the templates of add setting in any project
 dotnet cleanarch remove feature Widgets          # report what removing it involves, writing nothing
 dotnet cleanarch remove feature Widgets --apply  # remove it, as its manifest records it
 dotnet cleanarch adopt       # write cleanarch.json for a project generated before the tool
@@ -150,7 +151,8 @@ and digest, in `code-templates/manifest.json`. The `.txt` copies are the team's 
 generators then write from them. It never overwrites a copy, so it takes `--dry-run` and no `--check`,
 and it is refused where `add feature` is. `templates copy add-use-case [<template>...]` copies those
 of `add use-case` into `code-templates/add-use-case/` the same way, in every project, and
-`templates copy add-event [<template>...]` those of `add event` into `code-templates/add-event/`. Once a newer
+`templates copy add-event [<template>...]` those of `add event` into `code-templates/add-event/`, and
+`templates copy add-setting [<template>...]` those of `add setting` into `code-templates/add-setting/`. Once a newer
 tool changes a template the project holds a copy of, each generator keeps writing from the copy and
 prints a `warning:` naming it; committing a copy untouched before editing it lets git carry the
 team's changes onto a fresh copy.

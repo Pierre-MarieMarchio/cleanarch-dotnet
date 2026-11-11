@@ -1,4 +1,6 @@
-﻿using CleanArch.Cli.Generators.AddSetting;
+﻿using System.Text.Json.Nodes;
+using CleanArch.Cli.CodeTemplates;
+using CleanArch.Cli.Generators.AddSetting;
 using CleanArch.Cli.Generators.Shared;
 using Xunit;
 
@@ -17,6 +19,12 @@ public sealed partial class NewSettingTests
 
     [Fact]
     public void ABrokenOverrideIsRefusedNamingIt() => Expectations.Hold(ABrokenOverrideIsRefusedNamingItCases);
+
+    [Fact]
+    public void AnUnchangedCopyWritesTheSameFiles() => Expectations.Hold(AnUnchangedCopyWritesTheSameFilesCases);
+
+    [Fact]
+    public void AddSettingWarnsWhenTheToolChangedACopiedTemplate() => Expectations.Hold(AddSettingWarnsWhenTheToolChangedACopiedTemplateCases);
 
     private static string ToolText(string reference) => ToolTemplates.Of(SettingPlan.TemplateFolder)[reference];
 
@@ -87,5 +95,54 @@ public sealed partial class NewSettingTests
             ExpectRefusal(root, _overriddenSetting, $"error: {OverridePath(reference)}: ", expect);
             ExpectRefusal(root, _overriddenSetting, message, expect);
         }
+    }
+
+    private static void AnUnchangedCopyWritesTheSameFilesCases(string scratch, Action<bool, string> expect)
+    {
+        string plain = NewTree(scratch);
+        string copied = NewTree(scratch);
+        int copy = TemplateCopy.Run(GeneratorRun.Project(copied), new TemplateCopyRequest(SettingPlan.TemplateFolder, [], DryRun: false), TextWriter.Null, TextWriter.Null);
+        string options = Path.Combine(copied, OverridePath(SettingPlan.OptionsTemplate));
+
+        File.WriteAllText(options, "\uFEFF" + File.ReadAllText(options).ReplaceLineEndings("\r\n"));
+
+        var expected = Invoke(plain, _overriddenSetting);
+        var result = Invoke(copied, _overriddenSetting);
+
+        expect(copy == 0, "templates copy refused the copy of add setting's templates the test compares.");
+        expect(expected.Code == 0 && result.Code == 0, $"add setting refused a run the copy test compares: {expected.Error}{result.Error}");
+        expect(
+            Differing(WrittenFiles(plain), WrittenFiles(copied)).Length == 0,
+            $"After templates copy, add setting did not write the bytes it writes without the copies, a BOM and CRLF line endings in one: {Differing(WrittenFiles(plain), WrittenFiles(copied))}");
+        expect(
+            result.Output.Contains($"Written from this project's code templates:\n  {OverridePath(SettingPlan.OptionsTemplate)}\n  {OverridePath(SettingPlan.TestsTemplate)}\n", StringComparison.Ordinal),
+            $"The report of add setting does not list the copies it wrote from: {result.Output}");
+        expect(!result.Error.Contains("warning:", StringComparison.Ordinal), $"add setting warned over copies the tool has not changed since: {result.Error}");
+    }
+
+    private static void AddSettingWarnsWhenTheToolChangedACopiedTemplateCases(string scratch, Action<bool, string> expect)
+    {
+        string root = NewTree(scratch);
+        string stale =
+            $"warning: {OverridePath(SettingPlan.TestsTemplate)} overrides a template the tool has changed since version {GeneratorCommand.Version}, which it was copied from; "
+            + $"the files keep your text. To take the change: move your file aside, run dotnet cleanarch templates copy {SettingPlan.TemplateFolder} PlaceholderLimitsOptionsTests.cs, "
+            + "and carry your changes over.\n";
+
+        TemplateCopy.Run(GeneratorRun.Project(root), new TemplateCopyRequest(SettingPlan.TemplateFolder, ["PlaceholderLimitsOptionsTests.cs"], DryRun: false), TextWriter.Null, TextWriter.Null);
+
+        string manifest = Path.Combine(root, TemplateCopies.Manifest);
+        var copies = JsonNode.Parse(File.ReadAllText(manifest))!;
+
+        copies["templates"]![0]!["sha256"] = new string('0', 64);
+        File.WriteAllText(manifest, copies.ToJsonString());
+
+        var dryRun = Invoke(root, [.. _overriddenSetting, "--dry-run"]);
+        var written = Invoke(root, _overriddenSetting);
+
+        expect(dryRun.Code == 0 && written.Code == 0, $"add setting refused over a copy the tool has changed since: {dryRun.Error}{written.Error}");
+        expect(
+            dryRun.Error.Contains(stale, StringComparison.Ordinal) && written.Error.Contains(stale, StringComparison.Ordinal),
+            $"add setting, under --dry-run or not, did not warn that the tool changed the template copied: {dryRun.Error}{written.Error}");
+        expect(File.Exists(Path.Combine(root, _optionsFile)), "add setting did not write the setting it warned over.");
     }
 }

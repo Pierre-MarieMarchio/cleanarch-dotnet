@@ -12,6 +12,7 @@ internal static class TemplatesCommand
         ["add-feature"] = new(project => GeneratorCommand.AuthenticationRefusal(project, "feature"), "add feature and add field now write"),
         ["add-use-case"] = new(_ => null, "add use-case now writes"),
         ["add-event"] = new(_ => null, "add event now writes"),
+        ["add-setting"] = new(_ => null, "add setting now writes"),
     };
 
     public static readonly CommandRegistration Registration = new(ProjectCommand.Requiring(Refusal), Build);
