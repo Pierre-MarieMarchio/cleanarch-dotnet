@@ -143,7 +143,7 @@ internal static class FeatureCode
         return $"{segments[0]}/{segments[1]}/{host}/{segments[3]}";
     }
 
-    internal static TemplateOverrides Overrides(string root) => TemplateOverrides.Read(root, TemplateFolder, FeatureFlags.Vocabulary);
+    internal static TemplateOverrides Overrides(string root) => TemplateOverrides.Read(root, TemplateFolder, FeatureFlags.Vocabulary, FeatureFlags.Report);
 
     internal static List<Emission> Plan(FeatureSpec spec, string root, TemplateOverrides templates, out List<string> skippedTestProjects)
     {
