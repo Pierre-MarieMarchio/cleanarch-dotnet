@@ -15,16 +15,7 @@ internal static class TemplatesCommand
         ["add-setting"] = new(_ => null, "add setting now writes"),
     };
 
-    public static readonly CommandRegistration Registration = new(ProjectCommand.Requiring(Refusal), Build);
-
-    private static string? Refusal(LocatedProject project)
-    {
-        string?[] refusals = [.. Generators.Values.Select(generator => generator.Refusal(project))];
-
-        return refusals.All(refusal => refusal is not null)
-            ? $"This project has no {Name} command, as no generator that writes from code templates applies to it. {string.Join(' ', refusals)}"
-            : null;
-    }
+    public static readonly CommandRegistration Registration = new(ProjectCommand.Refusal, Build);
 
     private static Command Build(CommandContext context)
     {
