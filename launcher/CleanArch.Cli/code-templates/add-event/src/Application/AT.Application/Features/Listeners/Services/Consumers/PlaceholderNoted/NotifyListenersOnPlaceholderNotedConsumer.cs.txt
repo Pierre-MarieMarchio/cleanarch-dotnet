@@ -1,0 +1,17 @@
+using AppTemplate.Application.Core.Common.Events;
+using AppTemplate.Domain.Features.Placeholders.Model.Events;
+
+namespace AppTemplate.Application.Features.Listeners.Services.Consumers.PlaceholderNoted;
+
+internal sealed class NotifyListenersOnPlaceholderNotedConsumer : IDomainEventConsumer<PlaceholderNotedDomainEvent>
+{
+    public Task ConsumeAsync(
+        PlaceholderNotedDomainEvent domainEvent,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(domainEvent);
+
+        throw new NotImplementedException(
+            "NotifyListeners is not written yet: re-derive the precondition from the stores, act, then commit through IUnitOfWork, so that running twice changes nothing.");
+    }
+}

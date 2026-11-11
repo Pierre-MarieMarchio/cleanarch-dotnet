@@ -1,0 +1,9 @@
+using AppTemplate.Domain.Core.Common.Events;
+
+namespace AppTemplate.Domain.Features.Placeholders.Model.Events;
+
+public sealed record PlaceholderNotedDomainEvent(
+//#each field
+    %field.Type% %field.Name%,
+//#end
+    DateTimeOffset OccurredOn) : IDomainEvent;

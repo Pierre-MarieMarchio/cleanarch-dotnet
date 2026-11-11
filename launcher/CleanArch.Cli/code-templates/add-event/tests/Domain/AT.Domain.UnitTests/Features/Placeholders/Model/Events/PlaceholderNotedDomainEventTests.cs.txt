@@ -1,0 +1,30 @@
+using AppTemplate.Domain.Core.Common.Events;
+using AppTemplate.Domain.Features.Placeholders.Model.Events;
+using Shouldly;
+using Xunit;
+
+namespace AppTemplate.Domain.UnitTests.Features.Placeholders.Model.Events;
+
+public sealed class PlaceholderNotedDomainEventTests
+{
+    private static readonly DateTimeOffset _occurredOn = new(2026, 8, 3, 12, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public void TheEvent_CarriesWhatItWasGiven()
+    {
+//#each field where guid
+        var %field.Sample% = Guid.CreateVersion7();
+//#end
+
+        var domainEvent = new PlaceholderNotedDomainEvent(/*#each field separator ", "*/%field.Sample%/*#end ", "*/_occurredOn);
+
+//#each field
+        domainEvent.%field.Name%.ShouldBe(%field.Sample%);
+//#end
+        domainEvent.OccurredOn.ShouldBe(_occurredOn);
+    }
+
+    [Fact]
+    public void TheEvent_IsADomainEvent() =>
+        typeof(IDomainEvent).IsAssignableFrom(typeof(PlaceholderNotedDomainEvent)).ShouldBeTrue();
+}

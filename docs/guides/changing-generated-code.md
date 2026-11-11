@@ -256,6 +256,39 @@ A block of `add use-case` repeats over `parameter`, the values the message carri
 | `ruled` | has a rule: a known type that is not a `bool` nor nullable |
 | `malformed` | is the first with a rule, the one a handler's test empties |
 
+## The templates of add event
+
+`add event` writes its files from templates of its own, under `code-templates/add-event`, in the
+language above. Each lies at its path for the event `PlaceholderNotedDomainEvent` of `Placeholders`,
+consumed by `Listeners` whose reaction is `NotifyListeners`:
+
+| Template | Written |
+|---|---|
+| `PlaceholderNotedDomainEvent.cs.txt` | always: the event |
+| `PlaceholderNotedDomainEventTests.cs.txt` | when the domain's unit test project exists |
+| `NotifyListenersOnPlaceholderNotedConsumer.cs.txt` | with `--consumer`: the consumer |
+| `NotifyListenersOnPlaceholderNotedConsumerTests.cs.txt` | with `--consumer`, when the application's unit test project exists |
+
+Its reference names are `PlaceholderNoted`, the event's name without `DomainEvent`, `Placeholders`
+the folder of the feature that raises it, `Listeners` the folder of the feature that consumes it,
+`NotifyListeners` the reaction, and the reference project's name. The registration in
+`ApplicationModule.cs`, the entry of an unconsumed event in `DomainEventTests.cs` and the report
+stay the tool's.
+
+### The flags of add event
+
+| Flag | Holds when |
+|---|---|
+| `configured` | The feature of `--consumer` takes the configuration: its `Add<Features>` method has an `IConfiguration` parameter. |
+
+### The fields of an event
+
+A block repeats over `field`, the fields of `--fields` in their order, or the aggregate's id by
+default. Its tokens are `Name`, the field's name, `Type`, its C# type, and `Sample`, the value the
+event's test gives it: a local `guid<n>` for a `Guid`, its index among the fields after `guid`, and
+a literal otherwise. Its one trait, `guid`, holds for a field of type `Guid`, whose test declares
+its local.
+
 ## Refusals
 
 `add feature` and `add field` read every copy before writing anything, and refuse, writing nothing,
