@@ -39,19 +39,19 @@ internal static class TemplateCopy
         copies = null;
         if (!TemplatesCommand.Generators.TryGetValue(request.Generator, out TemplatedGenerator? generator))
         {
-            return $"{request.Generator} has no code templates to copy: {string.Join(", ", TemplatesCommand.Generators.Keys)} has them.";
+            return $"{request.Generator} has no code templates to copy; the generators that have some are {string.Join(", ", TemplatesCommand.Generators.Keys)}.";
         }
 
         if (generator.Refusal(project) is { } refused)
         {
-            return $"{Display(request.Generator)} does not apply to this project, so there is nothing to copy: {refused}";
+            return $"{ToolTemplates.Spoken(request.Generator)} does not apply to this project, so there is nothing to copy: {refused}";
         }
 
         string[] unmatched = [.. request.Templates.Where(name => !ToolTemplates.Of(request.Generator).Keys.Any(reference => Names(name, reference)))];
         if (unmatched.Length > 0)
         {
             return string.Join('\n', unmatched.Select(name =>
-                $"{name} names no template of {Display(request.Generator)}: {CleanArchCommand.Name} {TemplatesCommand.Name} copy {request.Generator} --dry-run lists them."));
+                $"{name} names no template of {ToolTemplates.Spoken(request.Generator)}: {CleanArchCommand.Name} {TemplatesCommand.Name} copy {request.Generator} --dry-run lists them."));
         }
 
         copies = TemplateCopies.Read(project.Root, out string? problem);
@@ -94,7 +94,7 @@ internal static class TemplateCopy
     private static void Report(TextWriter output, TemplateCopyRequest request, string[] copied, string[] kept)
     {
         string templates = copied.Length == 1 ? "template" : "templates";
-        output.WriteLine($"{(request.DryRun ? "Would write" : "Wrote")} {copied.Length} {templates} of {Display(request.Generator)} from version {GeneratorCommand.Version} of the tool, recorded in {TemplateCopies.Manifest}:");
+        output.WriteLine($"{(request.DryRun ? "Would write" : "Wrote")} {copied.Length} {templates} of {ToolTemplates.Spoken(request.Generator)} from version {GeneratorCommand.Version} of the tool, recorded in {TemplateCopies.Manifest}:");
         output.WriteLine(Listed(request.Generator, copied));
         if (kept.Length > 0)
         {
@@ -105,11 +105,9 @@ internal static class TemplateCopy
         output.WriteLine();
         output.WriteLine(request.DryRun
             ? "--dry-run: nothing was written."
-            : $"{TemplatesCommand.Generators[request.Generator].WrittenBy} now write those files from them.");
+            : $"{TemplatesCommand.Generators[request.Generator].Writes} those files from them.");
     }
 
     private static string Listed(string generator, IEnumerable<string> references) =>
         string.Join('\n', references.Select(reference => $"  {ToolTemplates.PathOf(generator, reference)}"));
-
-    private static string Display(string generator) => generator.Replace('-', ' ');
 }

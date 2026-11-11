@@ -205,8 +205,12 @@ tests only with a rule, the handler's test only where the application's tests ho
 `ValidatedHandler` double, the DTO unless the feature declares it, the contracts only where the API
 serves the feature. The controller's action and the route's row are edits, which no template writes.
 
-A copy of one lies at `code-templates/add-use-case/<reference path>.txt`, and `add use-case` writes
-that file from it as `add feature` does: it reads every copy before writing anything, refuses a
+`dotnet cleanarch templates copy add-use-case --dry-run` lists them, and the command copies them as
+[the steps](#steps) say, by their path or the end of it after a `/`, such as the reference
+command's file name; a project without authentication has them too, since `add use-case` serves
+it. A copy lies at `code-templates/add-use-case/<reference path>.txt`, and `add use-case` writes
+that file from it as `add feature` does, and warns as `add feature` does
+[when the tool changes it](#when-the-tool-changes-a-template): it reads every copy before writing anything, refuses a
 broken one as [below](#refusals), and lists the copies it wrote from under `Written from this
 project's code templates:`. The feature's manifest records the files it wrote, never the copies:
 only `add field` reads them back.

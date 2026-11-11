@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text.Json.Nodes;
+using CleanArch.Cli.CodeTemplates;
 using CleanArch.Cli.Generators.AddUseCase;
 using CleanArch.Cli.Generators.Shared;
 using Xunit;
@@ -32,6 +33,12 @@ public sealed partial class NewUseCaseTests
 
     [Fact]
     public void TheManifestRecordsTheWrittenBytesAndNoTemplatesKey() => Expectations.Hold(TheManifestRecordsTheWrittenBytesAndNoTemplatesKeyCases);
+
+    [Fact]
+    public void AnUnchangedCopyWritesTheSameFiles() => Expectations.Hold(AnUnchangedCopyWritesTheSameFilesCases);
+
+    [Fact]
+    public void AddUseCaseWarnsWhenTheToolChangedACopiedTemplate() => Expectations.Hold(AddUseCaseWarnsWhenTheToolChangedACopiedTemplateCases);
 
     private static string ToolText(string reference) => ToolTemplates.Of(NewUseCase.TemplateFolder)[reference];
 
@@ -163,5 +170,59 @@ public sealed partial class NewUseCaseTests
             recorded == Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(Path.Combine(root, _approveCommand)))),
             "The manifest does not record the bytes the override wrote, so remove feature would take the command for edited.");
         expect(manifest["templates"] is null, $"add use-case recorded the templates it wrote from, which only add field reads: {manifest["templates"]?.ToJsonString()}");
+    }
+
+    private static void AnUnchangedCopyWritesTheSameFilesCases(string scratch, Action<bool, string> expect)
+    {
+        string plain = NewTree(scratch);
+        string copied = NewTree(scratch);
+        using var copyError = new StringWriter();
+
+        int copy = TemplateCopy.Run(GeneratorRun.Project(copied), new TemplateCopyRequest(NewUseCase.TemplateFolder, [], DryRun: false), TextWriter.Null, copyError);
+        string command = Path.Combine(copied, OverridePath(_referenceCommand));
+        File.WriteAllText(command, "\uFEFF" + File.ReadAllText(command).ReplaceLineEndings("\r\n"));
+
+        string[][] runs = [_approving, ["Invoices", "GetInvoiceTotals", "--kind", "query", "--input", "id, Since:DateOnly"]];
+        var expected = runs.Select(run => Invoke(plain, run)).ToList();
+        var results = runs.Select(run => Invoke(copied, run)).ToList();
+        string[] commandCopies = [.. ToolTemplates.Of(NewUseCase.TemplateFolder).Keys.Where(reference => reference.Contains("ApprovePlaceholder", StringComparison.Ordinal)).Select(OverridePath).Order(StringComparer.Ordinal)];
+
+        expect(copy == 0, $"templates copy refused the copy the test compares: {copyError}");
+        expect(expected.Concat(results).All(result => result.Code == 0), $"add use-case refused a run the copy test compares: {string.Concat(expected.Concat(results).Select(result => result.Error))}");
+        expect(
+            Same(WrittenFiles(plain), WrittenFiles(copied)),
+            $"After templates copy, add use-case did not write the files it writes without the copy, a BOM and CRLF line endings in one: {Differing(WrittenFiles(plain), WrittenFiles(copied))}");
+        expect(
+            results[0].Output.Contains($"Written from this project's code templates:{string.Concat(commandCopies.Select(path => $"\n  {path}"))}\n", StringComparison.Ordinal),
+            $"The report of the command does not list the five copies it wrote from: {results[0].Output}");
+        expect(results.All(result => !result.Error.Contains("warning:", StringComparison.Ordinal)), "add use-case warned over copies the tool has not changed since.");
+    }
+
+    private static void AddUseCaseWarnsWhenTheToolChangedACopiedTemplateCases(string scratch, Action<bool, string> expect)
+    {
+        string root = NewTree(scratch);
+        string stale =
+            $"warning: {OverridePath(_referenceCommand)} overrides a template the tool has changed since version {GeneratorCommand.Version}, which it was copied from; "
+            + $"the files keep your text. To take the change: move your file aside, run dotnet cleanarch templates copy {NewUseCase.TemplateFolder} ApprovePlaceholder.cs, "
+            + "and carry your changes over.\n";
+
+        TemplateCopy.Run(GeneratorRun.Project(root), new TemplateCopyRequest(NewUseCase.TemplateFolder, [_referenceCommand], DryRun: false), TextWriter.Null, TextWriter.Null);
+
+        string manifest = Path.Combine(root, TemplateCopies.Manifest);
+        var copies = JsonNode.Parse(File.ReadAllText(manifest))!;
+
+        copies["templates"]![0]!["sha256"] = new string('0', 64);
+        File.WriteAllText(manifest, copies.ToJsonString());
+        Put(root, OverridePath(_referenceRequest), Marked(_referenceRequest));
+
+        var dryRun = Invoke(root, [.. _approving, "--dry-run"]);
+        var written = Invoke(root, _approving);
+
+        expect(dryRun.Code == 0 && written.Code == 0, $"add use-case refused over a copy the tool has changed since: {dryRun.Error}{written.Error}");
+        expect(
+            dryRun.Error.Contains(stale, StringComparison.Ordinal) && written.Error.Contains(stale, StringComparison.Ordinal),
+            $"add use-case, under --dry-run or not, did not warn that the tool changed the template copied: {dryRun.Error}{written.Error}");
+        expect(!written.Error.Contains(OverridePath(_referenceRequest), StringComparison.Ordinal), $"add use-case warned over an override written by hand, which no copy records: {written.Error}");
+        expect(File.ReadAllText(Path.Combine(root, _approveCommand)).Length > 0, "add use-case did not write the use case it warned over.");
     }
 }
