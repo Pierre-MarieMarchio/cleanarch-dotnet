@@ -1,0 +1,14 @@
+using FluentValidation;
+
+namespace AppTemplate.Application.Features.Placeholders.UseCases.Queries.GetPlaceholderTotals;
+
+public sealed class GetPlaceholderTotalsQueryValidator : AbstractValidator<GetPlaceholderTotalsQuery>
+{
+    public GetPlaceholderTotalsQueryValidator()
+    {
+//#each parameter where ruled separator "\n\n"
+        RuleFor(query => query.%parameter.Name%)
+            .NotEmpty().WithMessage("%parameter.Required%");
+//#end
+    }
+}

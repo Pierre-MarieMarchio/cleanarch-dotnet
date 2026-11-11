@@ -1,0 +1,21 @@
+using AppTemplate.Application.Core.Common.Results;
+using AppTemplate.Application.Features.Placeholders.Model.Dtos;
+using Mediator;
+
+namespace AppTemplate.Application.Features.Placeholders.UseCases.Queries.GetPlaceholderTotals;
+
+#if parameters
+public sealed record GetPlaceholderTotalsQuery(
+//#each parameter separator ",\n"
+    %parameter.Type% %parameter.Name%
+//#end ") : IQuery<Result<PlaceholderTotalsDto>>;"
+#else
+public sealed record GetPlaceholderTotalsQuery : IQuery<Result<PlaceholderTotalsDto>>;
+#endif
+
+public sealed class GetPlaceholderTotalsQueryHandler : IQueryHandler<GetPlaceholderTotalsQuery, Result<PlaceholderTotalsDto>>
+{
+    public ValueTask<Result<PlaceholderTotalsDto>> Handle(GetPlaceholderTotalsQuery query, CancellationToken cancellationToken) =>
+        throw new NotImplementedException(
+            "GetPlaceholderTotals is not written yet: read through the feature's queries port into PlaceholderTotalsDto.");
+}

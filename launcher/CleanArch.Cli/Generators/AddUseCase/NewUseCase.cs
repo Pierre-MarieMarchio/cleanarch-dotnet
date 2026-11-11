@@ -5,6 +5,10 @@ namespace CleanArch.Cli.Generators.AddUseCase;
 
 internal static class NewUseCase
 {
+    internal const string Generator = "dotnet cleanarch add use-case";
+
+    internal const string TemplateFolder = "add-use-case";
+
     internal const string Usage =
         "Usage: dotnet cleanarch add use-case <Features> <UseCase> --kind command|query\n"
         + "           [--input id|none|\"[id, ]Name:Type, Other:Type\"]\n"

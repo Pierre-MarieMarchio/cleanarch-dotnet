@@ -1,0 +1,27 @@
+using AppTemplate.Application.Features.Placeholders.UseCases.Queries.GetPlaceholderTotals;
+using Shouldly;
+using Xunit;
+
+namespace AppTemplate.Application.UnitTests.Features.Placeholders.UseCases.Queries.GetPlaceholderTotals;
+
+public sealed class GetPlaceholderTotalsQueryValidatorTests
+{
+    private readonly GetPlaceholderTotalsQueryValidator _validator = new();
+
+    private static CancellationToken TestToken => TestContext.Current.CancellationToken;
+
+    [Fact]
+    public async Task AWellFormedQuery_PassesValidation() =>
+        (await _validator.ValidateAsync(AWellFormedQuery(), TestToken))
+            .IsValid.ShouldBeTrue();
+
+//#each parameter where ruled separator "\n\n"
+    [Fact]
+    public async Task AnEmpty%parameter.Name%_IsRefused() =>
+        (await _validator.ValidateAsync(AWellFormedQuery() with { %parameter.Name% = %parameter.Empty% }, TestToken))
+            .IsValid.ShouldBeFalse();
+//#end
+
+    internal static GetPlaceholderTotalsQuery AWellFormedQuery() =>
+        new(/*#each parameter separator ", "*/%parameter.Valid%/*#end*/);
+}

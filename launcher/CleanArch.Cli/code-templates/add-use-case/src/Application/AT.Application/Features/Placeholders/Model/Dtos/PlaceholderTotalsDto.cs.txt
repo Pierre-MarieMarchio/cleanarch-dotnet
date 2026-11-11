@@ -1,0 +1,7 @@
+namespace AppTemplate.Application.Features.Placeholders.Model.Dtos;
+
+#if id
+public sealed record PlaceholderTotalsDto(Guid Id);
+#else
+public sealed record PlaceholderTotalsDto;
+#endif
