@@ -1,0 +1,101 @@
+using AppTemplate.Application.Features.Placeholders.Configuration.Options;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Shouldly;
+using Xunit;
+
+namespace AppTemplate.Application.UnitTests.Features.Placeholders.Configuration;
+
+public sealed class PlaceholderLimitsOptionsTests
+{
+//#each key where validated
+%key.PassingCases%
+    public void %key.Name%_%key.Passing%_Passes(%key.PassingParameter%) =>
+        Validate(options => options.%key.Name% = %key.PassingValue%).Succeeded.ShouldBeTrue();
+
+    [Theory]
+%key.FailingCases%
+    public void %key.Name%_%key.Failing%_NamesTheKey(%key.Parameter%)
+    {
+        var result = Validate(options => options.%key.Name% = %key.Value%);
+
+        result.Failed.ShouldBeTrue();
+        result.FailureMessage.ShouldContain("PlaceholderLimits:%key.Name%");
+    }
+
+//#end
+    [Fact]
+    public void ASectionOutOfRange_StopsTheHostAtStart()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+//#each key where supplied
+                ["PlaceholderLimits:%key.Name%"] = %key.Setting%,
+//#end
+                ["PlaceholderLimits:%Broken%"] = %BrokenValue%,
+            })
+            .Build();
+        var services = new ServiceCollection();
+#if configured
+        services.AddPlaceholders(configuration);
+#else
+        services.AddSingleton<IConfiguration>(configuration);
+        services.AddPlaceholders();
+#endif
+
+        using var provider = services.BuildServiceProvider();
+
+        var failure = Should.Throw<Exception>(() => provider.GetRequiredService<IStartupValidator>().Validate());
+
+        failure.ToString().ShouldContain("'PlaceholderLimits:%Broken%'");
+    }
+
+    [Fact]
+    public void ASectionInRange_IsBoundFromItsConfiguration()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+//#each key
+                ["PlaceholderLimits:%key.Name%"] = %key.Setting%,
+//#end
+            })
+            .Build();
+        var services = new ServiceCollection();
+#if configured
+        services.AddPlaceholders(configuration);
+#else
+        services.AddSingleton<IConfiguration>(configuration);
+        services.AddPlaceholders();
+#endif
+
+        using var provider = services.BuildServiceProvider();
+        var bound = provider.GetRequiredService<IOptions<PlaceholderLimitsOptions>>().Value;
+
+//#each key
+        bound.%key.Name%.ShouldBe(%key.Expected%);
+//#end
+    }
+
+    private static PlaceholderLimitsOptions ValidOptions() =>
+#if required
+        new()
+        {
+//#each key where required
+            %key.Name% = %key.Valid%,
+//#end
+        };
+#else
+        new();
+#endif
+
+    private static ValidateOptionsResult Validate(Action<PlaceholderLimitsOptions> change)
+    {
+        var options = ValidOptions();
+        change(options);
+
+        return new PlaceholderLimitsOptionsValidator().Validate(name: null, options);
+    }
+}
