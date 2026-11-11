@@ -226,13 +226,17 @@ write from this project's copy, and a copy left unchanged writes what the tool d
 already there is never overwritten, and a run where every one named exists is refused: move one
 aside to copy it again. `--dry-run` lists what it would copy and writes nothing; it takes no
 `--check`, since it creates files once rather than keeping them in step.
+`dotnet cleanarch templates copy add-use-case [<template>...]` copies those of `add use-case` into
+`code-templates/add-use-case/` the same way, at the paths of the reference command
+`ApprovePlaceholder` and query `GetPlaceholderTotals`, and applies to every project, since
+`add use-case` does.
 
 `code-templates/manifest.json` records each copy's path, the tool's version and the digest of the
 tool's text when it was copied: it is the tool's to write, while the `.txt` copies are the team's to
 edit. A manifest the tool cannot read refuses the copy until it is repaired or moved aside.
 
-When a newer tool changes the text of a template this project holds a copy of, `add feature` and
-`add field` still write from the copy and warn on the error output, under `--dry-run` too, without
+When a newer tool changes the text of a template this project holds a copy of, `add feature`,
+`add field` and `add use-case` still write from the copy and warn on the error output, under `--dry-run` too, without
 changing their exit code; [changing generated code](../guides/changing-generated-code.md#when-the-tool-changes-a-template)
 says how to take the change. The report of either generator lists the copies it wrote from, except
 when it refuses.

@@ -9,7 +9,8 @@ internal static class TemplatesCommand
 
     internal static IReadOnlyDictionary<string, TemplatedGenerator> Generators { get; } = new Dictionary<string, TemplatedGenerator>(StringComparer.Ordinal)
     {
-        ["add-feature"] = new(project => GeneratorCommand.AuthenticationRefusal(project, "feature"), "add feature and add field"),
+        ["add-feature"] = new(project => GeneratorCommand.AuthenticationRefusal(project, "feature"), "add feature and add field now write"),
+        ["add-use-case"] = new(_ => null, "add use-case now writes"),
     };
 
     public static readonly CommandRegistration Registration = new(ProjectCommand.Requiring(Refusal), Build);
@@ -58,4 +59,4 @@ internal static class TemplatesCommand
     }
 }
 
-internal sealed record TemplatedGenerator(Func<LocatedProject, string?> Refusal, string WrittenBy);
+internal sealed record TemplatedGenerator(Func<LocatedProject, string?> Refusal, string Writes);
