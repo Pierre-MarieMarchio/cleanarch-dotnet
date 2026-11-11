@@ -6,6 +6,7 @@
     "auth_context": "true",
     "integration": "true",
     "generator": "true",
+    "code_templates": "true",
     "end_to_end": "true"
   },
   {

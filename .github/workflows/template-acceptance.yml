@@ -581,18 +581,57 @@ jobs:
         working-directory: ${{ runner.temp }}/generated
         run: dotnet cleanarch docs-index --check
 
-      # add feature writes a feature, makes the edits that compose it, adds its migration and rewrites the OpenAPI reference, the record and the aggregate with a field of every type; the solution then builds with warnings as errors and the architecture and feature tests pass, and where the leg has Docker the integration tests add feature wrote pass against the database. The aggregate one takes five more use cases from add use-case, which adds each action, two with typed inputs, and refuses the record ones. With the four together, add field adds a required field with its default, another and a nullable one to the record and to the aggregate with fields, then adds their migration with the defaults, and Invoices takes a setting and an event, before the same proof. The documentation indexes stay current with four features present, and remove feature --apply takes them out of the committed tree, leaving each feature's migrations alone.
+      # add feature writes a feature, makes the edits that compose it, adds its migration and rewrites the OpenAPI reference, the record and the aggregate with a field of every type; the solution then builds with warnings as errors and the architecture and feature tests pass, and where the leg has Docker the integration tests add feature wrote pass against the database. The aggregate one takes five more use cases from add use-case, which adds each action, two with typed inputs, and refuses the record ones. With the four together, add field adds a required field with its default, another and a nullable one to the record and to the aggregate with fields, then adds their migration with the defaults, and Invoices takes a setting and an event, before the same proof. The documentation indexes stay current with four features present, and remove feature --apply takes them out of the committed tree, leaving each feature's migrations alone. On the leg that sets code_templates, every generator first copies its templates, committed untouched and then edited, as docs/guides/changing-generated-code.md asks: each record add feature writes carries the line added to its copy, each manifest records that copy under templates, the report prints the line added to its report.txt and lists the copies, and no generator warns.
       - name: Assert the feature generator round trip leaves the tree untouched
         if: matrix.generator == 'true'
         working-directory: ${{ runner.temp }}/generated
         env:
           INTEGRATION: ${{ matrix.integration }}
+          CODE_TEMPLATES: ${{ matrix.code_templates }}
         run: |
           set -euo pipefail
           fail() { echo "::error title=Generator round trip::$1"; exit 1; }
+          commit() {
+            git add -A
+            git -c user.name=acceptance -c user.email=acceptance@localhost commit --quiet -m "$1"
+          }
           git init --quiet
-          git add -A
-          git -c user.name=acceptance -c user.email=acceptance@localhost commit --quiet -m generated
+          commit generated
+          # The marker and the report's line name no reference name, which a generator would rename.
+          marker="// Written from this project's code template."
+          report_line="This project's report adds this line."
+          record_copy=""
+          if [ "$CODE_TEMPLATES" = "true" ]; then
+            for generator in add-feature add-field add-use-case add-event add-setting; do
+              log="${{ runner.temp }}/templates-copy-$generator.log"
+              dotnet cleanarch templates copy "$generator" > "$log" 2>&1 || { cat "$log"; fail "templates copy $generator failed."; }
+            done
+            commit "code templates copied"
+            record_copy=$(find code-templates/add-feature -path '*/Rows/Models/PlaceholderRecord.cs.txt')
+            [ -n "$record_copy" ] || fail "templates copy add-feature copied no PlaceholderRecord.cs.txt."
+            awk -v marker="$marker" '{ print } /^namespace / { print ""; print marker }' "$record_copy" > "${{ runner.temp }}/record-copy.txt"
+            mv "${{ runner.temp }}/record-copy.txt" "$record_copy"
+            grep -qxF "$marker" "$record_copy" || fail "$record_copy holds no namespace line to put the marker after."
+            echo "$report_line" >> code-templates/add-feature/report.txt
+            commit "code templates edited"
+          fi
+          # A copy the tool has not changed since it was copied draws no warning, whichever generator reads it.
+          unwarned() {
+            if [ -n "$record_copy" ] && grep -q '^warning: ' "$1"; then
+              cat "$1"
+              fail "$2 warned over this project's code templates, which the tool has not changed since they were copied."
+            fi
+          }
+          # add feature writes the record from the edited copy, records that copy under templates in the feature's manifest, and prints the report's added line and the copies it wrote from.
+          templated() {
+            local feature type record
+            read -r feature type _ <<< "$1"
+            record=$(find src/Infrastructure -path "*/Features/$feature/Rows/Models/${type}Record.cs")
+            [ -n "$record" ] && grep -qxF "$marker" "$record" || fail "add feature $feature did not write its record from this project's copy of $record_copy."
+            jq -e --arg copy "$record_copy" 'any(.templates[]?; .path == $copy)' ".feature-manifest/$feature.json" > /dev/null || fail "the manifest of $feature does not record $record_copy under templates."
+            grep -qxF "$report_line" "$2" || fail "add feature $feature did not print the line this project's report.txt adds."
+            grep -qxF "Written from this project's code templates:" "$2" || fail "add feature $feature did not list the copies it wrote from."
+          }
           cases=(
             "Orders Order --access owner --deletion delete --fields=Title:string(120),Nickname:string(40)?,Notes:text?,Summary:text(500),Count:int>=0<=1000,Total:long?>-5,Budget:decimal(12,2)>=0,Ratio:decimal(5,4)?,Paid:bool,Due:DateOnly,StartsAt:DateTimeOffset,Reference:Guid?"
             "Tags Tag --access shared"
@@ -611,6 +650,8 @@ jobs:
             [ -f ".feature-manifest/${1%% *}.json" ] || fail "add feature $1 left no manifest."
             jq -e '.edits | length > 0' ".feature-manifest/${1%% *}.json" > /dev/null || fail "add feature $1 recorded no edit in its manifest."
             compgen -G "src/Infrastructure/*.Infrastructure.Persistence/Migrations/*_Add${1%% *}.cs" > /dev/null || fail "add feature $1 added no migration."
+            unwarned "$log" "add feature $1"
+            [ -z "$record_copy" ] || templated "$1" "$log"
           }
           extend() {
             local feature type
@@ -626,6 +667,7 @@ jobs:
               log="${{ runner.temp }}/add-use-case-$feature-${usecase%% *}.log"
               # shellcheck disable=SC2086
               dotnet cleanarch add use-case "$feature" $usecase > "$log" 2>&1 || { cat "$log"; fail "add use-case $feature $usecase failed."; }
+              unwarned "$log" "add use-case $feature $usecase"
             done
           }
           widen() {
@@ -634,6 +676,7 @@ jobs:
             [[ "$1" == *"--fields"* ]] || return 0
             log="${{ runner.temp }}/add-field-$feature.log"
             dotnet cleanarch add field "$feature" "Code:string(20)='none', Rank:int>=1=1, Weight:decimal(8,3)?" > "$log" 2>&1 || { cat "$log"; fail "add field $feature failed."; }
+            unwarned "$log" "add field $feature"
             grep -q 'Breaking change: Code is required' "$log" || fail "add field $feature did not say that a required field breaks the clients."
             jq -e '.addedFields | length == 1' ".feature-manifest/$feature.json" > /dev/null || fail "add field $feature recorded no addition in its manifest."
             migration=$(compgen -G "src/Infrastructure/*.Infrastructure.Persistence/Migrations/*_AddCodeAnd2MoreFieldsTo$feature.cs") || fail "add field $feature added no migration."
@@ -657,14 +700,12 @@ jobs:
           settle() {
             local log="${{ runner.temp }}/add-setting.log"
             dotnet cleanarch add setting Invoices InvoiceLimits --keys "MaxLines:int(1..500)=100" > "$log" 2>&1 || { cat "$log"; fail "add setting Invoices failed."; }
+            unwarned "$log" "add setting Invoices"
             log="${{ runner.temp }}/add-event.log"
             dotnet cleanarch add event Invoices InvoiceApprovedDomainEvent --unconsumed "Nothing reacts to an approved invoice yet" > "$log" 2>&1 || { cat "$log"; fail "add event Invoices failed."; }
+            unwarned "$log" "add event Invoices"
             jq -e '[.files[].path] | any(endswith("/InvoiceLimitsOptions.cs")) and any(endswith("/InvoiceApprovedDomainEvent.cs"))' .feature-manifest/Invoices.json > /dev/null || fail "add setting or add event did not record its files in the manifest of Invoices."
             jq -e '[.edits[].path] | any(endswith("/appsettings.json")) and any(endswith("/DomainEventTests.cs"))' .feature-manifest/Invoices.json > /dev/null || fail "add setting or add event did not record its edits in the manifest of Invoices."
-          }
-          commit() {
-            git add -A
-            git -c user.name=acceptance -c user.email=acceptance@localhost commit --quiet -m "$1"
           }
           # remove feature --apply takes each feature out of a committed tree, edited or not, last in first out; the tree then differs from the commit generation made by each feature's Add and Remove migrations and the migrations add field added alone, so the model snapshot, the references and every file an edit touched read as they did there.
           remove() {
