@@ -37,7 +37,7 @@ internal static class FeatureFlags
         FeatureCode.Generator,
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["api"] = "The project has the API, so the feature's routes and its refusal join `docs/reference/api.md`.",
+            ["api"] = "The project has the API, so the feature's routes and its refusal join the API reference.",
             ["reaction"] = "The project had no feature that owns user data, so the account-deleted reaction ships with this one, in five more edits.",
             ["fieldTests"] = "The integration test of the fields is written, and the database fixture truncates the feature's schema.",
             ["sorted"] = "A field sorts the list.",

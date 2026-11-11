@@ -418,7 +418,7 @@ It takes the flags of add feature, those of every report, and these:
 
 | Flag | Holds when |
 |---|---|
-| `api` | The project has the API, so the feature's routes and its refusal join `docs/reference/api.md`. |
+| `api` | The project has the API, so the feature's routes and its refusal join the API reference. |
 | `reaction` | The project had no feature that owns user data, so the account-deleted reaction ships with this one, in five more edits. |
 | `fieldTests` | The integration test of the fields is written, and the database fixture truncates the feature's schema. |
 | `sorted` | A field sorts the list. |
@@ -432,7 +432,7 @@ numbered edits; `%TestDatabase%`, the database fixture of the integration tests;
 `%Sortable%` and `%Kept%`, the fields as declared, those the list sorts by and those anonymising
 keeps; `%Steps%`, the commands a run takes; `%Page%`, `%PageTemplate%` and `%Unwritten%`, the
 feature's page, its template, and why it was not written; `%Routes%` and `%ErrorRow%`, the route
-section and the refusal's row of `docs/reference/api.md`; `%InPlace%`, the edits found in place.
+section and the refusal's row of the API reference; `%InPlace%`, the edits found in place.
 
 ### The report of add field
 
