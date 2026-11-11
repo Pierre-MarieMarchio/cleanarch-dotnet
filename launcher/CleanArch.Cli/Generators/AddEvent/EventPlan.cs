@@ -17,7 +17,9 @@ internal static class EventPlan
     private const string _consumerTests =
         "tests/Application/AT.Application.UnitTests/Features/Listeners/Services/Consumers/PlaceholderNoted/NotifyListenersOnPlaceholderNotedConsumerTests.cs";
 
-    internal static List<Emission> Emissions(EventSpec spec, string root)
+    internal static TemplateOverrides Overrides(string root) => TemplateOverrides.Read(root, TemplateFolder, EventFlags.Vocabulary);
+
+    internal static List<Emission> Emissions(EventSpec spec, string root, TemplateOverrides templates)
     {
         var tokens = Tokens(spec);
         var flags = EventFlags.Of(spec);
@@ -30,7 +32,7 @@ internal static class EventPlan
 
             if (!tests || ProjectExists(root, path))
             {
-                emissions.Add(new Emission(path, Render(reference, flags, tokens, fields)));
+                emissions.Add(new Emission(path, templates.Render(reference, flags, tokens, fields)));
             }
         }
 
@@ -63,7 +65,4 @@ internal static class EventPlan
 
         return tokens;
     }
-
-    private static string Render(string reference, HashSet<string> flags, Dictionary<string, string> tokens, TemplateList fields) =>
-        Template.Render(ToolTemplates.Of(TemplateFolder)[reference], EventFlags.Vocabulary, flags, tokens, fields);
 }
