@@ -1122,6 +1122,7 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | `remove feature` removes a feature written from an override as its manifest records it, and leaves `code-templates` as it was | `RemoveFeatureTests.AFeatureWrittenFromAnOverride_IsRemovedAsRecorded_AndTheOverrideStays` |
 | Every template the tool embeds for `add feature` is written by one of the configurations the digests with `--fields` cover, or by an owner feature in a tree whose callers sign in with an external provider | `NewFeatureTests.EveryTemplateIsWritten` |
 | Over the configurations the digests cover, every C# file `add feature` writes or edits, and every one `add field` writes or changes, parses without a syntax error; an edited file is parsed as the edit leaves it in the tests' tree, whose shared files are cut down to the code around the anchors, and the message names each group and path that wrote the same broken text | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
+| The files, the edits and the report of `add use-case` are those its digests record, over every layout it writes: a command and a query with and without the id or any input, several inputs among them one of an unknown type, a query answering a DTO the feature declares, and a tree without the application's tests, the `ValidatedHandler` double or the API | `NewUseCaseTests.Output`, `NewUseCaseTests.Layouts` |
 
 ## The package
 

@@ -53,6 +53,9 @@ public sealed class NewUseCaseTests
     [Fact]
     public void Output() => Expectations.Hold(OutputCases);
 
+    [Fact]
+    public void Layouts() => Expectations.Hold(LayoutsCases);
+
     private static string NewTree(string scratch, params string[] repositories)
     {
         string root = Path.Combine(scratch, Guid.CreateVersion7().ToString("N"));
@@ -311,9 +314,17 @@ public sealed class NewUseCaseTests
 
     private const string _outputDigest = "593dde802ad9568d4a5522fdfb460750df9d58e0da34b7904ea7d19e767bcf55";
 
+    private const string _layoutsDigest = "c7cd2e45e070a87ea6430b176d70afb3c2fcd20a86a464d87b54d6b244b85b82";
+
     private static void OutputCases(string scratch, Action<bool, string> expect)
     {
-        string digest = OutputDigest(scratch);
+        string root = NewTree(scratch);
+        string digest = OutputDigest(
+        [
+            (root, ["Invoices", "ApproveInvoice", "--kind", "command", "--input", "id, Reason:string"]),
+            (root, ["Invoices", "FindByCustomer", "--kind", "query", "--input", "id, Customer:string"]),
+            (root, ["Invoices", "GetInvoiceTotals", "--kind", "query"]),
+        ]);
 
         expect(
             digest == _outputDigest,
@@ -321,21 +332,53 @@ public sealed class NewUseCaseTests
             + $"recorded {_outputDigest}. A change to that output is a change for every project that runs add use-case: make it on purpose, then record the new digest.");
     }
 
-    private static string OutputDigest(string scratch)
+    private static void LayoutsCases(string scratch, Action<bool, string> expect)
     {
-        string[][] runs =
-        [
-            ["Invoices", "ApproveInvoice", "--kind", "command", "--input", "id, Reason:string"],
-            ["Invoices", "FindByCustomer", "--kind", "query", "--input", "id, Customer:string"],
-            ["Invoices", "GetInvoiceTotals", "--kind", "query"],
-        ];
+        string plain = NewTree(scratch);
+        string withDto = NewTree(scratch);
+        string withoutTests = NewTree(scratch);
+        string withoutDouble = NewTree(scratch);
+        string withoutApi = NewTree(scratch);
 
-        string root = NewTree(scratch);
+        Directory.CreateDirectory(Path.Combine(withDto, "src/Application/A.Application/Features/Invoices/Model/Dtos"));
+        File.WriteAllText(Path.Combine(withDto, "src/Application/A.Application/Features/Invoices/Model/Dtos/InvoiceDto.cs"), "public sealed record InvoiceDto(Guid Id);\n");
+        Directory.Delete(Path.Combine(withoutTests, "tests/Application/A.Application.UnitTests"), recursive: true);
+        File.Delete(Path.Combine(withoutDouble, "tests/Application/A.Application.UnitTests/TestDoubles/ValidatedHandler.cs"));
+        Directory.Delete(Path.Combine(withoutApi, "src/Presentation/A.Api"), recursive: true);
+        Directory.CreateDirectory(Path.Combine(withoutApi, "src/Presentation/A.Portal"));
+        File.WriteAllText(Path.Combine(withoutApi, "src/Presentation/A.Portal/Program.cs"), "builder.Services.AddInvoices();\n");
+
+        string digest = OutputDigest(
+        [
+            (plain, ["Invoices", "PingInvoices", "--kind", "command", "--input", "none"]),
+            (plain, ["Invoices", "MarkInvoices", "--kind", "command", "--input", "Note:string"]),
+            (plain, ["Invoices", "SummariseRevenue", "--kind", "query", "--input", "none"]),
+            (plain, ["Invoices", "FindInvoicesByCustomer", "--kind", "query", "--input", "Customer:string, Limit:int, Since:DateOnly?, Until:DateTimeOffset?"]),
+            (plain, ["Invoices", "RetagInvoice", "--kind", "command", "--input", "id, Tags:IReadOnlyList<string>, Urgent:bool"]),
+            (plain, ["Invoices", "FlagInvoices", "--kind", "command", "--input", "Labels:HashSet<string>, Urgent:bool"]),
+            (plain, ["Invoices", "CountInvoices", "--kind", "query", "--input", "id, Since:DateOnly?"]),
+            (withDto, ["Invoices", "GetInvoice", "--kind", "query"]),
+            (withoutTests, ["Invoices", "ApproveInvoice", "--kind", "command", "--input", "id, Reason:string"]),
+            (withoutDouble, ["Invoices", "ApproveInvoice", "--kind", "command", "--input", "id, Reason:string"]),
+            (withoutApi, ["Invoices", "ApproveInvoice", "--kind", "command", "--input", "id, Reason:string"]),
+            (withoutApi, ["Invoices", "FindInvoicesByCustomer", "--kind", "query", "--input", "id, Customer:string, Event:int"]),
+        ]);
+
+        expect(
+            digest == _layoutsDigest,
+            $"A layout add use-case writes is no longer the one it wrote when this digest was recorded: digest {digest}, recorded {_layoutsDigest}. "
+            + "These runs cover the shapes the output digest does not: without the id or any input, several inputs among them one of an unknown type, "
+            + "a query answering a DTO the feature declares, and a tree without the tests, the ValidatedHandler double or the API. "
+            + "Make a change to them on purpose, then record the new digest.");
+    }
+
+    private static string OutputDigest((string Root, string[] Run)[] runs)
+    {
         using var digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
 
         void Feed(string text) => digest.AppendData(Encoding.UTF8.GetBytes(text.ReplaceLineEndings("\n") + "\u0000"));
 
-        foreach (string[] run in runs)
+        foreach (var (root, run) in runs)
         {
             var before = Snapshot(root);
             var result = Invoke(root, run);
