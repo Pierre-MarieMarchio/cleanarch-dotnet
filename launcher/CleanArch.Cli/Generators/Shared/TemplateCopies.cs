@@ -44,7 +44,9 @@ internal static class TemplateCopies
 
     internal static IEnumerable<string> Stale(string root, TemplateOverrides templates)
     {
-        if (templates.Used.Count == 0)
+        string[] inUse = [.. templates.InUse];
+
+        if (inUse.Length == 0)
         {
             return [];
         }
@@ -59,11 +61,11 @@ internal static class TemplateCopies
             template => (Name: Path.GetFileName(template.Key), Sha256: ToolTemplates.Digest(template.Value)),
             StringComparer.Ordinal);
 
-        return templates.Used
-            .Where(used => copies.ContainsKey(used.Path) && copies[used.Path].Sha256 != tool[used.Path].Sha256)
-            .Select(used =>
-                $"{used.Path} overrides a template the tool has changed since version {copies[used.Path].Version}, which it was copied from; the files keep your text. "
-                + $"To take the change: move your file aside, run dotnet cleanarch templates copy {templates.Generator} {tool[used.Path].Name}, and carry your changes over.");
+        return inUse
+            .Where(path => copies.ContainsKey(path) && copies[path].Sha256 != tool[path].Sha256)
+            .Select(path =>
+                $"{path} overrides a template the tool has changed since version {copies[path].Version}, which it was copied from; the files keep your text. "
+                + $"To take the change: move your file aside, run dotnet cleanarch templates copy {templates.Generator} {tool[path].Name}, and carry your changes over.");
     }
 
     internal static byte[] Written(IReadOnlyDictionary<string, Copy> copies)

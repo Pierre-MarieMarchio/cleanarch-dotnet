@@ -28,7 +28,7 @@ public sealed partial class NewFeatureTests
 
     private const string _thingMigrations = "src/Infrastructure/A.Infrastructure.Persistence/Migrations";
 
-    private static (int Code, string Output, string Error) InvokeField(string root, Func<TextEdits.Command, int> run, params string[] args)
+    internal static (int Code, string Output, string Error) InvokeField(string root, Func<TextEdits.Command, int> run, params string[] args)
     {
         var (code, output, error) = GeneratorRun.Invoke(AddFieldCommand.Build(GeneratorRun.Project(root), _ => new FakeExecutor(run)), args);
 

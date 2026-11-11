@@ -18,11 +18,11 @@ public sealed class TemplatesCommandTests : IDisposable
     private readonly StringWriter _output = new();
     private readonly StringWriter _error = new();
 
-    private static IReadOnlyDictionary<string, string> Templates => ToolTemplates.Of(_generator).Where(template => template.Key != ToolTemplates.Report).ToDictionary();
+    private static IReadOnlyDictionary<string, string> Templates => ToolTemplates.Of(_generator);
 
     private static string ControllerReference => Templates.Keys.Single(reference => reference.EndsWith("/" + _controller, StringComparison.Ordinal));
 
-    public static TheoryData<string> GeneratorsRefusingAProjectWithoutAuthentication => ["add-feature"];
+    public static TheoryData<string> GeneratorsRefusingAProjectWithoutAuthentication => ["add-feature", "add-field"];
 
     public void Dispose()
     {
@@ -48,6 +48,16 @@ public sealed class TemplatesCommandTests : IDisposable
             $"Wrote {Templates.Count} templates of add feature from version {GeneratorCommand.Version} of the tool, recorded in {TemplateCopies.Manifest}:{Environment.NewLine}"
             + $"  {ToolTemplates.PathOf(_generator, Templates.Keys.Order(StringComparer.Ordinal).First())}{Environment.NewLine}");
         _output.ToString().ShouldEndWith($"{Environment.NewLine}add feature and add field now write those files from them.{Environment.NewLine}");
+    }
+
+    [Fact]
+    public void CopyOfAddField_WritesItsReport()
+    {
+        Run("templates", "copy", "add-field").ShouldBe(CleanArchCommand.Succeeded, _error.ToString());
+
+        Recorded().Select(copy => copy.Path).ShouldBe([ToolTemplates.PathOf("add-field", ToolTemplates.Report)]);
+        File.Exists(Path.Combine(_project.Root, ToolTemplates.PathOf("add-field", ToolTemplates.Report))).ShouldBeTrue();
+        _output.ToString().ShouldEndWith($"{Environment.NewLine}add field now writes its report from them.{Environment.NewLine}");
     }
 
     [Fact]
@@ -78,7 +88,7 @@ public sealed class TemplatesCommandTests : IDisposable
     }
 
     [Theory]
-    [InlineData("add-widget", "add-widget has no code templates to copy; the generators that have some are add-feature, add-use-case, add-event, add-setting.")]
+    [InlineData("add-widget", "add-widget has no code templates to copy; the generators that have some are add-feature, add-field, add-use-case, add-event, add-setting.")]
     [InlineData("add-feature Widget.cs", "Widget.cs names no template of add feature: dotnet cleanarch templates copy add-feature --dry-run lists them.")]
     [InlineData("add-feature Model/Entities", "Model/Entities names no template of add feature: dotnet cleanarch templates copy add-feature --dry-run lists them.")]
     public void CopyRefusesAnUnknownGeneratorOrTemplate(string arguments, string refusal)
@@ -122,7 +132,7 @@ public sealed class TemplatesCommandTests : IDisposable
     public void ACopyOfAGeneratorWithoutARefusal_WorksWithoutAuthentication(string generator)
     {
         using var unauthenticated = new SampleProject(SampleProject.Minimal);
-        var templates = ToolTemplates.Of(generator).Where(template => template.Key != ToolTemplates.Report).ToDictionary();
+        var templates = ToolTemplates.Of(generator);
 
         Run(["templates", "copy", generator], unauthenticated.Root).ShouldBe(CleanArchCommand.Succeeded, _error.ToString());
 

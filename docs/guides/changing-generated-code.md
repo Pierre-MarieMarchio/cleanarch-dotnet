@@ -92,7 +92,7 @@ single file changed copies that one, and the others follow the tool from version
 
 ## What a copy changes
 
-A copy changes the text of one file, and nothing else:
+A copy changes the text of one file, or of a report, and nothing else:
 
 | A copy decides | The tool decides |
 |---|---|
@@ -100,6 +100,7 @@ A copy changes the text of one file, and nothing else:
 | which lines each option keeps, through its directives | the options, their defaults and their refusals |
 | how the fields, parameters or keys are written, through its blocks | their grammar and the code each token holds |
 | | the edits of files no template writes: the composition, the context, the indexes of pages |
+| the text of the report, through its directives and tokens | the facts it reports, and the refusals, warnings and steps of a run |
 | <!--#if (canAddFeature)--> |
 | | the feature's page, written from `docs/_page-templates/feature.md` |
 | <!--#endif--> |
@@ -315,7 +316,8 @@ the event `PlaceholderNotedDomainEvent` of `Placeholders`, consumed by `Listener
 Its reference names are `PlaceholderNoted`, the event's name without `DomainEvent`, `Placeholders`
 the folder of the feature that raises it, `Listeners` the folder of the feature that consumes it,
 and `NotifyListeners` the reaction. The registration in `ApplicationModule.cs`, the entry of an
-unconsumed event in `DomainEventTests.cs` and the report stay the tool's.
+unconsumed event in `DomainEventTests.cs` stay the tool's; its report is a template, as
+[reports](#reports) says.
 
 ### The flags of add event
 
@@ -375,6 +377,122 @@ differs by its type, and a directive is decided once per generation, so that cod
 | `required` | is a `secret`, or a `string` without a default |
 | `supplied` | is required and is not `%Broken%`, so the test of a section out of range gives it a value |
 
+## Reports
+
+What a generator prints after a run, its report, comes from a template too:
+`code-templates/<generator>/report.txt`, which `templates copy <generator>` copies with the
+generator's files.
+<!--#if (canAddFeature)-->
+`add field` writes its files from the templates of `add feature`, so its report alone lies under
+`code-templates/add-field`, which `templates copy add-field` copies.
+<!--#endif-->
+A copy changes the text of the report and nothing a run does.
+
+A report is prose, not C#: its directives and reference names read as a file's do, and its usings
+and blank lines are kept as written. Its flags are those of its generator, the flags of the report's
+mode below, of which one holds, and its own, listed with each generator. A `%Token%` is a fact the
+tool computes, such as the files written or the steps a run takes: a line that is exactly a
+`%Token%` becomes its lines, and is dropped when the fact is empty. A report repeats no block, since
+each list it shows is a token. A copy names only the tokens the tool's own `report.txt` names.
+
+The tool keeps its own text for the rest of what a run prints: its refusals, errors and warnings,
+the `--dry-run` line, the steps it runs and what they print, its exit code, and the copies it wrote
+its files from, listed after the report under `Written from this project's code templates:`.
+`remove feature` and `templates copy` have no report template.
+
+A generator reads its copy of `report.txt` before writing anything, and refuses a broken one as
+[refusals](#refusals) lists, though the report itself prints after the run.
+
+### The flags of every report
+
+| Flag | Holds when |
+|---|---|
+| `applied` | The run wrote its files and made its edits. |
+| `dryrun` | `--dry-run`: the run wrote nothing, and says what it would write. |
+| `refused` | An edit found no line to stand beside, so the run wrote nothing, and says what to make by hand. |
+<!--#if (canAddFeature)-->
+
+### The report of add feature
+
+It takes the flags of add feature, those of every report, and these:
+
+| Flag | Holds when |
+|---|---|
+| `api` | The project has the API, so the feature's routes and its refusal join `docs/reference/api.md`. |
+| `reaction` | The project had no feature that owns user data, so the account-deleted reaction ships with this one, in five more edits. |
+| `fieldTests` | The integration test of the fields is written, and the database fixture truncates the feature's schema. |
+| `sorted` | A field sorts the list. |
+| `kept` | Under `anonymise`, a field is kept as it was: one that is not a string, a text or nullable. |
+| `page` | The feature's page is written. |
+| `inPlace` | An edit was in place already, so it was left as it was and not recorded. |
+
+Its tokens: `%Count%` and `%Files%`, the files written; `%Options%`, the options in words;
+`%Manifest%`, the feature's manifest; `%Skipped%`, the test projects not in the tree; `%Edits%`, the
+numbered edits; `%TestDatabase%`, the database fixture of the integration tests; `%Fields%`,
+`%Sortable%` and `%Kept%`, the fields as declared, those the list sorts by and those anonymising
+keeps; `%Steps%`, the commands a run takes; `%Page%`, `%PageTemplate%` and `%Unwritten%`, the
+feature's page, its template, and why it was not written; `%Routes%` and `%ErrorRow%`, the route
+section and the refusal's row of `docs/reference/api.md`; `%InPlace%`, the edits found in place.
+
+### The report of add field
+
+It takes the flags of add feature, those of every report, and this one:
+
+| Flag | Holds when |
+|---|---|
+| `sorted` | The list sorts by a field added: `list` is among the operations, and a field added is sortable. |
+
+Its tokens: `%Added%`, the fields as declared; `%Options%`, the feature's options in words;
+`%Count%` and `%Changes%`, the files changed with each member; `%Manifest%`, the feature's manifest;
+`%Compatibility%`, what each field changes for the callers; `%Sortable%`, the fields added the list
+sorts by; `%Steps%`, the commands a run takes.
+<!--#endif-->
+
+### The report of add use-case
+
+It takes the flags of add use-case, those of every report, and these:
+
+| Flag | Holds when |
+|---|---|
+| `command` | `--kind command`; a query otherwise. |
+| `api` | The API serves the feature, so the run edits its controller and writes its contracts. |
+| `request` | The message carries an input, so a request contract carries it over HTTP. |
+| `validator` | An input has a rule, so a validator is written. |
+| `validatorTests` | The validator's tests are written. |
+| `handlerTests` | The handler's test is written: the application's tests hold the `ValidatedHandler` double. |
+| `skipped` | The application's test project is not in the tree, so no test is written. |
+| `unknown` | An input is of a type the command knows no rule and no test value for. |
+| `dtoDeclared` | The query answers a DTO the feature declares already. |
+| `manifest` | A feature manifest names the feature, and records the files and the edits. |
+| `page` | The feature has its page under `docs/features`. |
+| `fullRoute` | The route's row is written in full, from `/api`, not relative to its table's prefix. |
+
+Its tokens: `%Count%` and `%Files%`, the files written; `%Kind%`, `command` or `query`; `%Input%`,
+the message's type; `%Manifest%`, the feature's manifest; `%Skipped%`, the test project not in the
+tree; `%Unknown%`, the inputs of an unknown type; `%Controller%`, `%Usings%` and `%Action%`, the
+controller, the usings it lacks and the action; `%RequestPath%`, `%Request%`, `%ResponsePath%` and
+`%Response%`, the contracts and their code; `%Steps%`, the commands a run takes; `%RouteRow%`, the
+route's row; `%Page%`, the feature's page; `%Construction%` and `%Hosts%`, the message to send and
+the hosts that serve the feature, without the API.
+
+### The report of add event
+
+It takes the flags of add event, those of every report, and this one:
+
+| Flag | Holds when |
+|---|---|
+| `consumed` | `--consumer`: a feature reacts to the event, and its consumer is written. |
+
+Its tokens: `%Count%` and `%Files%`, the files written; `%Edited%`, the files edited.
+
+### The report of add setting
+
+It takes the flags of add setting and those of every report, and no other.
+
+Its tokens: `%Count%` and `%Files%`, the files written; `%Edited%`, the files edited; `%Hosts%`, the
+hosts whose `appsettings.json` carries the section; `%Unset%`, what to do for each key the file
+gives no value.
+
 ## Refusals
 
 A generator reads every copy of its own before writing anything, and refuses, writing nothing, with
@@ -387,7 +505,8 @@ a message that starts with the copy's path, and the line's number where there is
   `#endif`;
 - a block over another list than the generator's, naming an unknown token or trait, left open, or a
   `%<list>.<Token>%` outside any block;
-- a `%Token%` the generation does not set.
+- a `%Token%` the generation does not set;
+- in `report.txt`, a block, or a `%Token%` the tool's own report does not name.
 
 Fix the copy, or delete it, and run the same command again.
 

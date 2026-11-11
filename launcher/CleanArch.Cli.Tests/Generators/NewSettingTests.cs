@@ -62,7 +62,7 @@ public sealed partial class NewSettingTests
 
     private const string _validKeys = "MaxItems:int(1..100)=10, Interval:duration(00:00:01..01:00:00)=00:05:00, Label:string(1..20)=main, Owner:string(3..40), ApiKey:secret, Strict:bool=true, Cap:long(1..5000000000)=1000";
 
-    private static string NewTree(string scratch)
+    internal static string NewTree(string scratch)
     {
         string root = Path.Combine(scratch, Guid.CreateVersion7().ToString("N"));
 
@@ -125,7 +125,7 @@ public sealed partial class NewSettingTests
         return root;
     }
 
-    private static (int Code, string Output, string Error) Invoke(string root, params string[] args) =>
+    internal static (int Code, string Output, string Error) Invoke(string root, params string[] args) =>
         GeneratorRun.Invoke(AddSettingCommand.Build(GeneratorRun.Project(root), _ => new FakeExecutor(_ => 0)), args);
 
     private static void RecordedEditsUndo(string root, Dictionary<string, string> before, Action<bool, string> expect)

@@ -23,7 +23,8 @@ internal sealed class FieldGeneration(Addition addition, GenerationContext conte
     protected override IEnumerable<string> Warnings =>
         _changedTemplates.Select(path =>
             $"{path} is not the text {ManifestPath(addition.After)} records the feature was written from; add field compares "
-            + "the files with what it writes today, so a member the difference reaches reads as changed by hand.");
+            + "the files with what it writes today, so a member the difference reaches reads as changed by hand.")
+        .Concat(TemplateCopies.Stale(Root, ReportTemplate));
 
     protected override TemplateOverrides Templates => addition.Templates;
 
@@ -58,6 +59,7 @@ internal sealed class FieldGeneration(Addition addition, GenerationContext conte
     {
         _changes = FieldChanges(Root, addition, _failures);
         problems.AddRange(addition.Templates.Problems);
+        problems.AddRange(ReportTemplate.Problems);
         _changedTemplates = [.. addition.Templates.DifferingFrom(addition.Manifest.Templates)];
 
         if (_failures.Count == 0)

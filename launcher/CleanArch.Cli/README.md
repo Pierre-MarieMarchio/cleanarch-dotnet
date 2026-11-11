@@ -147,8 +147,10 @@ caller, and are refused with that reason.
 the project's `code-templates/<generator>/`, each at the path of the file it writes for the
 generator's reference with `.txt` after it, and records each copy's source, the tool's version and
 digest, in `code-templates/manifest.json`. `<generator>` is `add-feature`, for `add feature` and
-`add field` and refused where `add feature` is, or `add-use-case`, `add-event` or `add-setting`, in
-every project. The `.txt` copies are the team's to edit, and the generator then writes from them.
+`add field`, or `add-field`, for the report of `add field`, both refused where `add feature` is, or
+`add-use-case`, `add-event` or `add-setting`, in every project. Each copies the generator's report,
+`report.txt`, with its files. The `.txt` copies are the team's to edit, and the generator then
+writes its files and its report from them.
 It never overwrites a copy, so it takes `--dry-run` and no `--check`. Once a newer tool changes a
 template the project holds a copy of, the generator keeps writing from the copy and prints a
 `warning:` naming it; committing a copy untouched before editing it lets git carry the team's
