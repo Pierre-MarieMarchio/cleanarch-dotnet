@@ -662,7 +662,7 @@ public sealed partial class NewSettingTests
         string[] unwritten =
         [
             .. ToolTemplates.Of(SettingPlan.TemplateFolder).Keys
-                .Where(reference => !File.Exists(Path.Combine(root, ProjectFolders.PathOf("Acme", reference, tokens))))
+                .Where(reference => reference != ToolTemplates.Report && !File.Exists(Path.Combine(root, ProjectFolders.PathOf("Acme", reference, tokens))))
                 .Select(reference => ToolTemplates.PathOf(SettingPlan.TemplateFolder, reference))
                 .Order(StringComparer.Ordinal),
         ];
