@@ -16,11 +16,7 @@ internal static class UseCaseHttp
 
     internal static string ApiFolder(UseCaseSpec spec) => $"{Presentation}/{FolderOf(spec.Prefix, "Api")}";
 
-    internal static string RequestPath(UseCaseSpec spec) => $"{ApiFolder(spec)}/Features/{spec.Features}/Contracts/Requests/{spec.Request}.cs";
-
     internal static string ResponseName(UseCaseSpec spec) => spec.Dto![..^"Dto".Length] + "Response";
-
-    internal static string ResponsePath(UseCaseSpec spec) => $"{ApiFolder(spec)}/Features/{spec.Features}/Contracts/Responses/{ResponseName(spec)}.cs";
 
     internal static string[] ControllerUsings(UseCaseSpec spec) =>
     [
@@ -32,35 +28,11 @@ internal static class UseCaseHttp
             : [$"{spec.Prefix}.Application.Core.Common.Results", $"{spec.Prefix}.Api.Features.{spec.Features}.Contracts.Responses"],
     ];
 
-    internal static string[] RequestContract(UseCaseSpec spec)
+    internal static void Http(TextEdits.Editor editor, string root, UseCaseSpec spec)
     {
-        string carrier = spec.IsCommand ? "body" : "query string";
-        string summary = spec.HasId
-            ? $"The {carrier} of {CSharpNames.Separated(spec.Name, ' ')}; the {CSharpNames.Separated(spec.Aggregate!, ' ')} id travels in the route."
-            : $"The {carrier} of {CSharpNames.Separated(spec.Name, ' ')}.";
-
-        return
-        [
-            $"namespace {spec.Prefix}.Api.Features.{spec.Features}.Contracts.Requests;",
-            string.Empty,
-            $"/// <summary>{summary}</summary>",
-            .. UseCasePlan.Record(spec.Request, spec.Inputs.Select(parameter => $"{parameter.Type} {parameter.Name}"), string.Empty).Split('\n'),
-        ];
-    }
-
-    internal static string[] ResponseContract(UseCaseSpec spec) =>
-    [
-        $"namespace {spec.Prefix}.Api.Features.{spec.Features}.Contracts.Responses;",
-        string.Empty,
-        $"/// <summary>The wire shape of {CSharpNames.Separated(ResponseName(spec)[..^"Response".Length], ' ')}.</summary>",
-        $"public sealed record {ResponseName(spec)};",
-    ];
-
-    internal static List<Emission> Http(TextEdits.Editor editor, string root, UseCaseSpec spec)
-    {
-        if (!Directory.Exists(Path.Combine(root, ApiFolder(spec))))
+        if (!Directory.Exists(Full(root, ApiFolder(spec))))
         {
-            return [];
+            return;
         }
 
         string controller = $"{ApiFolder(spec)}/Features/{spec.Features}/Controllers/{spec.Features}Controller.cs";
@@ -78,12 +50,6 @@ internal static class UseCaseHttp
 
         editor.Step = "the route's row in docs/reference/api.md";
         AddRouteRow(editor, spec);
-
-        return
-        [
-            .. spec.HasRequest ? [new Emission(RequestPath(spec), string.Join('\n', RequestContract(spec)) + "\n")] : Array.Empty<Emission>(),
-            .. spec.IsCommand ? Array.Empty<Emission>() : [new Emission(ResponsePath(spec), string.Join('\n', ResponseContract(spec)) + "\n")],
-        ];
     }
 
     internal static void AddAction(TextEdits.Editor editor, TextEdits.Sheet sheet, UseCaseSpec spec)

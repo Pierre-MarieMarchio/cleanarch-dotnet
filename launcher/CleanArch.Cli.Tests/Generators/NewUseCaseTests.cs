@@ -9,7 +9,7 @@ using static CleanArch.Cli.Generators.Shared.ProjectFolders;
 
 namespace CleanArch.Cli.Tests.Generators;
 
-public sealed class NewUseCaseTests
+public sealed partial class NewUseCaseTests
 {
     [Fact]
     public void Parser() => Expectations.Hold(ParserCases);
@@ -912,11 +912,6 @@ public sealed class NewUseCaseTests
         if (text.Contains('\r', StringComparison.Ordinal) || text.EndsWith("\n\n", StringComparison.Ordinal) || !text.EndsWith('\n'))
         {
             yield return $"{relative}: not LF endings closed by exactly one newline.";
-        }
-
-        if (UseCasePlan._tokenPattern.IsMatch(text))
-        {
-            yield return $"{relative}: a token was left unsubstituted: {UseCasePlan._tokenPattern.Match(text).Value}";
         }
 
         string code = relative.Contains("/Contracts/", StringComparison.Ordinal)

@@ -1,0 +1,11 @@
+namespace AppTemplate.Api.Features.Placeholders.Contracts.Requests;
+
+#if id
+/// <summary>The query string of %Spoken%; the %SpokenAggregate% id travels in the route.</summary>
+#else
+/// <summary>The query string of %Spoken%.</summary>
+#endif
+public sealed record GetPlaceholderTotalsRequest(
+//#each parameter where input separator ",\n"
+    %parameter.Type% %parameter.Name%
+//#end ");"

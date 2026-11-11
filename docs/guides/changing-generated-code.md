@@ -194,6 +194,58 @@ A using marked `//?<Type>|<Type>` at the end of its line is kept only when the c
 namespace names one of those types, so a branch can drop the last use of a namespace without
 leaving an unused using.
 
+## The templates of add use-case
+
+`add use-case` writes its files from templates in the same language. A command's are those of the
+reference command `ApprovePlaceholder` of the feature `Placeholders`, a query's those of the
+reference query `GetPlaceholderTotals`, which answers `PlaceholderTotalsDto`: the use case, its
+validator, the validator's tests, the handler's test and the request contract, and for the query its
+DTO and its response contract. The tool decides which of them a run writes: the validator and its
+tests only with a rule, the handler's test only where the application's tests hold the
+`ValidatedHandler` double, the DTO unless the feature declares it, the contracts only where the API
+serves the feature. The controller's action and the route's row are edits, which no template writes.
+
+### Reference names of add use-case
+
+`ApprovePlaceholder` and `GetPlaceholderTotals` become the use case's name, `PlaceholderTotals` the
+name its DTO and its response start with, `Placeholders` the feature's folder, `Placeholder` the
+aggregate where the use case carries its id, and the reference project's name this project's. Prose
+takes three tokens instead, since a name written in words is not a reference name: `%Spoken%` is
+the use case's name in words, `approve invoice`; `%SpokenAggregate%` the aggregate's, where the use
+case carries its id; `%SpokenAnswer%` the answer's, in a query.
+
+### The flags of add use-case
+
+| Flag | Holds when |
+|---|---|
+| `id` | `id` is in `--input`, as by default: the message carries the id of the feature's aggregate, first. |
+| `parameters` | The message carries a value: the id, an input, or both. |
+
+### Blocks over parameters
+
+A block of `add use-case` repeats over `parameter`, the values the message carries in the order
+`--input` gives them, the aggregate's id first. This block writes a message's members, one per line:
+
+```text
+//#each parameter separator ",\n"
+    %parameter.Type% %parameter.Name%
+//#end ") : ICommand<Result>;"
+```
+
+| Token | Writes |
+|---|---|
+| `Name` | the parameter's name, `Reason` |
+| `Type` | its C# type, as `--input` gives it |
+| `Required` | the message its rule refuses an empty value with, `Reason is required.` |
+| `Valid` | a valid value for a test, `default!` for a type the tool knows no value of |
+| `Empty` | the empty value its rule refuses, where it has a rule |
+
+| Trait | Holds for a parameter that |
+|---|---|
+| `input` | is an input, not the aggregate's id, so a request contract carries it |
+| `ruled` | has a rule: a known type that is not a `bool` nor nullable |
+| `malformed` | is the first with a rule, the one a handler's test empties |
+
 ## Refusals
 
 `add feature` and `add field` read every copy before writing anything, and refuse, writing nothing,

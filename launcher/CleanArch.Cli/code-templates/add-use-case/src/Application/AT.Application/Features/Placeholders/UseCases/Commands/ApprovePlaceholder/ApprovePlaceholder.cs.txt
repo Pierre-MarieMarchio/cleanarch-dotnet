@@ -1,0 +1,33 @@
+#if id
+using AppTemplate.Application.Core.Common.Concurrency;
+#endif
+using AppTemplate.Application.Core.Common.Results;
+using Mediator;
+
+namespace AppTemplate.Application.Features.Placeholders.UseCases.Commands.ApprovePlaceholder;
+
+#if id
+public sealed record ApprovePlaceholderCommand(
+//#each parameter
+    %parameter.Type% %parameter.Name%,
+//#end
+    VersionPrecondition? Precondition = null) : ICommand<Result>;
+#elif parameters
+public sealed record ApprovePlaceholderCommand(
+//#each parameter separator ",\n"
+    %parameter.Type% %parameter.Name%
+//#end ") : ICommand<Result>;"
+#else
+public sealed record ApprovePlaceholderCommand : ICommand<Result>;
+#endif
+
+public sealed class ApprovePlaceholderCommandHandler : ICommandHandler<ApprovePlaceholderCommand, Result>
+{
+    public ValueTask<Result> Handle(ApprovePlaceholderCommand command, CancellationToken cancellationToken) =>
+        throw new NotImplementedException(
+#if id
+            "ApprovePlaceholder is not written yet: load the Placeholder, call the method that holds the rule, then commit through IUnitOfWork.");
+#else
+            "ApprovePlaceholder is not written yet: decide, then commit through IUnitOfWork.");
+#endif
+}
