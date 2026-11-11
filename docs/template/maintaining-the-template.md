@@ -1076,8 +1076,10 @@ of the type `Placeholder`, with `.txt` appended; a file written into each host l
 `AT.Api`. One file of a feature comes from one template, and a template writes one file. The tool
 embeds the folder under its own name, `ToolTemplates.Of` reads a generator's templates by that path,
 and the plan in `launcher/CleanArch.Cli/Generators/Shared/FeatureCode.cs` names each template by it:
-`FeatureCode.PathOf` derives the file's path in the project, the project's folder for `AT.<Part>`
-and the generation's names for the reference names, and never the reverse.
+`ProjectFolders.PathOf` derives the file's path in the project, the project's folder for `AT.<Part>`
+and the generation's names for the reference names, and never the reverse; `FeatureCode.PathOf`
+puts a host's file in each host instead of `AT.Api`. A test file is written only where
+`ProjectFolders.ProjectExists` finds the test project its path names.
 
 A project overrides a template with a file at the same path under its own `code-templates` folder,
 `code-templates/add-feature/<reference path>.txt` at its root. `TemplateOverrides.Read` reads that
