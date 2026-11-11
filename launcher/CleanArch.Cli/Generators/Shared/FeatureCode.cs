@@ -131,17 +131,16 @@ internal static class FeatureCode
 
     internal static string PathOf(FeatureSpec spec, string reference, Dictionary<string, string> tokens, string? host = null)
     {
-        string[] segments = reference.Split('/', 4);
-        string referenceFolder = FolderOf(ReferenceProduct, string.Empty);
+        string path = ProjectFolders.PathOf(spec.Prefix, reference, tokens);
 
-        if (segments.Length < 4 || !segments[2].StartsWith(referenceFolder, StringComparison.Ordinal))
+        if (host is null)
         {
-            throw new InvalidOperationException($"{reference} names no file of a {referenceFolder}<Part> project, so add feature cannot tell where it goes.");
+            return path;
         }
 
-        string folder = host ?? FolderOf(spec.Prefix, segments[2][referenceFolder.Length..]);
+        string[] segments = path.Split('/', 4);
 
-        return $"{segments[0]}/{segments[1]}/{folder}/{Template.ReplaceReferenceNames(segments[3], tokens)}";
+        return $"{segments[0]}/{segments[1]}/{host}/{segments[3]}";
     }
 
     internal static TemplateOverrides Overrides(string root) => TemplateOverrides.Read(root, TemplateFolder, FeatureFlags.Vocabulary);
@@ -573,15 +572,15 @@ internal static class FeatureCode
 
         private void AddTest(string reference, string when = "")
         {
-            string project = string.Join('/', PathOf(spec, reference, _tokens).Split('/')[..3]);
+            string path = PathOf(spec, reference, _tokens);
 
-            if (Directory.Exists(System.IO.Path.Combine(root, project)))
+            if (ProjectExists(root, path))
             {
                 Add(reference, when);
             }
-            else if (!Skipped.Contains(project, StringComparer.Ordinal))
+            else if (!Skipped.Contains(ProjectFolderOf(path), StringComparer.Ordinal))
             {
-                Skipped.Add(project);
+                Skipped.Add(ProjectFolderOf(path));
             }
         }
     }

@@ -10,11 +10,11 @@ internal static class EventPlan
     {
         string domain = $"{SourceProject(spec.Prefix, "Domain")}/Features/{spec.Features}/Model/Events";
         var emissions = new List<Emission> { new($"{domain}/{spec.Name}.cs", EventRecord(spec)) };
-        string domainTests = $"tests/Domain/{FolderOf(spec.Prefix, "Domain.UnitTests")}";
+        string eventTests = $"tests/Domain/{FolderOf(spec.Prefix, "Domain.UnitTests")}/Features/{spec.Features}/Model/Events/{spec.Name}Tests.cs";
 
-        if (Directory.Exists(Path.Combine(root, domainTests)))
+        if (ProjectExists(root, eventTests))
         {
-            emissions.Add(new Emission($"{domainTests}/Features/{spec.Features}/Model/Events/{spec.Name}Tests.cs", EventTests(spec)));
+            emissions.Add(new Emission(eventTests, EventTests(spec)));
         }
 
         if (spec.ConsumerFeatures is not null)
@@ -23,11 +23,11 @@ internal static class EventPlan
 
             emissions.Add(new Emission($"{application}/{spec.ConsumerName}.cs", ConsumerClass(spec)));
 
-            string applicationTests = $"tests/Application/{FolderOf(spec.Prefix, "Application.UnitTests")}";
+            string consumerTests = $"tests/Application/{FolderOf(spec.Prefix, "Application.UnitTests")}/Features/{spec.ConsumerFeatures}/Services/Consumers/{spec.Base}/{spec.ConsumerName}Tests.cs";
 
-            if (Directory.Exists(Path.Combine(root, applicationTests)))
+            if (ProjectExists(root, consumerTests))
             {
-                emissions.Add(new Emission($"{applicationTests}/Features/{spec.ConsumerFeatures}/Services/Consumers/{spec.Base}/{spec.ConsumerName}Tests.cs", ConsumerTests(spec)));
+                emissions.Add(new Emission(consumerTests, ConsumerTests(spec)));
             }
         }
 
