@@ -20,6 +20,8 @@ internal sealed class TemplateOverrides
         _vocabulary = vocabulary;
     }
 
+    internal string Generator => _generator;
+
     private string Spoken => _generator.Replace('-', ' ');
 
     internal IReadOnlyList<UsedTemplate> Used => [.. _used.Select(used => new UsedTemplate(used.Key, used.Value))];
@@ -72,9 +74,9 @@ internal sealed class TemplateOverrides
             .Where(path => !recorded.TryGetValue(path, out string? was) || !_used.TryGetValue(path, out string? now) || was != now)
             .Order(StringComparer.Ordinal);
 
-    internal void ReportUsed(TextWriter output)
+    internal void ReportUsed(TextWriter output, ReportMode mode)
     {
-        if (_used.Count == 0)
+        if (_used.Count == 0 || mode == ReportMode.Refused)
         {
             return;
         }

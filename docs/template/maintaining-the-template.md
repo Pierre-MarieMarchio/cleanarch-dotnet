@@ -1058,7 +1058,11 @@ file or none; `FeatureManifest.cs`, a feature's manifest read in either schema v
 hashes, edits and the fields `add field` added merged, and written; `CSharpNames.cs`, a name in
 PascalCase and the C# keywords it must not become once lowered; and `FieldGrammar.cs`, the field
 model with the subset of each field profile; `TemplateOverrides.cs`, which text renders each template
-of one generator in one project. A change to a shared unit is made there once.
+of one generator in one project; `TemplateCopies.cs`, the record `templates copy` keeps of each copy
+and the copies the tool has changed since; and `Generation.cs`, the run every generator follows,
+whose `Warnings` hook a generator overrides to print, after its draft and whether it writes or
+refuses, a dry run included, each line as `warning: ` on the error output, the exit code unchanged
+and a resumed run printing none. A change to a shared unit is made there once.
 
 `add setting --keys` reads its own grammar: a key is a bounded configuration value with a default,
 `duration` and `secret` among its types, which no field has; its names follow `CSharpNames`.
@@ -1095,6 +1099,10 @@ different texts. An override whose digest is not the one the manifest records un
 changed, added or removed since, is a warning on the error output, starting with `warning: `, and
 not a refusal: the files are compared with what `add field` writes today, so a member the difference
 reaches reads as changed by hand. Once written, the manifest records the overrides that run used.
+Both generators also warn, through `TemplateCopies.Stale`, for each override used whose entry in
+`code-templates/manifest.json` records another digest than the tool's text has today; an override
+the manifest does not record was written by hand and is not reported. Their reports list the
+overrides used, under `--dry-run` too, and a refused report lists none, since nothing was written.
 `remove feature` reads nothing under `templates` and leaves `code-templates` as it is.
 
 `Template.Render`, in `launcher/CleanArch.Cli/Generators/Shared/Template.cs`, renders the templates
@@ -1233,7 +1241,7 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | The table of the flags of `add feature` on this page is its vocabulary, each flag with its meaning, and nothing else | `FeatureFlagsTests.ThePage_ListsEachFlagOfAddFeature_WithItsMeaning_AndNoOther` |
 | The output of `add feature` and `add field` does not change when a template changes its form | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
 | A project's override of a template writes its own file, and changes no other | `NewFeatureTests.OverrideWinsForItsFileOnly` |
-| After `templates copy add-feature`, a BOM and CRLF line endings given to one copy, `add feature` writes the bytes it writes without the copies, lists the copies it wrote from, and the manifest records each with the digest of the tool's text | `NewFeatureTests.ACopyOfTheTemplatesWritesTheSameBytes` |
+| After `templates copy add-feature`, a BOM and CRLF line endings given to one copy, `add feature` writes the bytes it writes without the copies, lists the copies it wrote from, warns of none, and the manifest records each with the digest of the tool's text | `NewFeatureTests.ACopyOfTheTemplatesWritesTheSameBytes` |
 | No generator reaches `templates copy`, so a generator writes the same files whether the command exists or not | `SliceIsolationTests.NoGenerator_ReachesTheCommandThatCopiesItsTemplates` |
 | A file under `code-templates/add-feature` naming no template is refused, and nothing is written | `NewFeatureTests.AnOverrideNamingNoTemplateIsRefused` |
 | An override with an unknown flag, an unknown field token, an unknown token or an `#if` never closed is refused, the message starting with its path and naming the line where the engine names one, and nothing is written | `NewFeatureTests.ABrokenOverrideIsRefusedNamingIt` |
@@ -1241,6 +1249,8 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | A dot file under `code-templates/add-feature` is not read as a template | `NewFeatureTests.DotFilesAreIgnored` |
 | `add field` renders the feature before and after its fields from the same override, an override's block writing the added field as `add feature` writes it | `NewFeatureTests.AddFieldUsesTheOverrideForBothRenders` |
 | `add field` warns, and still writes, when an override is not the text the manifest records, then records the text it wrote from | `NewFeatureTests.AddFieldWarnsWhenTheOverrideChangedSinceAddFeature` |
+| `add feature`, under `--dry-run` or not, and `add field` warn and still write when the tool changed a template copied since, never over an override written by hand, and warn without refusing over a `code-templates/manifest.json` they cannot read; both reports list the overrides used | `NewFeatureTests.AGeneratorWarnsWhenTheToolChangedACopiedTemplate` |
+| A refused report lists no override, since nothing was written | `NewFeatureTests.ARefusedReportListsNoOverride` |
 | `remove feature` removes a feature written from an override as its manifest records it, and leaves `code-templates` as it was | `RemoveFeatureTests.AFeatureWrittenFromAnOverride_IsRemovedAsRecorded_AndTheOverrideStays` |
 | Every template the tool embeds for `add feature` is written by one of the configurations the digests with `--fields` cover, or by an owner feature in a tree whose callers sign in with an external provider | `NewFeatureTests.EveryTemplateIsWritten` |
 | Over the configurations the digests cover, every C# file `add feature` writes or edits, and every one `add field` writes or changes, parses without a syntax error; an edited file is parsed as the edit leaves it in the tests' tree, whose shared files are cut down to the code around the anchors, and the message names each group and path that wrote the same broken text | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |

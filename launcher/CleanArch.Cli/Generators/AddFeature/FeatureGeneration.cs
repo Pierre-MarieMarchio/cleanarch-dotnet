@@ -27,6 +27,8 @@ internal sealed class FeatureGeneration(FeatureSpec spec, IReadOnlyList<string> 
 
     protected override bool StopsAtDryRun => true;
 
+    protected override IEnumerable<string> Warnings => TemplateCopies.Stale(Root, _templates);
+
     protected override IReadOnlyList<string> EditFailures => _editor.Failures;
 
     protected override IReadOnlyList<(string Path, byte[] Bytes)> Created =>
@@ -79,7 +81,7 @@ internal sealed class FeatureGeneration(FeatureSpec spec, IReadOnlyList<string> 
     {
         FeatureReport.Report(Output, Root, spec, _plan, _manifest!.Path, _skipped, mode);
         FeatureReport.ReportPage(Output, spec, _page, _unwritten, mode);
-        _templates.ReportUsed(Output);
+        _templates.ReportUsed(Output, mode);
 
         if (mode == ReportMode.Applied && _editor.Kept.Count > 0)
         {

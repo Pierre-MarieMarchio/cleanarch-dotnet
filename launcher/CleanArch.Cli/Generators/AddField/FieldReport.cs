@@ -28,6 +28,8 @@ internal static class FieldReport
             }
         }
 
+        addition.Templates.ReportUsed(output, mode);
+
         output.WriteLine();
         output.WriteLine(
             $"Manifest: {ManifestPath(spec)}{(mode == ReportMode.Applied ? string.Empty : ", not written")}: the fields join its fields, with each "

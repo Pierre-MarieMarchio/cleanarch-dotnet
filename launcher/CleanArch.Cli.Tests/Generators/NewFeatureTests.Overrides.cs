@@ -25,6 +25,12 @@ public sealed partial class NewFeatureTests
     public void ACopyOfTheTemplatesWritesTheSameBytes() => Expectations.Hold(ACopyOfTheTemplatesWritesTheSameBytesCases);
 
     [Fact]
+    public void AGeneratorWarnsWhenTheToolChangedACopiedTemplate() => Expectations.Hold(AGeneratorWarnsWhenTheToolChangedACopiedTemplateCases);
+
+    [Fact]
+    public void ARefusedReportListsNoOverride() => Expectations.Hold(ARefusedReportListsNoOverrideCases);
+
+    [Fact]
     public void AnOverrideNamingNoTemplateIsRefused() => Expectations.Hold(AnOverrideNamingNoTemplateIsRefusedCases);
 
     [Fact]
@@ -117,8 +123,76 @@ public sealed partial class NewFeatureTests
         expect(
             recorded.All(entry => entry.Sha256 == ToolTemplates.Digest(ToolText(ReferenceOf(entry.Path)))),
             "The feature's manifest records an unchanged copy, a BOM and CRLF line endings among them, with another digest than the tool's text.");
+        expect(!result.Error.Contains("warning:", StringComparison.Ordinal), $"add feature warned over copies the tool has not changed since: {result.Error}");
 
         static string ReferenceOf(string path) => path[$"{ToolTemplates.Folder}/{TemplateFolder}/".Length..^ToolTemplates.Extension.Length];
+    }
+
+    private static void AGeneratorWarnsWhenTheToolChangedACopiedTemplateCases(string scratch, Action<bool, string> expect)
+    {
+        string[] feature = ["Things", "Thing", .. _fieldShapes[0].Options, "--fields", _existingFields];
+        string root = FieldTree(scratch);
+        string stale =
+            $"warning: {OverridePath(_record)} overrides a template the tool has changed since version {GeneratorCommand.Version}, which it was copied from; "
+            + $"the files keep your text. To take the change: move your file aside, run dotnet cleanarch templates copy {TemplateFolder} PlaceholderRecord.cs, "
+            + "and carry your changes over.\n";
+
+        CopyAsAnEarlierTool(root, _record);
+        Put(root, OverridePath(_controller), Marked(_controller));
+
+        var dryRun = Invoke(root, [.. feature, "--dry-run"]);
+        var created = Invoke(root, feature);
+        var added = InvokeField(root, Migrating(root, [], "Things"), "Things", "Notes:text?");
+
+        expect(dryRun.Code == 0 && created.Code == 0 && added.Code == 0, $"A generator refused over a copy the tool has changed since: {dryRun.Error}{created.Error}{added.Error}");
+        expect(
+            new[] { dryRun.Error, created.Error, added.Error }.All(error => error.Contains(stale, StringComparison.Ordinal)),
+            $"add feature, under --dry-run or not, and add field did not warn that the tool changed the template copied: {dryRun.Error}{created.Error}{added.Error}");
+        expect(
+            !created.Error.Contains(OverridePath(_controller), StringComparison.Ordinal),
+            $"add feature warned over an override written by hand, which no copy records: {created.Error}");
+        expect(File.Exists(System.IO.Path.Combine(root, FeatureManifest.PathOf("Things"))), "add feature did not write the feature it warned over.");
+        expect(
+            new[] { dryRun.Output, added.Output }.All(output => output.Contains($"Written from this project's code templates:\n  {OverridePath(_record)}\n  {OverridePath(_controller)}\n", StringComparison.Ordinal)),
+            $"The report of add feature under --dry-run, or of add field, does not list the overrides it wrote from: {dryRun.Output}{added.Output}");
+
+        string unreadable = FieldTree(scratch);
+
+        CopyAsAnEarlierTool(unreadable, _record);
+        Put(unreadable, TemplateCopies.Manifest, "{");
+
+        var unread = Invoke(unreadable, [.. feature, "--dry-run"]);
+
+        expect(
+            unread.Code == 0 && unread.Error.StartsWith($"warning: {TemplateCopies.Manifest} cannot be read (", StringComparison.Ordinal),
+            $"add feature did not warn, and only warn, over a {TemplateCopies.Manifest} it cannot read: {unread.Error}");
+    }
+
+    private static void CopyAsAnEarlierTool(string root, string reference)
+    {
+        TemplateCopy.Run(GeneratorRun.Project(root), new TemplateCopyRequest(TemplateFolder, [reference], DryRun: false), TextWriter.Null, TextWriter.Null);
+
+        string manifest = System.IO.Path.Combine(root, TemplateCopies.Manifest);
+        var copies = JsonNode.Parse(File.ReadAllText(manifest))!;
+
+        copies["templates"]![0]!["sha256"] = new string('0', 64);
+        File.WriteAllText(manifest, copies.ToJsonString());
+    }
+
+    private static void ARefusedReportListsNoOverrideCases(string scratch, Action<bool, string> expect)
+    {
+        string root = NewTree(scratch, reaction: false);
+        string context = System.IO.Path.Combine(root, "src/Infrastructure/A.Infrastructure.Persistence/Common/Contexts/AppDbContext.cs");
+
+        File.WriteAllLines(context, File.ReadAllLines(context).Where(line => line != "    public const string PlatformSchema = \"platform\";"));
+        Put(root, OverridePath(_controller), Marked(_controller));
+
+        var result = Invoke(root, _overriddenFeature);
+
+        expect(result.Code == 1 && result.Output.Length > 0, $"add feature did not refuse after its report over a missing anchor: {result.Error}");
+        expect(
+            !result.Output.Contains("Written from this project's code templates", StringComparison.Ordinal),
+            $"A refused report lists overrides as written from, though nothing was written: {result.Output}");
     }
 
     private static void AnOverrideNamingNoTemplateIsRefusedCases(string scratch, Action<bool, string> expect)

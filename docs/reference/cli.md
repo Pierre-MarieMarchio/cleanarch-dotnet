@@ -231,6 +231,15 @@ aside to copy it again. `--dry-run` lists what it would copy and writes nothing;
 tool's text when it was copied: it is the tool's to write, while the `.txt` copies are the team's to
 edit. A manifest the tool cannot read refuses the copy until it is repaired or moved aside.
 
+When a newer tool changes the text of a template this project holds a copy of, `add feature` and
+`add field` still write from the copy and warn on the error output, under `--dry-run` too, without
+changing their exit code: `warning: <path> overrides a template the tool has changed since version
+<version>, which it was copied from`, followed by how to take the change. To take it, move the copy
+aside, copy the template again, and carry your changes over; a copy committed untouched before it is
+edited gives git the merge base that carries them. A template written by hand, which the manifest
+does not record, is never reported, and a manifest the tool cannot read is a warning there, not a
+refusal. The report of either generator lists the copies it wrote from, except when it refuses.
+
 <!--#endif-->
 ## Ejecting a command
 

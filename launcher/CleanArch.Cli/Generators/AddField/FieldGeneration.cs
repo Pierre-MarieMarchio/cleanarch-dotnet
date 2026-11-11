@@ -14,9 +14,19 @@ internal sealed class FieldGeneration(Addition addition, GenerationContext conte
 
     private byte[] _manifest = [];
 
+    private string[] _changedTemplates = [];
+
     protected override string Usage => NewField.Usage;
 
     protected override bool StopsAtDryRun => true;
+
+    protected override IEnumerable<string> Warnings =>
+        [
+            .. _changedTemplates.Select(path =>
+                $"{path} is not the text {ManifestPath(addition.After)} records the feature was written from; add field compares "
+                + "the files with what it writes today, so a member the difference reaches reads as changed by hand."),
+            .. TemplateCopies.Stale(Root, addition.Templates),
+        ];
 
     protected override IReadOnlyList<string> EditFailures => _failures;
 
@@ -47,13 +57,7 @@ internal sealed class FieldGeneration(Addition addition, GenerationContext conte
     {
         _changes = FieldChanges(Root, addition, _failures);
         problems.AddRange(addition.Templates.Problems);
-
-        foreach (string path in addition.Templates.DifferingFrom(addition.Manifest.Templates))
-        {
-            Error.WriteLine(
-                $"warning: {path} is not the text {ManifestPath(addition.After)} records the feature was written from; add field compares "
-                + "the files with what it writes today, so a member the difference reaches reads as changed by hand.");
-        }
+        _changedTemplates = [.. addition.Templates.DifferingFrom(addition.Manifest.Templates)];
 
         if (_failures.Count == 0)
         {
