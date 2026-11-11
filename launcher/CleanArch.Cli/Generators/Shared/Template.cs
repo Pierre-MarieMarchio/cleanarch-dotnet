@@ -42,12 +42,15 @@ internal static class Template
         return text;
     }
 
-    internal static string Render(string template, FlagSet vocabulary, HashSet<string> flags, Dictionary<string, string> tokens, TemplateList? list = null)
+    internal static string Render(string template, FlagSet vocabulary, HashSet<string> flags, Dictionary<string, string> tokens, TemplateList? list = null) =>
+        Tidy(PruneUsings(RenderText(template, vocabulary, flags, tokens, list)));
+
+    internal static string RenderText(string template, FlagSet vocabulary, HashSet<string> flags, Dictionary<string, string> tokens, TemplateList? list = null)
     {
         string selected = Directives.Apply(template.ReplaceLineEndings("\n"), flags, vocabulary);
         string expanded = TemplateBlocks.Expand(ReplaceReferenceNames(selected, tokens), list);
 
-        return Tidy(PruneUsings(EveryTokenSet(Substitute(expanded, tokens))));
+        return EveryTokenSet(Substitute(expanded, tokens));
     }
 
     internal static string ReplaceReferenceNames(string text, Dictionary<string, string> tokens) =>
