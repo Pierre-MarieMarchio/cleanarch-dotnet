@@ -15,11 +15,11 @@ internal static class SettingPlan
     {
         string application = $"{SourceProject(spec.Prefix, "Application")}/Features/{spec.Features}/Configuration/Options";
         var emissions = new List<Emission> { new($"{application}/{spec.Options}.cs", OptionsClass(spec)) };
-        string tests = $"tests/Application/{FolderOf(spec.Prefix, "Application.UnitTests")}";
+        string tests = $"tests/Application/{FolderOf(spec.Prefix, "Application.UnitTests")}/Features/{spec.Features}/Configuration/{spec.Options}Tests.cs";
 
-        if (Directory.Exists(Path.Combine(root, tests)))
+        if (ProjectExists(root, tests))
         {
-            emissions.Add(new Emission($"{tests}/Features/{spec.Features}/Configuration/{spec.Options}Tests.cs", TestsClass(spec)));
+            emissions.Add(new Emission(tests, TestsClass(spec)));
         }
 
         return emissions;
