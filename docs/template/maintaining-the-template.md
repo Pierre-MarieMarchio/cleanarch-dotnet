@@ -1023,7 +1023,8 @@ overrides used, under `--dry-run` too, and a refused report lists none, since no
 `remove feature` reads nothing under `templates` and leaves `code-templates` as it is.
 
 `Template.Render`, in `launcher/CleanArch.Cli/Generators/Shared/Template.cs`, renders the templates
-of every generator that writes from them in five passes, in this order:
+of every generator that writes from them in five passes, in this order; `Template.RenderText` runs
+the first four alone, for a text that is not C#:
 
 1. `Directives` keeps the lines of the `#if`, `#elif` and `#else` branches the generation's flags
    select, and drops the directive lines.
