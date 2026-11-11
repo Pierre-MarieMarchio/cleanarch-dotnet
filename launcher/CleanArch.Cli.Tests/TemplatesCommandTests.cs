@@ -78,7 +78,7 @@ public sealed class TemplatesCommandTests : IDisposable
     }
 
     [Theory]
-    [InlineData("add-widget", "add-widget has no code templates to copy; the generators that have some are add-feature, add-use-case.")]
+    [InlineData("add-widget", "add-widget has no code templates to copy; the generators that have some are add-feature, add-use-case, add-event.")]
     [InlineData("add-feature Widget.cs", "Widget.cs names no template of add feature: dotnet cleanarch templates copy add-feature --dry-run lists them.")]
     [InlineData("add-feature Model/Entities", "Model/Entities names no template of add feature: dotnet cleanarch templates copy add-feature --dry-run lists them.")]
     public void CopyRefusesAnUnknownGeneratorOrTemplate(string arguments, string refusal)
@@ -115,21 +115,23 @@ public sealed class TemplatesCommandTests : IDisposable
         Directory.Exists(Path.Combine(_project.Root, ToolTemplates.Folder)).ShouldBeFalse();
     }
 
-    [Fact]
-    public void CopyAddUseCase_WithoutAuthentication()
+    [Theory]
+    [InlineData("add-use-case")]
+    [InlineData("add-event")]
+    public void ACopyOfAGeneratorWithoutARefusal_WorksWithoutAuthentication(string generator)
     {
         using var unauthenticated = new SampleProject(SampleProject.Minimal);
-        var templates = ToolTemplates.Of("add-use-case");
+        var templates = ToolTemplates.Of(generator);
 
-        Run(["templates", "copy", "add-use-case"], unauthenticated.Root).ShouldBe(CleanArchCommand.Succeeded, _error.ToString());
+        Run(["templates", "copy", generator], unauthenticated.Root).ShouldBe(CleanArchCommand.Succeeded, _error.ToString());
 
         foreach (var (reference, text) in templates)
         {
-            File.ReadAllText(Path.Combine(unauthenticated.Root, ToolTemplates.PathOf("add-use-case", reference))).ShouldBe(text + "\n", reference);
+            File.ReadAllText(Path.Combine(unauthenticated.Root, ToolTemplates.PathOf(generator, reference))).ShouldBe(text + "\n", reference);
         }
 
-        _output.ToString().ShouldStartWith($"Wrote {templates.Count} templates of add use-case from version {GeneratorCommand.Version} of the tool");
-        _output.ToString().ShouldEndWith($"{Environment.NewLine}add use-case now writes those files from them.{Environment.NewLine}");
+        _output.ToString().ShouldStartWith($"Wrote {templates.Count} templates of {ToolTemplates.Spoken(generator)} from version {GeneratorCommand.Version} of the tool");
+        _output.ToString().ShouldEndWith($"{Environment.NewLine}{ToolTemplates.Spoken(generator)} now writes those files from them.{Environment.NewLine}");
     }
 
     [Theory]

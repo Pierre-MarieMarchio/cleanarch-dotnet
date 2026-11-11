@@ -259,7 +259,8 @@ A block of `add use-case` repeats over `parameter`, the values the message carri
 ## The templates of add event
 
 `add event` writes its files from templates of its own, under `code-templates/add-event`, in the
-language above. Each lies at its path for the event `PlaceholderNotedDomainEvent` of `Placeholders`,
+language above, and `dotnet cleanarch templates copy add-event` copies them, in a project without
+authentication too. Each lies at its path for the event `PlaceholderNotedDomainEvent` of `Placeholders`,
 consumed by `Listeners` whose reaction is `NotifyListeners`:
 
 | Template | Written |
@@ -278,7 +279,8 @@ stay the tool's.
 A copy at its path under `code-templates/add-event` writes its own file and no other, as one of
 `add feature` does: `add event` reads only that folder, refuses a broken copy or one naming no
 template with the same messages and writes nothing, and its report lists the copies it wrote from
-under `Written from this project's code templates:`. The feature's manifest records the event's
+under `Written from this project's code templates:`, and it warns, as `add feature` does, when the
+tool has changed a template copied since. The feature's manifest records the event's
 files and edits, and no copy: its `templates` stay those of `add feature`, which `add field` reads.
 
 ### The flags of add event

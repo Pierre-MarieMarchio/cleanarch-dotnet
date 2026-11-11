@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Nodes;
+using CleanArch.Cli.CodeTemplates;
 using CleanArch.Cli.Generators.AddEvent;
 using CleanArch.Cli.Generators.Shared;
 using Xunit;
@@ -30,6 +31,12 @@ public sealed partial class NewEventTests
 
     [Fact]
     public void LeavesTheRecordAddFieldReads() => Expectations.Hold(LeavesTheRecordAddFieldReadsCases);
+
+    [Fact]
+    public void AnUnchangedCopyWritesTheSameFiles() => Expectations.Hold(AnUnchangedCopyWritesTheSameFilesCases);
+
+    [Fact]
+    public void AGeneratorWarnsWhenTheToolChangedACopiedTemplate() => Expectations.Hold(AGeneratorWarnsWhenTheToolChangedACopiedTemplateCases);
 
     private static string ToolText(string reference) => ToolTemplates.Of(EventPlan.TemplateFolder)[reference];
 
@@ -145,5 +152,55 @@ public sealed partial class NewEventTests
         expect(
             templates == JsonNode.Parse(recorded)!.ToJsonString(),
             $"add event changed the templates the feature's manifest records for add field, which records only add feature's: {templates}");
+    }
+
+    private static int Copy(string root, params string[] templates) =>
+        TemplateCopy.Run(GeneratorRun.Project(root), new TemplateCopyRequest(EventPlan.TemplateFolder, templates, DryRun: false), TextWriter.Null, TextWriter.Null);
+
+    private static void AnUnchangedCopyWritesTheSameFilesCases(string scratch, Action<bool, string> expect)
+    {
+        string plain = NewTree(scratch);
+        string copied = NewTree(scratch);
+        int copy = Copy(copied);
+        string listed = string.Concat(ToolTemplates.Of(EventPlan.TemplateFolder).Keys.Order(StringComparer.Ordinal).Select(reference => $"\n  {OverridePath(reference)}"));
+
+        var expected = Invoke(plain, _consumedEvent);
+        var result = Invoke(copied, _consumedEvent);
+
+        expect(copy == 0, "templates copy add-event refused the copy the test compares.");
+        expect(expected.Code == 0 && result.Code == 0, $"add event refused a run the copy test compares: {expected.Error}{result.Error}");
+        expect(
+            Same(WrittenFiles(plain), WrittenFiles(copied)),
+            $"After templates copy add-event, add event did not write the files it writes without the copies: {Differing(WrittenFiles(plain), WrittenFiles(copied))}");
+        expect(
+            result.Output.Contains($"Written from this project's code templates:{listed}\n", StringComparison.Ordinal),
+            $"The report of add event does not list each copy it wrote from: {result.Output}");
+        expect(!result.Error.Contains("warning:", StringComparison.Ordinal), $"add event warned over copies the tool has not changed since: {result.Error}");
+    }
+
+    private static void AGeneratorWarnsWhenTheToolChangedACopiedTemplateCases(string scratch, Action<bool, string> expect)
+    {
+        string root = NewTree(scratch);
+        string stale =
+            $"warning: {OverridePath(_consumerReference)} overrides a template the tool has changed since version {GeneratorCommand.Version}, which it was copied from; "
+            + $"the files keep your text. To take the change: move your file aside, run dotnet cleanarch templates copy {EventPlan.TemplateFolder} NotifyListenersOnPlaceholderNotedConsumer.cs, "
+            + "and carry your changes over.\n";
+
+        Copy(root, _consumerReference);
+
+        string manifest = Path.Combine(root, TemplateCopies.Manifest);
+        var copies = JsonNode.Parse(File.ReadAllText(manifest))!;
+
+        copies["templates"]![0]!["sha256"] = new string('0', 64);
+        File.WriteAllText(manifest, copies.ToJsonString());
+
+        var dryRun = Invoke(root, [.. _consumedEvent, "--dry-run"]);
+        var result = Invoke(root, _consumedEvent);
+
+        expect(dryRun.Code == 0 && result.Code == 0, $"add event refused over a copy the tool has changed since: {dryRun.Error}{result.Error}");
+        expect(
+            dryRun.Error.Contains(stale, StringComparison.Ordinal) && result.Error.Contains(stale, StringComparison.Ordinal),
+            $"add event, under --dry-run or not, did not warn that the tool changed the template copied: {dryRun.Error}{result.Error}");
+        expect(Read(root, _writtenConsumer).Length > 0, "add event did not write the event it warned over.");
     }
 }
