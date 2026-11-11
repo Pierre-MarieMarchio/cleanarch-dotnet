@@ -15,8 +15,8 @@ A team that wants the generators to write another shape of code, a different bas
 attribute on every record or another test style, has nowhere to say it.
 [Decision 0003](0003-a-project-runs-its-tasks-from-a-pinned-dotnet-tool.md) does not let a project
 eject `add` and `remove`, since they run on a library, Spectre.Console and Roslyn that a file-based
-app does not carry, and it leaves the code they write to a depth of its own. `add feature` and
-`add field` render that code from templates, through
+app does not carry, and it leaves the code they write to a depth of its own. Each `add` generator
+renders that code, and the report it prints, from templates, through
 [the template engine](../maintaining-the-template.md#the-template-engine). Once a project
 holds a copy of one of those templates, the copy depends on three things the tool owns: where the
 tool looks for it, the language it is written in, and the flags its conditions name. A project
@@ -41,8 +41,9 @@ where it left them, or its copies break with no change of its own.
   generator computes. A `%Token%` left after rendering is refused, as is any line the grammar cannot
   read, and a refusal names the file and the line.
 - **The vocabulary is readable and per generator.** Each generator that renders templates owns one
-  set of flags, each named for what it means and documented with that meaning, as
-  [the flags of add feature](../maintaining-the-template.md#the-flags-of-add-feature) are. A
+  set of flags, each named for what it means and documented with that meaning in the project's
+  guide, as [the flags of add feature](../../guides/changing-generated-code.md#the-flags-of-add-feature)
+  are. A
   template names only its own generator's flags; another generator's flag is refused as a typo is.
 - **The three are a public contract.** Renaming a flag, a token or a reference name, or moving a
   key, breaks the copies a project holds, so it takes a major version of the tool. Adding a flag, a
@@ -61,13 +62,17 @@ where it left them, or its copies break with no change of its own.
 
 `ConditionTests` holds the grammar and `DirectivesTests` the directives, each refusal naming the
 offending text and line.
-`FeatureFlagsTests.TheGuideToCodeTemplates_ListsEachFlagOfAddFeature_WithItsMeaning_AndNoOther` holds the
-vocabulary of `add feature` to its table, flag for flag. `NewFeatureTests.TemplateGuard` holds the
-passes together, a leftover `%Token%` and another generator's flag refused, and
-`NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields` and
-`NewFeatureTests.FieldAdditionOutput` hold the output of a project without an override to its
-digests. The override itself, the copy, its record and the warning each take a test of their own,
-in the generator that reads them, seen failing once before this decision is accepted.
+`FeatureFlagsTests` holds the vocabulary of each generator and of each report to its table in the
+guide, flag for flag. `NewFeatureTests.TemplateGuard` holds the passes together, a leftover
+`%Token%` and another generator's flag refused, and `NewFeatureTests.WithoutFields`,
+`NewFeatureTests.WithFields` and `NewFeatureTests.FieldAdditionOutput` hold the output of a project
+without an override to its digests. `OverrideWinsForItsFileOnly` and `ABrokenOverrideIsRefusedNamingIt`
+hold the override in each of `NewFeatureTests`, `NewUseCaseTests`, `NewEventTests` and
+`NewSettingTests`; `TemplatesCommandTests.CopyWritesEachTemplateAsTheToolHoldsIt_AndRecordsItsSource`
+and `TemplatesCommandTests.CopyNeverOverwrites_AndRefusesWhenEveryTemplateNamedExists` the copy and
+its record; `NewFeatureTests.AGeneratorWarnsWhenTheToolChangedACopiedTemplate` and its peers the
+warning; `NewFeatureTests.TheManifestRecordsEachOverride` and
+`NewFeatureTests.AddFieldWarnsWhenTheOverrideChangedSinceAddFeature` the feature manifest's record.
 
 ## Alternatives considered
 
