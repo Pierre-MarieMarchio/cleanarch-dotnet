@@ -1,0 +1,121 @@
+#if applied
+Wrote %Count% files for the %Kind% ApprovePlaceholder in Placeholders:
+#else
+Would write %Count% files for the %Kind% ApprovePlaceholder in Placeholders:
+#endif
+%Files%
+
+#if dtoDeclared
+It answers the PlaceholderTotalsDto the feature already declares under Model/Dtos.
+#endif
+#if manifest
+Recorded in %Manifest% with their SHA-256, the contracts among them, and with each edit made outside the feature's files, so remove feature deletes them and undoes those edits with the feature.
+#else
+No manifest names Placeholders, so remove feature never deletes these files; they are the feature's like any it holds.
+#endif
+#if skipped
+Not written: '%Skipped%' is not in this tree, so the use case's tests were skipped.
+#elif validatorTests && !handlerTests
+Not written: ApprovePlaceholderTests.cs, whose UseCase() runs the handler behind its validator through TestDoubles/ValidatedHandler.cs, which this tree's application tests do not hold.
+#endif
+
+Nothing to register: AddFeature("Placeholders") in ApplicationModule finds its validator by folder, and each host's generated mediator registers its handler.
+#if validator
+Until its body is written, %Input%Handler throws NotImplementedException; the pipeline answers what its validator refuses before the handler is reached.
+#else
+Until its body is written, %Input%Handler throws NotImplementedException.
+#endif
+#if !validator && parameters
+No validator and no test were written: no input is one this command writes a rule for, a bool or a nullable accepting every value. Write %Input%Validator beside ApprovePlaceholder.cs once a value is refused, with %Input%ValidatorTests and ApprovePlaceholderTests beside the feature's other tests.
+#endif
+#if unknown
+
+Written as given, of a type this command knows no rule and no test value for:
+%Unknown%
+For each, yours to write:
+#if validator
+  - its rule in %Input%Validator, when a value of it is refused, and that refusal's test in %Input%ValidatorTests
+#else
+  - its rule, when a value of it is refused, in the validator above
+#endif
+#if validatorTests && command
+  - a real value in AWellFormedCommand() in %Input%ValidatorTests, which passes default! for it until then
+#elif validatorTests
+  - a real value in AWellFormedQuery() in %Input%ValidatorTests, which passes default! for it until then
+#endif
+#if api && request
+  - a using of its namespace in ApprovePlaceholder.cs and in ApprovePlaceholderRequest.cs, unless the type is imported already
+#else
+  - a using of its namespace in ApprovePlaceholder.cs, unless the type is imported already
+#endif
+#endif
+
+What it decides is yours to write, each with its test (docs/guides/testing.md):
+#if command && id
+  - the rule, as a method of the Placeholder in the domain, and a domain test per invariant
+  - the body: load through the feature's service or repository, call that method, commit through IUnitOfWork
+#elif command
+  - the rule, as a method of the aggregate in the domain, and a domain test per invariant
+  - the body: load through the feature's service or repository, call that method, commit through IUnitOfWork
+#else
+  - PlaceholderTotalsDto's members, and a method of the feature's queries port that projects them
+  - the body: ask ICurrentUser for the caller when the feature is owned, then that method
+#endif
+#if handlerTests
+  - its dependencies, in the handler's primary constructor; in ApprovePlaceholderTests, each one a substitute field passed where UseCase() builds the handler, the one place that does
+#else
+  - its dependencies, in the handler's primary constructor
+#endif
+  - one unit test per decision the body adds, each refusal with its control
+#if api
+  - an error code of its own: its row in docs/reference/api.md, which the error-code tests read
+
+#if applied
+To serve it over HTTP, the edit made in %Controller%:
+#elif dryrun
+To serve it over HTTP, the edit a run without --dry-run makes in %Controller%:
+#else
+To serve it over HTTP, the edit by hand in %Controller%:
+#endif
+  the usings it lacks  %Usings%
+  the parameter        ISender sender, in the primary constructor, unless it has one
+  the action
+%Action%
+#if request
+  and %RequestPath%, with what a client sends:
+%Request%
+#endif
+#if !command
+  and %ResponsePath%, with the members a client reads:
+%Response%
+#endif
+#if !applied
+
+#if dryrun
+Then a run without --dry-run rewrites what the contract feeds, in this order:
+#else
+Then rewrite what the contract feeds, once the edit is made:
+#endif
+%Steps%
+#endif
+#if applied && fullRoute
+and its row, added to the table of Placeholders under ## Routes in docs/reference/api.md, which ApiRouteTableTests reads, written in full, from /api:
+#elif applied
+and its row, added to the table of Placeholders under ## Routes in docs/reference/api.md, which ApiRouteTableTests reads, relative to that table's 'Under' prefix:
+#elif fullRoute
+and its row in the table of Placeholders under ## Routes in docs/reference/api.md, which ApiRouteTableTests reads, written in full, from /api:
+#else
+and its row in the table of Placeholders under ## Routes in docs/reference/api.md, which ApiRouteTableTests reads, relative to that table's 'Under' prefix:
+#endif
+  %RouteRow%
+#if page
+and add the route to %Page%.
+#endif
+#else
+
+To offer it, send %Construction% through ISender by hand where a host serves Placeholders, under:
+%Hosts%
+#if page
+and add the operation to %Page%.
+#endif
+#endif

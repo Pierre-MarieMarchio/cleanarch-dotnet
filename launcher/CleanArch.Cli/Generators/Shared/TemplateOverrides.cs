@@ -79,6 +79,11 @@ internal sealed class TemplateOverrides
     {
         string template = ToolTemplates.Of(_generator)[ToolTemplates.Report];
 
+        if (Template.TokensOf(template).FirstOrDefault(token => !tokens.ContainsKey(token)) is { } unset)
+        {
+            throw new InvalidOperationException($"{ToolTemplates.PathOf(_generator, ToolTemplates.Report)} names %{unset}%, which {Spoken} does not set in every run.");
+        }
+
         foreach (string line in Template.RenderReport(template, _reportVocabulary, [.. flags, ReportFlags.Of(mode)], tokens).Split('\n'))
         {
             output.WriteLine(line);

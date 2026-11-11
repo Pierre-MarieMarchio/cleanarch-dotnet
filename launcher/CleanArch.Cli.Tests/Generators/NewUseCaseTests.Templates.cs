@@ -19,7 +19,7 @@ public sealed partial class NewUseCaseTests
         string[] unwritten =
         [
             .. ToolTemplates.Of(NewUseCase.TemplateFolder).Keys
-                .Where(reference => !generations.Any(names => File.Exists(Full(root, PathOf("Acme", reference, names)))))
+                .Where(reference => reference != ToolTemplates.Report && !generations.Any(names => File.Exists(Full(root, PathOf("Acme", reference, names)))))
                 .Select(reference => ToolTemplates.PathOf(NewUseCase.TemplateFolder, reference))
                 .Order(StringComparer.Ordinal),
         ];
