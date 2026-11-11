@@ -27,6 +27,8 @@ internal sealed class FieldGeneration(Addition addition, GenerationContext conte
 
     protected override TemplateOverrides Templates => addition.Templates;
 
+    private TemplateOverrides ReportTemplate { get; } = FieldReport.Overrides(context.Root);
+
     protected override IReadOnlyList<string> EditFailures => _failures;
 
     protected override IReadOnlyList<(string Path, byte[] Bytes)> Created =>
@@ -71,7 +73,7 @@ internal sealed class FieldGeneration(Addition addition, GenerationContext conte
 
     protected override string? Preconditions() => FeatureCode.Preconditions(Root, addition.After, Output, Context.Executor);
 
-    protected override void Report(ReportMode mode) => FieldReport.Write(Output, Root, addition, _changes, mode);
+    protected override void Report(ReportMode mode) => FieldReport.Write(Output, ReportTemplate, Root, addition, _changes, mode);
 
     protected override int Finish() => FinishField(Root, addition, Output, Error, Context.Executor);
 
