@@ -52,16 +52,12 @@ Each group comes in no fixed order:
   ([#122](https://github.com/Pierre-MarieMarchio/cleanarch-dotnet/issues/122)): 
   Playwright flows beyond the browser smoke of each web app, Storybook, and mobile apps from Expo or
   Capacitor on the same API client.
-- **What remains of the project tool**
-  ([#376](https://github.com/Pierre-MarieMarchio/cleanarch-dotnet/issues/376)): the
-  code templates a generator writes from and the `templates copy` command, neither of which exists
-  yet, and the steps the project file adds to a command, as
-  [template decision 0003](decisions/0003-a-project-runs-its-tasks-from-a-pinned-dotnet-tool.md) decides.
 
 ## Not planned
 
-- **A generator command of the user's choosing.** Its output could be neither tested nor held to the
-  content security policy.
+- **A web app or a host from a scaffolding command of the user's choosing.** Its output could be
+  neither tested nor held to the content security policy. What the project's own generators write
+  a team changes through [code templates](../guides/changing-generated-code.md).
 - **A desktop app wired straight to the application layer.** It would carry the database's
   credentials onto every user's machine.
 - **MySQL**, until Entity Framework Core 10 has an official MySQL provider; `--database` then gains the value with its overlay.
