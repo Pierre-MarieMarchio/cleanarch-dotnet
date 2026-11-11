@@ -230,13 +230,15 @@ aside to copy it again. `--dry-run` lists what it would copy and writes nothing;
 `dotnet cleanarch templates copy add-event [<template>...]` copies, under the same rules, the
 templates `add event` writes an event, its consumer and their tests from into
 `code-templates/add-event/`.
+`dotnet cleanarch templates copy add-setting` copies the two templates `add setting` writes an options
+class and its tests from into `code-templates/add-setting/` the same way.
 
 `code-templates/manifest.json` records each copy's path, the tool's version and the digest of the
 tool's text when it was copied: it is the tool's to write, while the `.txt` copies are the team's to
 edit. A manifest the tool cannot read refuses the copy until it is repaired or moved aside.
 
 When a newer tool changes the text of a template this project holds a copy of, `add feature`,
-`add field`, `add use-case` and `add event` still write from the copy and warn on the error output, under `--dry-run` too, without
+`add field`, `add use-case`, `add event` and `add setting` still write from the copy and warn on the error output, under `--dry-run` too, without
 changing their exit code; [changing generated code](../guides/changing-generated-code.md#when-the-tool-changes-a-template)
 says how to take the change. The report of each generator lists the copies it wrote from, except
 when it refuses.
