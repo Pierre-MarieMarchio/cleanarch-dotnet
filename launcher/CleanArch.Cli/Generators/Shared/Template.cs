@@ -7,7 +7,8 @@ internal static class Template
     private static readonly (string Name, string Token)[] _referenceNames =
     [
         (ProjectFolders.ReferenceProduct, "P"), ("ApprovePlaceholder", "UseCase"), ("GetPlaceholderTotals", "UseCase"), ("PlaceholderTotals", "Answer"),
-        ("Placeholders", "F"), ("Placeholder", "A"), ("placeholder", "L"),
+        ("PlaceholderNoted", "E"), ("Placeholders", "F"), ("Placeholder", "A"), ("placeholder", "L"),
+        ("NotifyListeners", "V"), ("Listeners", "C"),
     ];
 
     private static readonly Regex _referenceName = new(

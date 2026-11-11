@@ -1,4 +1,5 @@
-﻿using CleanArch.Cli.Generators.AddUseCase;
+﻿using CleanArch.Cli.Generators.AddEvent;
+using CleanArch.Cli.Generators.AddUseCase;
 using CleanArch.Cli.Generators.Shared;
 using CleanArch.Tooling.Markdown;
 using Shouldly;
@@ -18,6 +19,10 @@ public sealed class FeatureFlagsTests
     public void TheGuideToCodeTemplates_ListsEachFlagOfAddUseCase_WithItsMeaning_AndNoOther() =>
         ListsEachFlag("add use-case", UseCaseFlags.Vocabulary);
 
+    [Fact]
+    public void TheGuideToCodeTemplates_ListsEachFlagOfAddEvent_WithItsMeaning_AndNoOther() =>
+        ListsEachFlag("add event", EventFlags.Vocabulary);
+
     private static void ListsEachFlag(string generator, FlagSet flags)
     {
         string heading = $"### The flags of {generator}";
@@ -35,7 +40,7 @@ public sealed class FeatureFlagsTests
         ];
 
         offenders.ShouldBeEmpty(
-            $"The table under '{heading}' in {_page} is the vocabulary of {flags.Generator}, row for row: "
+            $"The table under '{heading}' in {_page} is the vocabulary of {generator}, row for row: "
             + "a flag renamed, added, removed or reworded changes both.");
     }
 }
