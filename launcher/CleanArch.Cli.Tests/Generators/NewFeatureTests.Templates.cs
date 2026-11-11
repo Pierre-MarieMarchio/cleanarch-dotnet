@@ -23,7 +23,7 @@ public sealed partial class NewFeatureTests
         string[] unwritten =
         [
             .. ToolTemplates.Of(TemplateFolder).Keys
-                .Where(reference => !written.Contains(PathOf(spec, reference, tokens)))
+                .Where(reference => reference != ToolTemplates.Report && !written.Contains(PathOf(spec, reference, tokens)))
                 .Select(reference => ToolTemplates.PathOf(TemplateFolder, reference))
                 .Order(StringComparer.Ordinal),
         ];

@@ -1260,18 +1260,18 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 
 ### Reports
 
-A generator whose report is a template holds it as `report.txt` at the root of its folder under
+The report of each `add` generator is a template, `report.txt` at the root of its folder under
 `launcher/CleanArch.Cli/code-templates`, embedded with its other templates and named
-`ToolTemplates.Report`, as those of `add use-case`, `add event`, `add setting` and `add field` are.
-`add field` writes its files from the templates of `add feature`, so its folder, `add-field`, holds
-its `report.txt` alone, which `FieldReport.Overrides` reads. `TemplateOverrides.WriteReport` renders
-a report after the run, through `Template.RenderReport`: a line that is exactly a `%Token%` whose
-value is empty is dropped, then `Template.RenderText` runs the directives, the reference names and
-the tokens, and neither prunes usings nor tidies blank lines, which carry the report's layout. A
-report's vocabulary is `ReportFlags.For` the generator's flags, the mode flags `applied`, `dryrun`
-and `refused`, of which one holds, and the report's own shape flags, which its report class names,
-as `EventReport.Shapes`. What the tool computes, the files written, the paths edited, a count, a
-step, a note on compatibility, is a token whose lines the class builds; a report repeats no block.
+`ToolTemplates.Report`. `add field` writes its files from the templates of `add feature`, so its
+folder, `add-field`, holds its `report.txt` alone, which `FieldReport.Overrides` reads.
+`TemplateOverrides.WriteReport` renders a report after the run, through `Template.RenderReport`: a
+line that is exactly a `%Token%` whose value is empty is dropped, then `Template.RenderText` runs
+the directives, the reference names and the tokens, and neither prunes usings nor tidies blank
+lines, which carry the report's layout. A report's vocabulary is `ReportFlags.For` the generator's
+flags, the mode flags `applied`, `dryrun` and `refused`, of which one holds, and the report's own
+shape flags, which its report class names, as `EventReport.Shapes`, or `FeatureFlags.ReportShapes`
+for `add feature`. What the tool computes, the files written, the paths edited, a count, a step, a
+note on compatibility, is a token whose lines the class builds; a report repeats no block.
 
 | Guarantee | Test |
 |---|---|

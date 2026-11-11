@@ -32,4 +32,19 @@ internal static class FeatureFlags
             ["trimsText"] = "Create or update takes a text the service trims: a field is a string.",
             ["constants"] = "A limit of the content is declared as a constant: a field is a string, a text or a decimal, or has a bound.",
         });
+
+    internal static FlagSet ReportShapes { get; } = new(
+        FeatureCode.Generator,
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["api"] = "The project has the API, so the feature's routes and its refusal join `docs/reference/api.md`.",
+            ["reaction"] = "The project had no feature that owns user data, so the account-deleted reaction ships with this one, in five more edits.",
+            ["fieldTests"] = "The integration test of the fields is written, and the database fixture truncates the feature's schema.",
+            ["sorted"] = "A field sorts the list.",
+            ["kept"] = "Under `anonymise`, a field is kept as it was: one that is not a string, a text or nullable.",
+            ["page"] = "The feature's page is written.",
+            ["inPlace"] = "An edit was in place already, so it was left as it was and not recorded.",
+        });
+
+    internal static FlagSet Report { get; } = ReportFlags.For(Vocabulary, ReportShapes);
 }
