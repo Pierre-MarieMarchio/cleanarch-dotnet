@@ -1,0 +1,26 @@
+#if dryrun
+Dry run: nothing was written.
+#else
+Wrote the PlaceholderLimits setting of Placeholders.
+#endif
+
+#if dryrun
+Would write %Count% file(s):
+#else
+Wrote %Count% file(s):
+#endif
+%Files%
+
+#if dryrun
+Would edit:
+#else
+Edited:
+#endif
+%Edited%
+
+Hosts whose appsettings.json carries the section: %Hosts%.
+
+What is left to you:
+  - docs/reference/configuration.md: say, in each Notes cell of the PlaceholderLimits table, what the key changes; the bounds are written.
+  - Inject IOptions<PlaceholderLimitsOptions> where the rule lives: the command's validator for a bound on a request, the use case for one that shapes the work.
+%Unset%

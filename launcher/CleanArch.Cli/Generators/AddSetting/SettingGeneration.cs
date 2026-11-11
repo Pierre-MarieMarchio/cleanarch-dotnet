@@ -23,6 +23,6 @@ internal sealed class SettingGeneration(SettingSpec spec, GenerationContext cont
 
     protected override void Report(ReportMode mode)
     {
-        SettingReport.Write(Output, spec, Emissions, Editor.Changed.Select(sheet => sheet.Path), _hosts, mode == ReportMode.DryRun);
+        SettingReport.Write(Output, Templates, spec, Emissions, Editor.Changed.Select(sheet => sheet.Path), _hosts, mode);
     }
 }
