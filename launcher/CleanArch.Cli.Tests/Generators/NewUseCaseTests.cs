@@ -56,6 +56,9 @@ public sealed partial class NewUseCaseTests
     [Fact]
     public void Layouts() => Expectations.Hold(LayoutsCases);
 
+    [Fact]
+    public void Reports() => Expectations.Hold(ReportsCases);
+
     private static string NewTree(string scratch, params string[] repositories)
     {
         string root = Path.Combine(scratch, Guid.CreateVersion7().ToString("N"));
@@ -370,6 +373,34 @@ public sealed partial class NewUseCaseTests
             + "These runs cover the shapes the output digest does not: without the id or any input, several inputs among them one of an unknown type, "
             + "a query answering a DTO the feature declares, and a tree without the tests, the ValidatedHandler double or the API. "
             + "Make a change to them on purpose, then record the new digest.");
+    }
+
+    private const string _reportsDigest = "903aaf64f51705d27f81706d92b128fdac1919b92f28a33a204abbf6ab78f3f2";
+
+    private static void ReportsCases(string scratch, Action<bool, string> expect)
+    {
+        string plain = NewTree(scratch);
+        string withoutApi = NewTree(scratch);
+        string withoutTable = NewTree(scratch);
+
+        Directory.Delete(Path.Combine(withoutApi, "src/Presentation/A.Api"), recursive: true);
+        Directory.CreateDirectory(Path.Combine(withoutApi, "src/Presentation/A.Portal"));
+        File.WriteAllText(Path.Combine(withoutApi, "src/Presentation/A.Portal/Program.cs"), "builder.Services.AddInvoices();\n");
+        File.WriteAllText(Path.Combine(withoutTable, _apiPage), "# API\n\n## Routes\n\n## Error codes\n");
+
+        string digest = OutputDigest(
+        [
+            (plain, ["Invoices", "ApproveInvoice", "--kind", "command", "--input", "id, Reason:string", "--dry-run"]),
+            (plain, ["Invoices", "FindInvoicesByCustomer", "--kind", "query", "--input", "Customer:string, Tags:IReadOnlyList<string>", "--dry-run"]),
+            (withoutApi, ["Invoices", "ApproveInvoice", "--kind", "command", "--input", "id, Reason:string", "--dry-run"]),
+            (withoutTable, ["Invoices", "ApproveInvoice", "--kind", "command", "--input", "id, Reason:string"]),
+            (withoutTable, ["Invoices", "GetInvoiceTotals", "--kind", "query"]),
+        ]);
+
+        expect(
+            digest == _reportsDigest,
+            $"The report of add use-case under --dry-run, or refused after it, is no longer the one recorded: digest {digest}, recorded {_reportsDigest}. "
+            + "The output digests cover the applied report; make a change to these on purpose, then record the new digest.");
     }
 
     private static string OutputDigest((string Root, string[] Run)[] runs)
