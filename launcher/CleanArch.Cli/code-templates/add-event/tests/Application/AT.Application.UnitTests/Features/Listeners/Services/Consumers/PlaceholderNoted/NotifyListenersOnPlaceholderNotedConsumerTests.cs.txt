@@ -1,0 +1,42 @@
+using AppTemplate.Application.Core.Common.Events;
+using AppTemplate.Application.Features.Listeners.Services.Consumers.PlaceholderNoted;
+using AppTemplate.Domain.Features.Placeholders.Model.Events;
+using Microsoft.Extensions.Configuration; //?ConfigurationBuilder
+using Microsoft.Extensions.DependencyInjection;
+using Shouldly;
+using Xunit;
+
+namespace AppTemplate.Application.UnitTests.Features.Listeners.Services.Consumers.PlaceholderNoted;
+
+public sealed class NotifyListenersOnPlaceholderNotedConsumerTests
+{
+    [Fact]
+    public void TheConsumer_IsRegisteredForItsEvent()
+    {
+        var services = new ServiceCollection();
+#if configured
+        services.AddListeners(new ConfigurationBuilder().Build());
+#else
+        services.AddListeners();
+#endif
+
+        services.ShouldContain(descriptor =>
+            descriptor.ServiceType == typeof(IDomainEventConsumer<PlaceholderNotedDomainEvent>)
+            && descriptor.ImplementationType == typeof(NotifyListenersOnPlaceholderNotedConsumer));
+    }
+
+    [Fact]
+    public async Task AMissingEvent_IsRefused()
+    {
+        var consumer = new NotifyListenersOnPlaceholderNotedConsumer();
+
+        await Should.ThrowAsync<ArgumentNullException>(() => consumer.ConsumeAsync(null!, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public void TheReaction_IsWritten() =>
+        Assert.Fail(
+            "NotifyListeners is not written: NotifyListenersOnPlaceholderNotedConsumer throws NotImplementedException, and the dispatcher logs that and drops the event. "
+            + "Re-derive the precondition from the stores, act, commit through IUnitOfWork so that running twice changes nothing (ADR 0002), "
+            + "then replace this test with the ones that hold the reaction.");
+}

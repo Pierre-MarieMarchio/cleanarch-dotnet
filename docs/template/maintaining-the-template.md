@@ -1089,6 +1089,13 @@ token. `UseCasePlan`, in `launcher/CleanArch.Cli/Generators/AddUseCase/UseCasePl
 files a run writes and renders each through `Template.Render`; `UseCaseHttp` keeps the edits, the
 controller's action and the route's row, which no template writes.
 
+`add event` renders its own templates, under `launcher/CleanArch.Cli/code-templates/add-event`, at
+their paths for the event `PlaceholderNotedDomainEvent` of `Placeholders`, consumed by `Listeners`
+with the reaction `NotifyListeners`: `EventPlan` names each, `EventFlags` holds its one flag and
+`EventBlocks` its list of fields, whose `Sample` differs from a feature's. The reference names of
+every generator are one list in `Template`, a longer name before a name it starts with or holds;
+the edits of `ApplicationModule.cs` and `DomainEventTests.cs` and the report stay code.
+
 A project overrides a template with a file at the same path under its own `code-templates` folder,
 `code-templates/<generator>/<reference path>.txt` at its root. `TemplateOverrides.Read` reads that
 folder once per run, its files ending in `.txt` and not starting with a dot, and `Render` renders the
@@ -1259,6 +1266,8 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | `remove feature` removes a feature written from an override as its manifest records it, and leaves `code-templates` as it was | `RemoveFeatureTests.AFeatureWrittenFromAnOverride_IsRemovedAsRecorded_AndTheOverrideStays` |
 | Every template the tool embeds for `add use-case` is written by a command and a query that carry the id, an input and a rule | `NewUseCaseTests.EveryUseCaseTemplateIsWritten` |
 | Every template the tool embeds for `add feature` is written by one of the configurations the digests with `--fields` cover, or by an owner feature in a tree whose callers sign in with an external provider | `NewFeatureTests.EveryTemplateIsWritten` |
+| Every template the tool embeds for `add event` is written by one of the runs its digests cover | `NewEventTests.EveryTemplateIsWritten` |
+| The table of the flags of `add event` in the guide to code templates is its vocabulary, each flag with its meaning, and nothing else | `FeatureFlagsTests.TheGuideToCodeTemplates_ListsEachFlagOfAddEvent_WithItsMeaning_AndNoOther` |
 | Over the configurations the digests cover, every C# file `add feature` writes or edits, and every one `add field` writes or changes, parses without a syntax error; an edited file is parsed as the edit leaves it in the tests' tree, whose shared files are cut down to the code around the anchors, and the message names each group and path that wrote the same broken text | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
 | The files, the edits and the report of `add use-case` are those its digests record, over every layout it writes: a command and a query with and without the id or any input, several inputs among them one of an unknown type, a query answering a DTO the feature declares, and a tree without the application's tests, the `ValidatedHandler` double or the API | `NewUseCaseTests.Output`, `NewUseCaseTests.Layouts` |
 

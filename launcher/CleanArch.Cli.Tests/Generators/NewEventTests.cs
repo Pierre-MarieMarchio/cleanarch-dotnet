@@ -35,6 +35,9 @@ public sealed class NewEventTests
     [Fact]
     public void Output() => Expectations.Hold(OutputCases);
 
+    [Fact]
+    public void EveryTemplateIsWritten() => Expectations.Hold(EveryTemplateIsWrittenCases);
+
     private const string _module = "src/Application/A.Application/ApplicationModule.cs";
 
     private const string _list = "tests/Architecture/A.Architecture.Tests/Rules/DomainEventTests.cs";
@@ -585,7 +588,37 @@ public sealed class NewEventTests
         }
     }
 
-    private static string OutputDigest(string scratch, string[][] runs)
+    private static void EveryTemplateIsWrittenCases(string scratch, Action<bool, string> expect)
+    {
+        var written = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var (_, runs) in _outputRuns)
+        {
+            OutputDigest(scratch, runs, path => written.Add(path));
+        }
+
+        var tokens = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["P"] = "Acme",
+            ["F"] = "Invoices",
+            ["E"] = "InvoicePaid",
+            ["C"] = "Reminders",
+            ["V"] = "CancelReminders",
+        };
+        string[] unwritten =
+        [
+            .. ToolTemplates.Of(EventPlan.TemplateFolder).Keys
+                .Where(reference => !written.Contains(ProjectFolders.PathOf("Acme", reference, tokens)))
+                .Select(reference => ToolTemplates.PathOf(EventPlan.TemplateFolder, reference))
+                .Order(StringComparer.Ordinal),
+        ];
+
+        expect(
+            unwritten.Length == 0,
+            $"add event wrote none of these templates in the runs its digests cover, so each is text no generation reads: write it from the plan, or delete it. {string.Join(", ", unwritten)}");
+    }
+
+    private static string OutputDigest(string scratch, string[][] runs, Action<string>? written = null)
     {
         string root = NewTree(scratch);
         using var digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -604,6 +637,7 @@ public sealed class NewEventTests
 
             foreach (var (path, hash) in Snapshot(root).Where(entry => !before.TryGetValue(entry.Key, out string? earlier) || earlier != entry.Value).OrderBy(entry => entry.Key, StringComparer.Ordinal))
             {
+                written?.Invoke(path);
                 Feed(path);
                 Feed(hash == "<directory>" ? hash : File.ReadAllText(Path.Combine(root, path)));
             }
