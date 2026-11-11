@@ -21,12 +21,11 @@ internal sealed class FieldGeneration(Addition addition, GenerationContext conte
     protected override bool StopsAtDryRun => true;
 
     protected override IEnumerable<string> Warnings =>
-        [
-            .. _changedTemplates.Select(path =>
-                $"{path} is not the text {ManifestPath(addition.After)} records the feature was written from; add field compares "
-                + "the files with what it writes today, so a member the difference reaches reads as changed by hand."),
-            .. TemplateCopies.Stale(Root, addition.Templates),
-        ];
+        _changedTemplates.Select(path =>
+            $"{path} is not the text {ManifestPath(addition.After)} records the feature was written from; add field compares "
+            + "the files with what it writes today, so a member the difference reaches reads as changed by hand.");
+
+    protected override TemplateOverrides Templates => addition.Templates;
 
     protected override IReadOnlyList<string> EditFailures => _failures;
 
