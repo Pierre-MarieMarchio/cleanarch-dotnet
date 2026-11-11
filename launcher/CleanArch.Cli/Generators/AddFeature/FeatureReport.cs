@@ -1,105 +1,74 @@
 ﻿using CleanArch.Cli.Generators.Shared;
-using Microsoft.CodeAnalysis;
 using static CleanArch.Cli.Generators.Shared.CSharpNames;
 using static CleanArch.Cli.Generators.Shared.FeatureCode;
 
 namespace CleanArch.Cli.Generators.AddFeature;
 
+internal sealed record FeatureOutput(
+    string Root,
+    FeatureSpec Spec,
+    List<Emission> Plan,
+    string Manifest,
+    List<string> Skipped,
+    Emission? Page,
+    string? Unwritten,
+    IReadOnlyList<string> InPlace);
+
 internal static class FeatureReport
 {
-    internal const string _removalRefusal = "remove feature refuses to remove this feature while another owner feature still uses these files.";
-
-    internal static void Report(TextWriter output, string root, FeatureSpec spec, List<Emission> plan, string manifest, List<string> skipped, ReportMode mode)
+    internal static void Write(TextWriter output, TemplateOverrides templates, FeatureOutput run, ReportMode mode)
     {
-        var report = new Sections(output, root, spec, mode);
+        var flags = Flags(run.Spec);
 
-        report.Files(plan, manifest, skipped);
-        report.EditsIntroduced();
-        report.Composition();
-        report.ModuleTests();
-        report.Reaction();
-        report.FieldTests(plan);
-
-        ReportFields(output, spec, spec.Fields);
-
-        output.WriteLine();
-        report.Steps();
-        report.Undecided();
-    }
-
-    internal static void ReportFields(TextWriter output, FeatureSpec spec, IReadOnlyList<Field> fields)
-    {
-        output.WriteLine();
-        output.WriteLine($"--fields: {string.Join(", ", fields.Select(field => field.Declaration))}.");
-        output.WriteLine("Each is checked twice, by the validator and by the aggregate or the service, stored in a column of its");
-        output.WriteLine("length or precision, and carried by the contracts and the generated tests.");
-
-        if (spec.Has("list"))
-        {
-            var sortable = fields.Where(FieldCode.IsSortable).Select(field => field.Name).ToList();
-
-            output.WriteLine(sortable.Count == 0
-                ? "No field sorts the list: only required string(n), int, long, DateOnly and DateTimeOffset fields do, each with its index."
-                : $"The list sorts by {string.Join(", ", sortable)} and createdAt, each with its index; a text, a decimal, a bool,");
-            output.WriteLine(sortable.Count == 0
-                ? "A text is long and unindexed, SQLite cannot order a decimal, and a nullable field orders apart on each provider."
-                : "a Guid and a nullable field do not, being long, unordered on SQLite, or ordered apart on each provider.");
-        }
-
-        if (spec.Deletion == "anonymise" && fields.Where(field => !FieldCode.IsAnonymised(field)).Select(field => field.Name).ToList() is { Count: > 0 } kept)
-        {
-            output.WriteLine($"--deletion anonymise rewrites the strings, the texts and the nullable fields, and keeps {string.Join(", ", kept)}:");
-            output.WriteLine("rewrite whatever of them still says who the owner was.");
-        }
-    }
-
-    internal static void ReportPage(TextWriter output, FeatureSpec spec, Emission? page, string? unwritten, ReportMode mode)
-    {
-        string path = FeaturePage.PagePath(spec.Features);
-        bool applied = mode == ReportMode.Applied;
-
-        output.WriteLine();
-
-        if (page is null)
-        {
-            output.WriteLine($"Feature page: {unwritten}");
-        }
-        else
-        {
-            output.WriteLine(applied
-                ? $"Feature page: {path}, from {FeaturePage._pageTemplate}. The manifest records it, so remove feature deletes it, edited or not."
-                : $"Feature page: {path}, from {FeaturePage._pageTemplate}, written with the files above.");
-            output.WriteLine("Each heading says what its section holds; replace those lines with what this feature does.");
-        }
-
-        output.WriteLine(applied
-            ? "docs-index lists it in the index of docs/features, by the title and the description of its frontmatter."
-            : "Then docs-index lists it in the index of docs/features, by the title and the description of its frontmatter.");
-
-        if (spec.HasApi)
-        {
-            output.WriteLine(applied
-                ? "Its section, added to the route table under ## Routes in docs/reference/api.md, which ApiRouteTableTests reads:"
-                : "And its section of the route table under ## Routes in docs/reference/api.md, which ApiRouteTableTests reads:");
-
-            foreach (string line in FeatureEdits.RouteSection(spec))
-            {
-                output.WriteLine("  " + line);
-            }
-        }
-
-        if (spec.HasApi && Flags(spec).Contains("notFound"))
-        {
-            output.WriteLine(applied
-                ? "The row of its refusal, added under ### Resources in docs/reference/api.md, which the error-code tests read:"
-                : "And the row of its refusal under ### Resources in docs/reference/api.md, which the error-code tests read:");
-            output.WriteLine($"  {ErrorRow(spec)}");
-        }
+        flags.UnionWith(ShapesOf(run).Where(shape => shape.Holds).Select(shape => shape.Flag));
+        templates.WriteReport(output, mode, flags, Tokens(run));
     }
 
     internal static string ErrorRow(FeatureSpec spec) => $"| `{CSharpNames.Lower(spec.Type)}.notFound` | 404 | Missing, or another caller's |";
 
-    private sealed class Sections(TextWriter output, string root, FeatureSpec spec, ReportMode mode)
+    private static Dictionary<string, string> Tokens(FeatureOutput run)
+    {
+        var spec = run.Spec;
+        var tokens = NameTokens(spec);
+
+        tokens["Count"] = $"{run.Plan.Count}";
+        tokens["Options"] = Described(spec);
+        tokens["Files"] = ReportLines.Of(run.Plan.Select(emission => emission.Path));
+        tokens["Manifest"] = run.Manifest;
+        tokens["Skipped"] = string.Join('\n', run.Skipped.Select(project => $"Not written: '{project}' is not in this tree, so its tests were skipped."));
+        tokens["Edits"] = Sections.Edits(run.Root, spec);
+        tokens["TestDatabase"] = TestDatabasePath(spec);
+        tokens["Fields"] = string.Join(", ", spec.Fields.Select(field => field.Declaration));
+        tokens["Sortable"] = string.Join(", ", Sortable(spec));
+        tokens["Kept"] = string.Join(", ", Kept(spec));
+        tokens["Steps"] = ReportLines.Of(FeatureGeneration.Steps(run.Root, spec).Select(step => step.Display));
+        tokens["Page"] = FeaturePage.PagePath(spec.Features);
+        tokens["PageTemplate"] = FeaturePage._pageTemplate;
+        tokens["Unwritten"] = run.Unwritten ?? string.Empty;
+        tokens["Routes"] = spec.HasApi ? string.Join('\n', FeatureEdits.RouteSection(spec).Select(line => "  " + line)) : string.Empty;
+        tokens["ErrorRow"] = ErrorRow(spec);
+        tokens["InPlace"] = string.Join("; ", run.InPlace.Distinct(StringComparer.Ordinal));
+
+        return tokens;
+    }
+
+    private static (string Flag, bool Holds)[] ShapesOf(FeatureOutput run) =>
+    [
+        ("api", run.Spec.HasApi),
+        ("reaction", run.Spec.Reaction is not null),
+        ("fieldTests", WritesTheFieldTests(run.Spec, run.Plan)),
+        ("sorted", Sortable(run.Spec).Length > 0),
+        ("kept", Kept(run.Spec).Length > 0),
+        ("page", run.Page is not null),
+        ("inPlace", run.InPlace.Count > 0),
+    ];
+
+    private static string[] Sortable(FeatureSpec spec) => [.. spec.Fields.Where(FieldCode.IsSortable).Select(field => field.Name)];
+
+    private static string[] Kept(FeatureSpec spec) =>
+        spec.Deletion == "anonymise" ? [.. spec.Fields.Where(field => !FieldCode.IsAnonymised(field)).Select(field => field.Name)] : [];
+
+    private sealed class Sections(TextWriter output, string root, FeatureSpec spec)
     {
         private readonly HashSet<string> _flags = Flags(spec);
 
@@ -111,56 +80,19 @@ internal static class FeatureReport
 
         private string Persistence => ProjectOf(spec, "src/Infrastructure", "Infrastructure.Persistence");
 
-        internal void Files(List<Emission> plan, string manifest, List<string> skipped)
+        internal static string Edits(string root, FeatureSpec spec)
         {
-            output.WriteLine(
-                (mode == ReportMode.Applied ? "Wrote" : "Would write")
-                + $" {plan.Count} files for {spec.Features}/{spec.Type} "
-                + $"(access {spec.Access}, model {spec.Model}, operations {string.Join(',', spec.Operations)}, "
-                + $"concurrency {spec.Concurrency}"
-                + (IsOwner ? $", deletion {spec.Deletion}" : string.Empty)
-                + "):");
+            using var output = new StringWriter { NewLine = "\n" };
+            var sections = new Sections(output, root, spec);
 
-            foreach (var emission in plan)
-            {
-                output.WriteLine($"  {emission.Path}");
-            }
+            sections.Composition();
+            sections.ModuleTests();
+            sections.Reaction();
 
-            output.WriteLine();
-            output.WriteLine(mode == ReportMode.Applied
-                ? $"Manifest: {manifest} (the options, the SHA-256 of each file above, and each edit below with the line it is placed beside)."
-                : $"Manifest: {manifest} (the options, the SHA-256 of each file above, and each edit below with the line it is placed beside), not written.");
-
-            foreach (string project in skipped)
-            {
-                output.WriteLine($"Not written: '{project}' is not in this tree, so its tests were skipped.");
-            }
+            return output.ToString().Trim('\n');
         }
 
-        internal void EditsIntroduced()
-        {
-            output.WriteLine();
-            output.WriteLine(mode switch
-            {
-                ReportMode.Applied => "The feature composes through these edits, each placed beside a line it found and recorded in the manifest.",
-                ReportMode.DryRun => "A run without --dry-run makes these edits, each placed beside a line it finds, or none when a line is missing.",
-                _ => "None of these edits was made: the solution does not compile until edit 1 is made, nor the feature compose until all are.",
-            });
-
-            if (spec.Reaction is null)
-            {
-                output.WriteLine("Six edits, each somewhere an absence should be visible:");
-                output.WriteLine(string.Empty);
-            }
-            else
-            {
-                output.WriteLine("Eleven edits: six like every feature, and five more because this project was");
-                output.WriteLine("generated with no feature that owns user data, so its account-deleted reaction ships with this one.");
-                output.WriteLine(_removalRefusal);
-            }
-        }
-
-        internal void Composition()
+        private void Composition()
         {
             string f = spec.Features;
             string a = spec.Type;
@@ -244,7 +176,7 @@ internal static class FeatureReport
             output.WriteLine();
         }
 
-        internal void ModuleTests()
+        private void ModuleTests()
         {
             string moduleTests = $"{ProjectOf(spec, "tests/Application", "Application.UnitTests")}/ApplicationModuleTests.cs";
 
@@ -260,7 +192,7 @@ internal static class FeatureReport
             }
         }
 
-        internal void Reaction()
+        private void Reaction()
         {
             if (!IsOwner || spec.Reaction is not { } adapter)
             {
@@ -330,71 +262,6 @@ internal static class FeatureReport
             foreach (string line in FeatureEdits.DirectoryDouble())
             {
                 output.WriteLine("       " + line);
-            }
-        }
-
-        internal void FieldTests(List<Emission> plan)
-        {
-            if (WritesTheFieldTests(spec, plan))
-            {
-                output.WriteLine();
-                output.WriteLine($" +. {TestDatabasePath(spec)}: AppDbContext.{spec.Features}Schema, before AppDbContext.PlatformSchema,");
-                output.WriteLine("     so the database fixture truncates the table the feature's integration test writes to");
-            }
-            else if (spec.HasApi)
-            {
-                output.WriteLine();
-                output.WriteLine($"When integration tests exercise the feature, AppDbContext.{spec.Features}Schema also joins the schemas their database");
-                output.WriteLine("fixture truncates between tests (tests/Integration, TestDatabase).");
-            }
-        }
-
-        internal void Steps()
-        {
-            if (mode == ReportMode.Applied)
-            {
-                return;
-            }
-
-            output.WriteLine(mode == ReportMode.DryRun
-                ? "Then a run without --dry-run runs, in this order, and stops at the first that fails:"
-                : "Then, once the edits are made:");
-
-            foreach (var step in FeatureGeneration.Steps(root, spec))
-            {
-                output.WriteLine($"  {step.Display}");
-            }
-
-            output.WriteLine();
-        }
-
-        internal void Undecided()
-        {
-            if (!IsRecord)
-            {
-                output.WriteLine("The aggregate raises no event. The first one it raises needs a consumer, or its name in");
-                output.WriteLine("DomainEventTests._deliberatelyUnconsumed with the reason (docs/guides/adding-a-feature.md lists the closed lists).");
-                output.WriteLine();
-            }
-
-            output.WriteLine("Not generated, because it is a decision rather than a shape: the rules the feature protects, any domain");
-            if (spec.HasApi)
-            {
-                output.WriteLine("event of its own, authorisation beyond default-deny, and the integration tests against PostgreSQL,");
-                output.WriteLine("a read of every response member on the wire among them.");
-            }
-            else
-            {
-                output.WriteLine("event of its own, authorisation beyond default-deny, and what each host shows of it.");
-            }
-
-            if (spec.Concurrency == "none")
-            {
-                output.WriteLine();
-                output.WriteLine("--concurrency none: an update replaces what is stored whatever its state, so two concurrent writers");
-                output.WriteLine(spec.HasApi
-                    ? "are last-write-wins, and the API publishes no ETag and reads no If-Match."
-                    : "are last-write-wins.");
             }
         }
     }

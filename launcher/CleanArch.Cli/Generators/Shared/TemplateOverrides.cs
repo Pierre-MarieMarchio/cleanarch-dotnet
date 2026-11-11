@@ -31,9 +31,6 @@ internal sealed class TemplateOverrides
 
     internal IReadOnlyList<string> Problems => _problems;
 
-    internal static TemplateOverrides Read(string root, string generator, FlagSet vocabulary) =>
-        Read(root, generator, vocabulary, ReportFlags.For(vocabulary, new FlagSet(vocabulary.Generator, new Dictionary<string, string>())));
-
     internal static TemplateOverrides Read(string root, string generator, FlagSet vocabulary, FlagSet reportVocabulary)
     {
         var templates = new TemplateOverrides(generator, vocabulary, reportVocabulary);

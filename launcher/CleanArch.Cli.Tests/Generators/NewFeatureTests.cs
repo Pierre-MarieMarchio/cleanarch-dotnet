@@ -365,6 +365,8 @@ public sealed partial class NewFeatureTests
             """),
     ];
 
+    private const string _removalRefusal = "remove feature refuses to remove this feature while another owner feature still uses these files.";
+
     private static (int Code, string Output, string Error) Invoke(string root, params string[] args) => Invoke(root, _ => 0, args);
 
     private static (int Code, string Output, string Error) Invoke(string root, Func<TextEdits.Command, int> run, params string[] args)
@@ -2070,8 +2072,7 @@ public sealed partial class NewFeatureTests
         var manifest = ManifestOf(spec, plan, null, editor, Version, []);
 
         using var report = new StringWriter();
-        Report(report, root, spec, plan, manifest.Path, skipped, ReportMode.DryRun);
-        ReportPage(report, spec, null, "no page", ReportMode.DryRun);
+        Write(report, Overrides(root), new FeatureOutput(root, spec, plan, manifest.Path, skipped, null, "no page", []), ReportMode.DryRun);
 
         foreach (var emission in plan)
         {

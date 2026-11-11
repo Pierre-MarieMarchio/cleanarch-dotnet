@@ -75,17 +75,8 @@ internal sealed class FeatureGeneration(FeatureSpec spec, IReadOnlyList<string> 
 
     protected override string? Preconditions() => FeatureCode.Preconditions(Root, spec, Output, Context.Executor);
 
-    protected override void Report(ReportMode mode)
-    {
-        FeatureReport.Report(Output, Root, spec, _plan, _manifest!.Path, _skipped, mode);
-        FeatureReport.ReportPage(Output, spec, _page, _unwritten, mode);
-
-        if (mode == ReportMode.Applied && _editor.Kept.Count > 0)
-        {
-            Output.WriteLine();
-            Output.WriteLine($"Already in place, so left as they were and not recorded: {string.Join("; ", _editor.Kept.Distinct(StringComparer.Ordinal))}.");
-        }
-    }
+    protected override void Report(ReportMode mode) =>
+        FeatureReport.Write(Output, Templates, new FeatureOutput(Root, spec, _plan, _manifest!.Path, _skipped, _page, _unwritten, _editor.Kept), mode);
 
     protected override int Finish() => Finish(Root, spec, Output, Error, Context.Executor, resumed: false);
 

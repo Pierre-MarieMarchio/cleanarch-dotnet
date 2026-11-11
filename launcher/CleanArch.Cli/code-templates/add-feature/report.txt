@@ -1,0 +1,119 @@
+#if applied
+Wrote %Count% files for Placeholders/Placeholder (%Options%):
+#else
+Would write %Count% files for Placeholders/Placeholder (%Options%):
+#endif
+%Files%
+
+#if applied
+Manifest: %Manifest% (the options, the SHA-256 of each file above, and each edit below with the line it is placed beside).
+#else
+Manifest: %Manifest% (the options, the SHA-256 of each file above, and each edit below with the line it is placed beside), not written.
+#endif
+%Skipped%
+
+#if applied
+The feature composes through these edits, each placed beside a line it found and recorded in the manifest.
+#elif dryrun
+A run without --dry-run makes these edits, each placed beside a line it finds, or none when a line is missing.
+#else
+None of these edits was made: the solution does not compile until edit 1 is made, nor the feature compose until all are.
+#endif
+#if reaction
+Eleven edits: six like every feature, and five more because this project was
+generated with no feature that owns user data, so its account-deleted reaction ships with this one.
+remove feature refuses to remove this feature while another owner feature still uses these files.
+#else
+Six edits, each somewhere an absence should be visible:
+
+#endif
+
+%Edits%
+#if fieldTests
+
+ +. %TestDatabase%: AppDbContext.PlaceholdersSchema, before AppDbContext.PlatformSchema,
+     so the database fixture truncates the table the feature's integration test writes to
+#elif api
+
+When integration tests exercise the feature, AppDbContext.PlaceholdersSchema also joins the schemas their database
+fixture truncates between tests (tests/Integration, TestDatabase).
+#endif
+
+--fields: %Fields%.
+Each is checked twice, by the validator and by the aggregate or the service, stored in a column of its
+length or precision, and carried by the contracts and the generated tests.
+#if list && sorted
+The list sorts by %Sortable% and createdAt, each with its index; a text, a decimal, a bool,
+a Guid and a nullable field do not, being long, unordered on SQLite, or ordered apart on each provider.
+#elif list
+No field sorts the list: only required string(n), int, long, DateOnly and DateTimeOffset fields do, each with its index.
+A text is long and unindexed, SQLite cannot order a decimal, and a nullable field orders apart on each provider.
+#endif
+#if kept
+--deletion anonymise rewrites the strings, the texts and the nullable fields, and keeps %Kept%:
+rewrite whatever of them still says who the owner was.
+#endif
+
+#if dryrun
+Then a run without --dry-run runs, in this order, and stops at the first that fails:
+%Steps%
+
+#elif refused
+Then, once the edits are made:
+%Steps%
+
+#endif
+#if aggregate
+The aggregate raises no event. The first one it raises needs a consumer, or its name in
+DomainEventTests._deliberatelyUnconsumed with the reason (docs/guides/adding-a-feature.md lists the closed lists).
+
+#endif
+Not generated, because it is a decision rather than a shape: the rules the feature protects, any domain
+#if api
+event of its own, authorisation beyond default-deny, and the integration tests against PostgreSQL,
+a read of every response member on the wire among them.
+#else
+event of its own, authorisation beyond default-deny, and what each host shows of it.
+#endif
+#if !etag
+
+--concurrency none: an update replaces what is stored whatever its state, so two concurrent writers
+#if api
+are last-write-wins, and the API publishes no ETag and reads no If-Match.
+#else
+are last-write-wins.
+#endif
+#endif
+
+#if page && applied
+Feature page: %Page%, from %PageTemplate%. The manifest records it, so remove feature deletes it, edited or not.
+Each heading says what its section holds; replace those lines with what this feature does.
+#elif page
+Feature page: %Page%, from %PageTemplate%, written with the files above.
+Each heading says what its section holds; replace those lines with what this feature does.
+#else
+Feature page: %Unwritten%
+#endif
+#if applied
+docs-index lists it in the index of docs/features, by the title and the description of its frontmatter.
+#else
+Then docs-index lists it in the index of docs/features, by the title and the description of its frontmatter.
+#endif
+#if api && applied
+Its section, added to the route table under ## Routes in docs/reference/api.md, which ApiRouteTableTests reads:
+%Routes%
+#elif api
+And its section of the route table under ## Routes in docs/reference/api.md, which ApiRouteTableTests reads:
+%Routes%
+#endif
+#if api && notFound && applied
+The row of its refusal, added under ### Resources in docs/reference/api.md, which the error-code tests read:
+  %ErrorRow%
+#elif api && notFound
+And the row of its refusal under ### Resources in docs/reference/api.md, which the error-code tests read:
+  %ErrorRow%
+#endif
+#if applied && inPlace
+
+Already in place, so left as they were and not recorded: %InPlace%.
+#endif

@@ -18,7 +18,7 @@ public sealed class TemplatesCommandTests : IDisposable
     private readonly StringWriter _output = new();
     private readonly StringWriter _error = new();
 
-    private static IReadOnlyDictionary<string, string> Templates => ToolTemplates.Of(_generator);
+    private static IReadOnlyDictionary<string, string> Templates => ToolTemplates.Of(_generator).Where(template => template.Key != ToolTemplates.Report).ToDictionary();
 
     private static string ControllerReference => Templates.Keys.Single(reference => reference.EndsWith("/" + _controller, StringComparison.Ordinal));
 
