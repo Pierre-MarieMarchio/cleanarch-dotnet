@@ -9,7 +9,7 @@ using static CleanArch.Cli.Generators.Shared.SourceText;
 
 namespace CleanArch.Cli.Tests.Generators;
 
-public sealed class NewEventTests
+public sealed partial class NewEventTests
 {
     [Fact]
     public void Parser() => Expectations.Hold(ParserCases);

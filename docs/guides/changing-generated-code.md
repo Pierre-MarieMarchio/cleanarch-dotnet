@@ -275,6 +275,12 @@ the folder of the feature that raises it, `Listeners` the folder of the feature 
 `ApplicationModule.cs`, the entry of an unconsumed event in `DomainEventTests.cs` and the report
 stay the tool's.
 
+A copy at its path under `code-templates/add-event` writes its own file and no other, as one of
+`add feature` does: `add event` reads only that folder, refuses a broken copy or one naming no
+template with the same messages and writes nothing, and its report lists the copies it wrote from
+under `Written from this project's code templates:`. The feature's manifest records the event's
+files and edits, and no copy: its `templates` stay those of `add feature`, which `add field` reads.
+
 ### The flags of add event
 
 | Flag | Holds when |
