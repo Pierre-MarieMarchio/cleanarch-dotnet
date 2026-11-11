@@ -401,7 +401,7 @@ public sealed class NewEventTests
 
         string[] usings = [.. text.Split('\n').TakeWhile(line => line.StartsWith("using ", StringComparison.Ordinal))];
 
-        if (!usings.SequenceEqual(usings.OrderBy(UsingKey, StringComparer.Ordinal)))
+        if (!usings.SequenceEqual(usings.Order(UsingOrder.Directives)))
         {
             yield return $"{relative}: its usings are not in order.";
         }
