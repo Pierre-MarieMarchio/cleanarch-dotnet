@@ -1009,7 +1009,8 @@ of `add feature` and `add field` in five passes, in this order:
    afterwards, one the generation does not set, is refused with the template's name, as
    `'%Plural%' is a token this generation does not set`, instead of being written as code.
 5. A using marked `//?<Types>` is pruned when no line after the namespace names one of its types,
-   the usings are sorted, and the blank lines are tidied.
+   the usings are sorted by `UsingOrder`, the rule the tool's edits insert a using by, `System`
+   first and then ignoring case, and the blank lines are tidied.
 
 The BOM and the line endings are fixed afterwards, by `TextEdits`. The directives and the
 conditions read lines and flags and nothing of C#.
