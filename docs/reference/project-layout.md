@@ -268,7 +268,8 @@ entry and one folder to delete for a host without local accounts.
 `code-templates/`, at the root, holds this project's copies of the code templates a generator writes
 from, which `dotnet cleanarch templates copy` writes once and the team edits:
 `code-templates/<generator>/<reference path>.txt`, such as `code-templates/add-use-case/` for
-`add use-case`. `code-templates/manifest.json` beside them is the tool's: it records the version and
+`add use-case`, and `code-templates/<generator>/report.txt` for the report it prints.
+`code-templates/manifest.json` beside them is the tool's: it records the version and
 the source of each copy, and nobody edits it.
 [Changing generated code](../guides/changing-generated-code.md) says how a copy is made and read.
 

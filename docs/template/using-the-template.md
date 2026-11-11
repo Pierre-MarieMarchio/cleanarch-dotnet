@@ -246,7 +246,10 @@ moves to a later one only when its team runs `dotnet tool update`, after compari
 with the template's changelog. The tool carries only what a project runs, its tasks and its generators,
 and its help and messages speak of "this project", as the pages do; a line
 about the template in either is a defect, but the provenance sentence and the item-template commands
-a project runs. A project keeps one documentation check of its own, `DocumentationCitationTests` in
+a project runs. What the generators write is the tool's text until a project copies a generator's
+code templates into `code-templates/` and edits them, which changes that code without changing the
+tool, as [changing generated code](../guides/changing-generated-code.md) says. A project keeps one
+documentation check of its own, `DocumentationCitationTests` in
 `tests/Architecture`: every `dotnet cleanarch` command a page cites is one
 `docs/reference/cli.md` lists, and every path and link in the root pages and the `AGENTS.md` files
 resolves.

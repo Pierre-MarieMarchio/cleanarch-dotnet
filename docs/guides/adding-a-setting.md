@@ -42,7 +42,9 @@ missing, and it is the one that has no value in `appsettings.json`.
 It writes steps 1 to 3, 5, 6 and 7 below, or nothing: every file is computed in memory and every
 anchor checked before the first write, and a missing anchor names the edit and stops with a
 non-zero exit. A section that already exists is refused, so running it twice never duplicates
-anything. `--dry-run` prints what it would write and writes nothing.
+anything. `--dry-run` prints what it would write and writes nothing. It writes the options class,
+its validator and their tests from code templates, this project's copies where it holds some, as
+[the templates of add setting](changing-generated-code.md#the-templates-of-add-setting) says.
 
 - The options class and its validator in `Features/<Features>/Configuration/Options/`, and the test
   of each key's bounds and of the start-up refusal beside the other feature tests.

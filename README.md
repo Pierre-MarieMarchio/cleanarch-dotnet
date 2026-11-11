@@ -72,7 +72,9 @@ dotnet cleanarch add presentation                                               
 ```
 
 `add feature` needs `--auth` other than `none`. [Adding a feature](docs/guides/adding-a-feature.md)
-gives the steps, and [the project tool](docs/reference/cli.md) every command.
+gives the steps, and [the project tool](docs/reference/cli.md) every command. Each `add` command
+writes from code templates a project copies and edits to carry its own conventions, as
+[changing generated code](docs/guides/changing-generated-code.md) says.
 
 ## What you get
 
