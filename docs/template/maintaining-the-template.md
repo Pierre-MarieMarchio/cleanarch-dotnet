@@ -1200,6 +1200,7 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | The table of the flags of `add event` in the guide to code templates is its vocabulary, each flag with its meaning, and nothing else | `FeatureFlagsTests.TheGuideToCodeTemplates_ListsEachFlagOfAddEvent_WithItsMeaning_AndNoOther` |
 | Over the configurations the digests cover, every C# file `add feature` writes or edits, and every one `add field` writes or changes, parses without a syntax error; an edited file is parsed as the edit leaves it in the tests' tree, whose shared files are cut down to the code around the anchors, and the message names each group and path that wrote the same broken text | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
 | The files, the edits and the report of `add use-case` are those its digests record, over every layout it writes: a command and a query with and without the id or any input, several inputs among them one of an unknown type, a query answering a DTO the feature declares, and a tree without the application's tests, the `ValidatedHandler` double or the API | `NewUseCaseTests.Output`, `NewUseCaseTests.Layouts` |
+| The report of `add feature` applied and refused, of `add field` refused, and of `add use-case` under `--dry-run` and refused, which no output digest covers, is the one its digest records | `NewFeatureTests.Reports`, `NewUseCaseTests.Reports` |
 
 ## The package
 
