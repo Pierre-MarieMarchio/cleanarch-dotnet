@@ -1190,6 +1190,8 @@ for a line break, where a line block otherwise joins them with a line break and 
 nothing, and a quoted tail after `#end` follows the last field. A selection with no field writes
 nothing, its tail included. Inside a block, `%field.<Token>%` is a value of the field; the tokens
 and the traits are those of `FieldBlocks`, and a block naming another, or one left open, is refused.
+`TemplateList.Of` builds a list from items of any type, the name its blocks repeat over, and the
+functions behind its tokens and traits, so a list of other items than fields renders the same way.
 Blocks do not nest, and since the directives are read first, an `#if` inside a block is decided once
 per generation, not once per field. A field token may write a `%Token%` of the feature, such as
 `%Limits%`, which the fourth pass replaces.

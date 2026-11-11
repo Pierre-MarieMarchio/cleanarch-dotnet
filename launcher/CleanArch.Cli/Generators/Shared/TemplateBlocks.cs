@@ -46,7 +46,7 @@ internal static class TemplateBlocks
         }
 
         string body = block.Groups["body"].Value;
-        var unknown = _itemToken.Matches(body).FirstOrDefault(token => token.Groups["item"].Value != item || !list.Tokens.ContainsKey(token.Groups["token"].Value));
+        var unknown = _itemToken.Matches(body).FirstOrDefault(token => token.Groups["item"].Value != item || !list.Tokens.Contains(token.Groups["token"].Value));
 
         if (unknown is not null)
         {
@@ -54,21 +54,21 @@ internal static class TemplateBlocks
         }
 
         var selected = Selection(block.Groups["trait"], list);
-        string[] items = [.. list.Items.Where(selected).Select(each => _itemToken.Replace(body, token => list.Tokens[token.Groups["token"].Value](each)))];
+        string[] items = [.. list.Items.Where(selected).Select(each => _itemToken.Replace(body, token => each.Token(token.Groups["token"].Value)))];
         string separator = block.Groups["separator"].Success ? block.Groups["separator"].Value.Replace(@"\n", "\n", StringComparison.Ordinal) : defaultSeparator;
 
         return items.Length == 0 ? string.Empty : string.Join(separator, items) + block.Groups["tail"].Value;
     }
 
-    private static Func<Field, bool> Selection(Group trait, TemplateList list)
+    private static Func<TemplateList.Item, bool> Selection(Group trait, TemplateList list)
     {
         if (!trait.Success)
         {
             return _ => true;
         }
 
-        return list.Traits.TryGetValue(trait.Value, out var holds)
-            ? holds
+        return list.Traits.Contains(trait.Value)
+            ? item => item.Has(trait.Value)
             : throw new InvalidOperationException($"'{trait.Value}' is not a trait a {list.Name} has.");
     }
 }
