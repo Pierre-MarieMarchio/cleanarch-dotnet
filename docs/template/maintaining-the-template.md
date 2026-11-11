@@ -1105,6 +1105,12 @@ ends in Options.cs, so the constant stays a reference name in the template and n
 The keys are the list `key` of `KeyBlocks`, repeated in the order
 `--keys` gives them; the code that differs by a key's type is a token computed by `KeyCode`, since a
 directive is decided once per generation and two blocks selecting by type would reorder the keys.
+Its vocabulary is `SettingPlan.Vocabulary`, listed in the guide as
+[the flags of add setting](../guides/changing-generated-code.md#the-flags-of-add-setting). It reads a
+project's overrides from `code-templates/add-setting` as `add feature` does, refuses a broken one the
+same way, warns through `TemplateCopies.Stale` and lists the overrides it used in its report, but
+records none in the feature's manifest: only `add field` reads that record, to render add feature's
+files again.
 
 ### Blocks over fields
 
@@ -1150,6 +1156,9 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | A `%Token%` the generation does not set is refused, not written as code | `NewFeatureTests.TemplateGuard` |
 | The table of the flags of `add feature` in the guide to code templates is its vocabulary, each flag with its meaning, and nothing else | `FeatureFlagsTests.TheGuideToCodeTemplates_ListsEachFlagOfAddFeature_WithItsMeaning_AndNoOther` |
 | The table of the flags of `add use-case` in the guide to code templates is its vocabulary, each flag with its meaning, and nothing else | `FeatureFlagsTests.TheGuideToCodeTemplates_ListsEachFlagOfAddUseCase_WithItsMeaning_AndNoOther` |
+| The table of the flags of `add setting` in the guide to code templates is its vocabulary, each flag with its meaning, and nothing else | `FeatureFlagsTests.TheGuideToCodeTemplates_ListsEachFlagOfAddSetting_WithItsMeaning_AndNoOther` |
+| A project's override of an `add setting` template writes its own file, changes no other, is listed by the report and recorded in no feature manifest | `NewSettingTests.OverrideWinsForItsFileOnly` |
+| A file under `code-templates/add-setting` naming no template, and an override naming a flag of another generator, an unknown key token or trait, or an unknown token, is refused, the message starting with its path, and nothing is written | `NewSettingTests.ABrokenOverrideIsRefusedNamingIt` |
 | The output of `add feature` and `add field` does not change when a template changes its form | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
 | The output of `add setting` does not change when a template changes its form, every type of key, a range from 0, a default at its minimum and a secret checked first included | `NewSettingTests.Output` |
 | Each template of `add setting` is written by a run into a tree with an application test project | `NewSettingTests.EveryTemplateIsWritten` |

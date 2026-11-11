@@ -1,4 +1,5 @@
 ﻿using CleanArch.Cli.Generators.AddEvent;
+using CleanArch.Cli.Generators.AddSetting;
 using CleanArch.Cli.Generators.AddUseCase;
 using CleanArch.Cli.Generators.Shared;
 using CleanArch.Tooling.Markdown;
@@ -22,6 +23,10 @@ public sealed class FeatureFlagsTests
     [Fact]
     public void TheGuideToCodeTemplates_ListsEachFlagOfAddEvent_WithItsMeaning_AndNoOther() =>
         ListsEachFlag("add event", EventFlags.Vocabulary);
+
+    [Fact]
+    public void TheGuideToCodeTemplates_ListsEachFlagOfAddSetting_WithItsMeaning_AndNoOther() =>
+        ListsEachFlag("add setting", SettingPlan.Vocabulary);
 
     private static void ListsEachFlag(string generator, FlagSet flags)
     {
