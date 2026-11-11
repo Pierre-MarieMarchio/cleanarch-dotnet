@@ -1135,12 +1135,13 @@ of every generator that writes from them in five passes, in this order:
 1. `Directives` keeps the lines of the `#if`, `#elif` and `#else` branches the generation's flags
    select, and drops the directive lines.
 2. The reference names `AppTemplate`, `Placeholders`, `Placeholder` and `placeholder` become the
-   project, feature, aggregate and lowered aggregate names, and those of `add use-case`,
-   `ApprovePlaceholder`, `GetPlaceholderTotals` and `PlaceholderTotals`, the use case's name and
-   its answer's, wherever they appear, inside a word or in prose: a template that needs the word
-   `placeholder` for itself cannot have it. `Template` holds them in one list, the longer before
-   the shorter it starts with, and a name the generation sets no token for is left as it is. They
-   are replaced before the blocks, so a field named after one keeps its name.
+   project, feature, aggregate and lowered aggregate names, and those of the other generators: the
+   use case `ApprovePlaceholder` or `GetPlaceholderTotals` and its answer `PlaceholderTotals`, the
+   event `PlaceholderNoted` with its consumer `Listeners` and reaction `NotifyListeners`, and the
+   section `PlaceholderLimits`, wherever they appear, inside a word or in prose: a template that
+   needs the word `placeholder` for itself cannot have it. `Template` holds them in one list, the
+   longer before the shorter it starts with or holds, and a name the generation sets no token for is
+   left as it is. They are replaced before the blocks, so a field named after one keeps its name.
 3. `TemplateBlocks` repeats each block once per field of the feature.
 4. Each `%Token%` becomes the code the generator computed for it. A `%Token%` still in the text
    afterwards, one the generation does not set, is refused with the template's name, as
@@ -1203,6 +1204,18 @@ guide, [the flags of add feature](../guides/changing-generated-code.md#the-flags
 and [the flags of add use-case](../guides/changing-generated-code.md#the-flags-of-add-use-case): a
 flag renamed, added, removed or reworded changes both.
 
+### The templates of add setting
+
+`add setting` writes its two files from templates under
+`launcher/CleanArch.Cli/code-templates/add-setting`, at the paths it writes them at for the section
+`PlaceholderLimits` of the feature `Placeholders`: the options class with its validator, and their
+tests, written only where the application's unit test project exists. `SettingPlan` names both.
+`NewSetting` and `RemovalScan` find a section by its `SectionName` constant, in a file whose name
+ends in Options.cs, so the constant stays a reference name in the template and never a token.
+The keys are the list `key` of `KeyBlocks`, repeated in the order
+`--keys` gives them; the code that differs by a key's type is a token computed by `KeyCode`, since a
+directive is decided once per generation and two blocks selecting by type would reorder the keys.
+
 ### Blocks over fields
 
 A block repeats its body once per field of the feature, so the loops, separators and indentation
@@ -1248,6 +1261,8 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | The table of the flags of `add feature` in the guide to code templates is its vocabulary, each flag with its meaning, and nothing else | `FeatureFlagsTests.TheGuideToCodeTemplates_ListsEachFlagOfAddFeature_WithItsMeaning_AndNoOther` |
 | The table of the flags of `add use-case` in the guide to code templates is its vocabulary, each flag with its meaning, and nothing else | `FeatureFlagsTests.TheGuideToCodeTemplates_ListsEachFlagOfAddUseCase_WithItsMeaning_AndNoOther` |
 | The output of `add feature` and `add field` does not change when a template changes its form | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
+| The output of `add setting` does not change when a template changes its form, every type of key, a range from 0, a default at its minimum and a secret checked first included | `NewSettingTests.Output` |
+| Each template of `add setting` is written by a run into a tree with an application test project | `NewSettingTests.EveryTemplateIsWritten` |
 | A project's override of a template writes its own file, and changes no other | `NewFeatureTests.OverrideWinsForItsFileOnly` |
 | After `templates copy add-feature`, a BOM and CRLF line endings given to one copy, `add feature` writes the bytes it writes without the copies, lists the copies it wrote from, warns of none, and the manifest records each with the digest of the tool's text | `NewFeatureTests.ACopyOfTheTemplatesWritesTheSameBytes` |
 | No generator reaches `templates copy`, so a generator writes the same files whether the command exists or not | `SliceIsolationTests.NoGenerator_ReachesTheCommandThatCopiesItsTemplates` |

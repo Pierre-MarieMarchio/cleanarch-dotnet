@@ -4,13 +4,15 @@ namespace CleanArch.Cli.Generators.AddSetting;
 
 internal sealed class SettingGeneration(SettingSpec spec, GenerationContext context) : FileGeneration(context, spec.Features, spec.Manifest)
 {
+    private readonly TemplateOverrides _templates = SettingPlan.Overrides(context.Root);
+
     private List<string> _hosts = [];
 
     protected override string Usage => NewSetting.Usage;
 
     protected override string EditAdvice => "Fix that file, or make this edit by hand and leave the setting to the steps of docs/guides/adding-a-setting.md.";
 
-    protected override IReadOnlyList<Emission> Plan() => SettingPlan.Emissions(spec, Root);
+    protected override IReadOnlyList<Emission> Plan() => SettingPlan.Emissions(spec, Root, _templates);
 
     protected override TextEdits.Editor Edit(List<string> problems)
     {

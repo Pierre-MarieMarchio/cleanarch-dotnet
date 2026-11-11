@@ -7,7 +7,7 @@ internal static class Template
     private static readonly (string Name, string Token)[] _referenceNames =
     [
         (ProjectFolders.ReferenceProduct, "P"), ("ApprovePlaceholder", "UseCase"), ("GetPlaceholderTotals", "UseCase"), ("PlaceholderTotals", "Answer"),
-        ("PlaceholderNoted", "E"), ("Placeholders", "F"), ("Placeholder", "A"), ("placeholder", "L"),
+        ("PlaceholderNoted", "E"), ("PlaceholderLimits", "Section"), ("Placeholders", "F"), ("Placeholder", "A"), ("placeholder", "L"),
         ("NotifyListeners", "V"), ("Listeners", "C"),
     ];
 
