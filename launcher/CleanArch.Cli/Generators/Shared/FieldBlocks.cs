@@ -5,7 +5,7 @@ namespace CleanArch.Cli.Generators.Shared;
 internal static class FieldBlocks
 {
     internal static TemplateList For(IReadOnlyList<Field> fields) =>
-        new(
+        TemplateList.Of(
             "field",
             fields,
             new Dictionary<string, Func<Field, string>>(StringComparer.Ordinal)
