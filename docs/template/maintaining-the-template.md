@@ -1152,8 +1152,8 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 
 A generator whose report is a template holds it as `report.txt` at the root of its folder under
 `launcher/CleanArch.Cli/code-templates`, embedded with its other templates and named
-`ToolTemplates.Report`; `add event` is one. `TemplateOverrides.WriteReport` renders it after the
-run, through `Template.RenderReport`: a line that is exactly a `%Token%` whose value is empty is
+`ToolTemplates.Report`, as those of `add event` and `add setting` are. `TemplateOverrides.WriteReport`
+renders it after the run, through `Template.RenderReport`: a line that is exactly a `%Token%` whose value is empty is
 dropped, then `Template.RenderText` runs the directives, the reference names and the tokens, and
 neither prunes usings nor tidies blank lines, which carry the report's layout. A report's vocabulary
 is `ReportFlags.For` the generator's flags, the mode flags `applied`, `dryrun` and `refused`, of

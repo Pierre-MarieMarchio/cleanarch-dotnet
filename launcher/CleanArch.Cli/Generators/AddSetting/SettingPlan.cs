@@ -14,7 +14,7 @@ internal static class SettingPlan
     internal static string Words(string pascal) =>
         string.Concat(pascal.Select((character, index) => char.IsUpper(character) && index > 0 ? " " + character : character.ToString()));
 
-    internal static TemplateOverrides Overrides(string root) => TemplateOverrides.Read(root, TemplateFolder, SettingFlags.Vocabulary);
+    internal static TemplateOverrides Overrides(string root) => TemplateOverrides.Read(root, TemplateFolder, SettingFlags.Vocabulary, SettingReport.Vocabulary);
 
     internal static List<Emission> Emissions(SettingSpec spec, string root, TemplateOverrides templates)
     {
