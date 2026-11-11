@@ -1,3 +1,0 @@
-namespace %P%.Application.Features.%F%.Model.Dtos;
-
-public sealed record %D%(Guid Id);

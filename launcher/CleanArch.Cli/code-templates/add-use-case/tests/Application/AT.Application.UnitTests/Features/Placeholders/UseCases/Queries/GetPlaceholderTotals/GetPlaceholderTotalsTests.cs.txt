@@ -1,0 +1,29 @@
+using AppTemplate.Application.Core.Common.Results;
+using AppTemplate.Application.Features.Placeholders.Model.Dtos;
+using AppTemplate.Application.Features.Placeholders.UseCases.Queries.GetPlaceholderTotals;
+using AppTemplate.Application.UnitTests.TestDoubles;
+using Shouldly;
+using Xunit;
+
+namespace AppTemplate.Application.UnitTests.Features.Placeholders.UseCases.Queries.GetPlaceholderTotals;
+
+public sealed class GetPlaceholderTotalsTests
+{
+    private static CancellationToken TestToken => TestContext.Current.CancellationToken;
+
+    [Fact]
+    public async Task AMalformedQuery_NeverReachesTheHandler()
+    {
+//#each parameter where malformed
+        var malformed = GetPlaceholderTotalsQueryValidatorTests.AWellFormedQuery() with { %parameter.Name% = %parameter.Empty% };
+//#end
+
+        var result = await UseCase().Handle(malformed, TestToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Error!.Type.ShouldBe(ErrorType.Validation);
+    }
+
+    private static ValidatedHandler<GetPlaceholderTotalsQuery, Result<PlaceholderTotalsDto>> UseCase() =>
+        new(new GetPlaceholderTotalsQueryHandler().Handle, new GetPlaceholderTotalsQueryValidator());
+}

@@ -1,0 +1,14 @@
+using FluentValidation;
+
+namespace AppTemplate.Application.Features.Placeholders.UseCases.Commands.ApprovePlaceholder;
+
+public sealed class ApprovePlaceholderCommandValidator : AbstractValidator<ApprovePlaceholderCommand>
+{
+    public ApprovePlaceholderCommandValidator()
+    {
+//#each parameter where ruled separator "\n\n"
+        RuleFor(command => command.%parameter.Name%)
+            .NotEmpty().WithMessage("%parameter.Required%");
+//#end
+    }
+}

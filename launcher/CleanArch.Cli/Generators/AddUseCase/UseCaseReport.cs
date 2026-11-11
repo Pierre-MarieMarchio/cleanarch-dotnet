@@ -13,6 +13,8 @@ internal sealed class UseCaseReport
 
     private readonly List<Emission> _plan;
 
+    private readonly List<Emission> _contracts;
+
     private readonly ReportMode _mode;
 
     private readonly string _validatorTests;
@@ -27,12 +29,13 @@ internal sealed class UseCaseReport
 
     private readonly bool _hasApi;
 
-    private UseCaseReport(TextWriter output, string root, UseCaseSpec spec, List<Emission> plan, ReportMode mode)
+    private UseCaseReport(TextWriter output, string root, UseCaseSpec spec, List<Emission> plan, List<Emission> contracts, ReportMode mode)
     {
         _output = output;
         _root = root;
         _spec = spec;
         _plan = plan;
+        _contracts = contracts;
         _mode = mode;
         _validatorTests = $"{spec.Input}ValidatorTests";
         _testsWritten = plan.Any(emission => emission.Path.EndsWith($"/{_validatorTests}.cs", StringComparison.Ordinal));
@@ -44,9 +47,9 @@ internal sealed class UseCaseReport
 
     private bool HasPage => File.Exists(Path.Combine(_root, _page));
 
-    internal static void Write(TextWriter output, string root, UseCaseSpec spec, List<Emission> plan, string? skipped, ReportMode mode)
+    internal static void Write(TextWriter output, string root, UseCaseSpec spec, List<Emission> plan, List<Emission> contracts, string? skipped, ReportMode mode)
     {
-        var report = new UseCaseReport(output, root, spec, plan, mode);
+        var report = new UseCaseReport(output, root, spec, plan, contracts, mode);
 
         report.Files(skipped);
         report.Handler();
@@ -221,16 +224,12 @@ internal sealed class UseCaseReport
 
     private void Contracts()
     {
-        if (_spec.HasRequest)
+        foreach (var contract in _contracts)
         {
-            _output.WriteLine($"  and {UseCaseHttp.RequestPath(_spec)}, with what a client sends:");
-            Indented(UseCaseHttp.RequestContract(_spec));
-        }
-
-        if (!_spec.IsCommand)
-        {
-            _output.WriteLine($"  and {UseCaseHttp.ResponsePath(_spec)}, with the members a client reads:");
-            Indented(UseCaseHttp.ResponseContract(_spec));
+            _output.WriteLine(contract.Path.EndsWith($"/{_spec.Request}.cs", StringComparison.Ordinal)
+                ? $"  and {contract.Path}, with what a client sends:"
+                : $"  and {contract.Path}, with the members a client reads:");
+            Indented(contract.Content.TrimEnd('\n').Split('\n'));
         }
     }
 

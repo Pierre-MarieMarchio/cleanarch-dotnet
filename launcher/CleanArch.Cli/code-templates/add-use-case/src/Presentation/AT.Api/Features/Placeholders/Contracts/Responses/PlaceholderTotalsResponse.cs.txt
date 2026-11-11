@@ -1,0 +1,4 @@
+namespace AppTemplate.Api.Features.Placeholders.Contracts.Responses;
+
+/// <summary>The wire shape of %SpokenAnswer%.</summary>
+public sealed record PlaceholderTotalsResponse;

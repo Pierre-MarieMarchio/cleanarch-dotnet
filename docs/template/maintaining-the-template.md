@@ -1081,6 +1081,14 @@ and the generation's names for the reference names, and never the reverse; `Feat
 puts a host's file in each host instead of `AT.Api`. A test file is written only where
 `ProjectFolders.ProjectExists` finds the test project its path names.
 
+The templates of `add use-case` lie the same way under
+`launcher/CleanArch.Cli/code-templates/add-use-case`, at the paths of the reference command
+`ApprovePlaceholder` and the reference query `GetPlaceholderTotals`, which answers
+`PlaceholderTotalsDto`, in the feature `Placeholders`: one set per kind, since a path holds no
+token. `UseCasePlan`, in `launcher/CleanArch.Cli/Generators/AddUseCase/UseCasePlan.cs`, chooses the
+files a run writes and renders each through `Template.Render`; `UseCaseHttp` keeps the edits, the
+controller's action and the route's row, which no template writes.
+
 A project overrides a template with a file at the same path under its own `code-templates` folder,
 `code-templates/add-feature/<reference path>.txt` at its root. `TemplateOverrides.Read` reads that
 folder once per run, its files ending in `.txt` and not starting with a dot, and `Render` renders the
@@ -1108,14 +1116,17 @@ overrides used, under `--dry-run` too, and a refused report lists none, since no
 `remove feature` reads nothing under `templates` and leaves `code-templates` as it is.
 
 `Template.Render`, in `launcher/CleanArch.Cli/Generators/Shared/Template.cs`, renders the templates
-of `add feature` and `add field` in five passes, in this order:
+of every generator that writes from them in five passes, in this order:
 
 1. `Directives` keeps the lines of the `#if`, `#elif` and `#else` branches the generation's flags
    select, and drops the directive lines.
 2. The reference names `AppTemplate`, `Placeholders`, `Placeholder` and `placeholder` become the
-   project, feature, aggregate and lowered aggregate names, wherever they appear, inside a word or
-   in prose: a template that needs the word `placeholder` for itself cannot have it. They are
-   replaced before the blocks, so a field named after one keeps its name.
+   project, feature, aggregate and lowered aggregate names, and those of `add use-case`,
+   `ApprovePlaceholder`, `GetPlaceholderTotals` and `PlaceholderTotals`, the use case's name and
+   its answer's, wherever they appear, inside a word or in prose: a template that needs the word
+   `placeholder` for itself cannot have it. `Template` holds them in one list, the longer before
+   the shorter it starts with, and a name the generation sets no token for is left as it is. They
+   are replaced before the blocks, so a field named after one keeps its name.
 3. `TemplateBlocks` repeats each block once per field of the feature.
 4. Each `%Token%` becomes the code the generator computed for it. A `%Token%` still in the text
    afterwards, one the generation does not set, is refused with the template's name, as
@@ -1171,10 +1182,12 @@ generator. A template names only the flags of its own generator; any other is re
 The vocabulary of `add feature`, which `add field` renders again, is `FeatureFlags.Vocabulary` in
 `launcher/CleanArch.Cli/Generators/Shared/FeatureFlags.cs`, and `FeatureCode.Flags` sets the flags
 that hold for a generation. Its flags are the words of the options where an option decides one,
-and otherwise say what the feature does. A project's team writes conditions with them, so the table
-of each flag with its meaning is in the project's guide,
-[the flags of add feature](../guides/changing-generated-code.md#the-flags-of-add-feature): a flag
-renamed, added, removed or reworded changes both.
+and otherwise say what the feature does. That of `add use-case` is `UseCaseFlags.Vocabulary`, in
+`launcher/CleanArch.Cli/Generators/AddUseCase/UseCaseFlags.cs`, which sets them too. A project's
+team writes conditions with them, so the table of each flag with its meaning is in the project's
+guide, [the flags of add feature](../guides/changing-generated-code.md#the-flags-of-add-feature)
+and [the flags of add use-case](../guides/changing-generated-code.md#the-flags-of-add-use-case): a
+flag renamed, added, removed or reworded changes both.
 
 ### Blocks over fields
 
@@ -1194,7 +1207,9 @@ nothing, and a quoted tail after `#end` follows the last field. A selection with
 nothing, its tail included. Inside a block, `%field.<Token>%` is a value of the field; the tokens
 and the traits are those of `FieldBlocks`, and a block naming another, or one left open, is refused.
 `TemplateList.Of` builds a list from items of any type, the name its blocks repeat over, and the
-functions behind its tokens and traits, so a list of other items than fields renders the same way.
+functions behind its tokens and traits, so a list of other items than fields renders the same way:
+`ParameterBlocks`, in `launcher/CleanArch.Cli/Generators/AddUseCase/ParameterBlocks.cs`, lists the
+parameters of a use case's message for `add use-case`.
 Blocks do not nest, and since the directives are read first, an `#if` inside a block is decided once
 per generation, not once per field. A field token may write a `%Token%` of the feature, such as
 `%Limits%`, which the fourth pass replaces.
@@ -1217,6 +1232,7 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | A template naming the flag of another generator is refused, and renders under that generator's vocabulary | `NewFeatureTests.TemplateGuard` |
 | A `%Token%` the generation does not set is refused, not written as code | `NewFeatureTests.TemplateGuard` |
 | The table of the flags of `add feature` in the guide to code templates is its vocabulary, each flag with its meaning, and nothing else | `FeatureFlagsTests.TheGuideToCodeTemplates_ListsEachFlagOfAddFeature_WithItsMeaning_AndNoOther` |
+| The table of the flags of `add use-case` in the guide to code templates is its vocabulary, each flag with its meaning, and nothing else | `FeatureFlagsTests.TheGuideToCodeTemplates_ListsEachFlagOfAddUseCase_WithItsMeaning_AndNoOther` |
 | The output of `add feature` and `add field` does not change when a template changes its form | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
 | A project's override of a template writes its own file, and changes no other | `NewFeatureTests.OverrideWinsForItsFileOnly` |
 | After `templates copy add-feature`, a BOM and CRLF line endings given to one copy, `add feature` writes the bytes it writes without the copies, lists the copies it wrote from, warns of none, and the manifest records each with the digest of the tool's text | `NewFeatureTests.ACopyOfTheTemplatesWritesTheSameBytes` |
@@ -1230,6 +1246,7 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | `add feature`, under `--dry-run` or not, and `add field` warn and still write when the tool changed a template copied since, never over an override written by hand, and warn without refusing over a `code-templates/manifest.json` they cannot read; both reports list the overrides used | `NewFeatureTests.AGeneratorWarnsWhenTheToolChangedACopiedTemplate` |
 | A refused report lists no override, since nothing was written | `NewFeatureTests.ARefusedReportListsNoOverride` |
 | `remove feature` removes a feature written from an override as its manifest records it, and leaves `code-templates` as it was | `RemoveFeatureTests.AFeatureWrittenFromAnOverride_IsRemovedAsRecorded_AndTheOverrideStays` |
+| Every template the tool embeds for `add use-case` is written by a command and a query that carry the id, an input and a rule | `NewUseCaseTests.EveryUseCaseTemplateIsWritten` |
 | Every template the tool embeds for `add feature` is written by one of the configurations the digests with `--fields` cover, or by an owner feature in a tree whose callers sign in with an external provider | `NewFeatureTests.EveryTemplateIsWritten` |
 | Over the configurations the digests cover, every C# file `add feature` writes or edits, and every one `add field` writes or changes, parses without a syntax error; an edited file is parsed as the edit leaves it in the tests' tree, whose shared files are cut down to the code around the anchors, and the message names each group and path that wrote the same broken text | `NewFeatureTests.WithoutFields`, `NewFeatureTests.WithFields`, `NewFeatureTests.FieldAdditionOutput` |
 | The files, the edits and the report of `add use-case` are those its digests record, over every layout it writes: a command and a query with and without the id or any input, several inputs among them one of an unknown type, a query answering a DTO the feature declares, and a tree without the application's tests, the `ValidatedHandler` double or the API | `NewUseCaseTests.Output`, `NewUseCaseTests.Layouts` |
@@ -1328,7 +1345,7 @@ which holds five more projects. Generation and the template package leave the fo
 | Project | What it is |
 |---|---|
 | `launcher/CleanArch.Tooling` | the library both tools share, never packed on its own: running a process and its verbatim output, the terminal, the templates' manifests with the evaluation of their refusals, and the questions asked from them; its tests are in `launcher/CleanArch.Tooling.Tests` |
-| `launcher/CleanArch.Cli` | the .NET tool `dotnet cleanarch`, packed as `CleanArch.Cli` at the same `templateVersion`, which finds a project by the project file at its root: `BuiltInCommands.cs` lists every command, and the ones that stay the tool's each have a folder, `launcher/CleanArch.Cli/Eject` with the source it ships and `launcher/CleanArch.Cli/UpgradeReport` reading template packages through `CleanArch.Tooling` and `launcher/CleanArch.Cli/CodeTemplates` copying a generator's templates into a project, which no generator references; `launcher/CleanArch.Cli/Joins` holds the join steps `add` runs, which are not commands. `launcher/CleanArch.Cli/Generators` holds one folder per generator, its command, request, plan, edits and report, and the templates of `add use-case` in `launcher/CleanArch.Cli/Generators/AddUseCase/Templates`, while `launcher/CleanArch.Cli/code-templates/add-feature` holds those of `add feature` and `add field` at their path in the reference feature, over `launcher/CleanArch.Cli/Generators/Shared`, the pipeline every generator runs and the code they share, which references no generator; its tests are in `launcher/CleanArch.Cli.Tests`, whose `launcher/CleanArch.Cli.Tests/Architecture` holds the launcher's boundaries: no command or generator references another, `Kernel` and `Shared` reference none, `CleanArch.Cli.Commands` references System.CommandLine alone, and only the two process launchers call `Process.Start` |
+| `launcher/CleanArch.Cli` | the .NET tool `dotnet cleanarch`, packed as `CleanArch.Cli` at the same `templateVersion`, which finds a project by the project file at its root: `BuiltInCommands.cs` lists every command, and the ones that stay the tool's each have a folder, `launcher/CleanArch.Cli/Eject` with the source it ships and `launcher/CleanArch.Cli/UpgradeReport` reading template packages through `CleanArch.Tooling` and `launcher/CleanArch.Cli/CodeTemplates` copying a generator's templates into a project, which no generator references; `launcher/CleanArch.Cli/Joins` holds the join steps `add` runs, which are not commands. `launcher/CleanArch.Cli/Generators` holds one folder per generator, its command, request, plan, edits and report, while `launcher/CleanArch.Cli/code-templates` holds the templates of each generator that writes from them at their path in the reference feature, `launcher/CleanArch.Cli/code-templates/add-feature` those of `add feature` and `add field` and `launcher/CleanArch.Cli/code-templates/add-use-case` those of `add use-case`, over `launcher/CleanArch.Cli/Generators/Shared`, the pipeline every generator runs and the code they share, which references no generator; its tests are in `launcher/CleanArch.Cli.Tests`, whose `launcher/CleanArch.Cli.Tests/Architecture` holds the launcher's boundaries: no command or generator references another, `Kernel` and `Shared` reference none, `CleanArch.Cli.Commands` references System.CommandLine alone, and only the two process launchers call `Process.Start` |
 | `launcher/CleanArch.Cli.Commands` | the commands `eject` can copy into a project, never packed on its own: it references System.CommandLine alone, since an ejected command is a file-based app that declares nothing else. Each command has a folder and a namespace of its own and references no other; `launcher/CleanArch.Cli.Commands/Hosting` holds the root command, the registration and the context, and `launcher/CleanArch.Cli.Commands/Kernel` what the commands share, the process launcher the context carries and every external call among it, the documentation index and the scaffold steps `bootstrap` runs, referencing neither the commands nor `Hosting`. `CleanArch.Cli` composes them with the ones that stay the tool's, and ships the source of every folder, which eject merges into one namespace |
 
 [Template decision 0003](decisions/0003-a-project-runs-its-tasks-from-a-pinned-dotnet-tool.md) says

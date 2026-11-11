@@ -1,0 +1,11 @@
+namespace AppTemplate.Api.Features.Placeholders.Contracts.Requests;
+
+#if id
+/// <summary>The body of %Spoken%; the %SpokenAggregate% id travels in the route.</summary>
+#else
+/// <summary>The body of %Spoken%.</summary>
+#endif
+public sealed record ApprovePlaceholderRequest(
+//#each parameter where input separator ",\n"
+    %parameter.Type% %parameter.Name%
+//#end ");"
