@@ -980,7 +980,7 @@ files a run writes and renders each through `Template.Render`; `UseCaseHttp` kee
 controller's action and the route's row, which no template writes.
 
 A project overrides a template with a file at the same path under its own `code-templates` folder,
-`code-templates/add-feature/<reference path>.txt` at its root. `TemplateOverrides.Read` reads that
+`code-templates/<generator>/<reference path>.txt` at its root. `TemplateOverrides.Read` reads that
 folder once per run, its files ending in `.txt` and not starting with a dot, and `Render` renders the
 project's text where there is one and the tool's otherwise: an override replaces text, and never
 chooses a path, a flag or code to run. Its BOM, its line endings and one final line break are
@@ -992,6 +992,10 @@ manifest of a feature written from an override records it under `templates`, eac
 SHA-256 of its normalised text, and the report lists it under `Written from this project's code
 templates:`; a feature written from the tool's text alone has neither, so its manifest and report
 are those of a project without overrides.
+
+`add use-case` reads its overrides in its draft through `UseCasePlan.Overrides`, refuses, reports
+and warns as `add feature` does, and records no `templates` in the feature's manifest: its files are
+recorded with the bytes written, and only `add field` reads `templates` back.
 
 `add field` reads the overrides once and renders from that one reading both the feature its manifest
 records and the feature with the fields added, so the two renders it compares never come from
@@ -1053,8 +1057,8 @@ unary := '!' unary | '(' or ')' | flag
 `launcher/CleanArch.Cli/Generators/Shared/FeatureCode.cs`, such as `"record && takesContent"`, is read
 by the same `Condition`, over the same vocabulary.
 
-`add feature` and `add field` refuse a template that holds one of these, with a message that starts
-with the template's path, `code-templates/add-feature/<reference path>.txt`, and the line's number, and names
+Every generator that writes from templates refuses one that holds one of these, with a message that
+starts with the template's path, `code-templates/<generator>/<reference path>.txt`, and the line's number, and names
 the offending text:
 
 - a condition naming a flag outside the generator's vocabulary, another generator's included, so a
@@ -1135,6 +1139,10 @@ per generation, not once per field. A field token may write a `%Token%` of the f
 | `add field` warns, and still writes, when an override is not the text the manifest records, then records the text it wrote from | `NewFeatureTests.AddFieldWarnsWhenTheOverrideChangedSinceAddFeature` |
 | `add feature`, under `--dry-run` or not, and `add field` warn and still write when the tool changed a template copied since, never over an override written by hand, and warn without refusing over a `code-templates/manifest.json` they cannot read; both reports list the overrides used | `NewFeatureTests.AGeneratorWarnsWhenTheToolChangedACopiedTemplate` |
 | A refused report lists no override, since nothing was written | `NewFeatureTests.ARefusedReportListsNoOverride` |
+| A project's override of an `add use-case` template writes its own file, and changes no other, and the report lists it | `NewUseCaseTests.OverrideWinsForItsFileOnly` |
+| The report of `add use-case` shows the request contract as the project's override writes it | `NewUseCaseTests.TheReportShowsTheOverriddenRequest` |
+| An override of `add use-case` with an unknown flag, a flag of `add feature`, an unknown parameter token or token, or a path naming no template is refused, the message starting with its path, and nothing is written | `NewUseCaseTests.ABrokenOverrideIsRefusedNamingIt` |
+| The feature's manifest records the bytes an override of `add use-case` wrote, and no `templates` | `NewUseCaseTests.TheManifestRecordsTheWrittenBytesAndNoTemplatesKey` |
 | `remove feature` removes a feature written from an override as its manifest records it, and leaves `code-templates` as it was | `RemoveFeatureTests.AFeatureWrittenFromAnOverride_IsRemovedAsRecorded_AndTheOverrideStays` |
 | Every template the tool embeds for `add use-case` is written by a command and a query that carry the id, an input and a rule | `NewUseCaseTests.EveryUseCaseTemplateIsWritten` |
 | Every template the tool embeds for `add feature` is written by one of the configurations the digests with `--fields` cover, or by an owner feature in a tree whose callers sign in with an external provider | `NewFeatureTests.EveryTemplateIsWritten` |
