@@ -681,6 +681,12 @@ public sealed class NewSettingTests
                 ["Invoices", "Wide", "--keys", "Big:long(-5000000000..5000000000)=-1, Brief:duration(00:00:01..00:00:59)=00:00:30, Hour:duration(00:00:01..2.00:00:00)=01:00:00"],
             ]),
         (
+            "lengths and a lone secret",
+            [
+                ["Invoices", "Lengths", "--keys", "Codes:string(0..8)=ab, Tag:string(2..8)=ab"],
+                ["Invoices", "Secrets", "--keys", "Token:secret, Max:int(1..9)=1"],
+            ]),
+        (
             "refused",
             [
                 ["Invoices", "Limits", "--keys", "Max:int(1..9)=10"],
@@ -694,6 +700,7 @@ public sealed class NewSettingTests
         ("defaults only", "a5b051b7c31617bd66ab041a9342593f1e8a80ca6b1b53891ce64ecb18976be1"),
         ("feature taking the configuration", "ad3013fc2d37b290edc47a6aa4d3756faba5c8d049a6c72360084e3fa9e9190a"),
         ("edge values", "c8e4d946c739bddca1a79389e41cf61aea0fe23bed62adb2d89000052966343a"),
+        ("lengths and a lone secret", "2a3a5d56410d99809c43892c269d9e9f159abd13163e05b88a784450d4c93772"),
         ("refused", "ae5a9117df15478aa393083cc5b677a2f74c6dc5a81003a9a63b811457fd123b"),
     ];
 
