@@ -365,6 +365,9 @@ The command writes in the application layer:
   and each rule has its refusal; and the handler's test, which proves a malformed message never
   reaches the handler.
 
+It writes them from code templates, this project's copies where it holds some, as
+[the templates of add use-case](changing-generated-code.md#the-templates-of-add-use-case) says.
+
 The handler's test builds the handler in one place, `UseCase()`, behind its validator, as the
 hand-written tests do. A dependency the handler gains is a substitute field of the test passed
 there, and no test changes:
@@ -436,6 +439,10 @@ exists is refused, so running it twice duplicates nothing. `--dry-run` prints wh
   a test that the consumer is registered for the event;
 - with `--unconsumed`, the event's name and the reason in `_deliberatelyUnconsumed` of
   `DomainEventTests`.
+
+It writes the event, the consumer and their tests from code templates, this project's copies where
+it holds some, as [the templates of add event](changing-generated-code.md#the-templates-of-add-event)
+says.
 
 What stays yours: the aggregate method that raises the event with `RaiseDomainEvent`, and its test;
 the body of the consumer, which throws `NotImplementedException` until written and, as the ADR asks,

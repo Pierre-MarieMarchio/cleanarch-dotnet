@@ -66,6 +66,9 @@ the migrations.
 <!--#if (!api)-->
 It reads neither the solution, the `.props` and `.targets` files nor `tools/`, nor the migrations.
 <!--#endif-->
+It removes what the manifest records whatever code templates its files were written from, and leaves
+this project's copies under `code-templates/` as they are, as
+[changing generated code](changing-generated-code.md#what-the-feature-records) says.
 
 `--apply` changes nothing while a file it would delete or edit is not committed as it stands, since
 only `git restore` gives back what it removes, while a model change waits for a migration
