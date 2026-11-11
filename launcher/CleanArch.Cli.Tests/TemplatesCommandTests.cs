@@ -78,7 +78,7 @@ public sealed class TemplatesCommandTests : IDisposable
     }
 
     [Theory]
-    [InlineData("add-widget", "add-widget has no code templates to copy; the generators that have some are add-feature, add-use-case, add-event.")]
+    [InlineData("add-widget", "add-widget has no code templates to copy; the generators that have some are add-feature, add-use-case, add-event, add-setting.")]
     [InlineData("add-feature Widget.cs", "Widget.cs names no template of add feature: dotnet cleanarch templates copy add-feature --dry-run lists them.")]
     [InlineData("add-feature Model/Entities", "Model/Entities names no template of add feature: dotnet cleanarch templates copy add-feature --dry-run lists them.")]
     public void CopyRefusesAnUnknownGeneratorOrTemplate(string arguments, string refusal)
@@ -118,6 +118,7 @@ public sealed class TemplatesCommandTests : IDisposable
     [Theory]
     [InlineData("add-use-case")]
     [InlineData("add-event")]
+    [InlineData("add-setting")]
     public void ACopyOfAGeneratorWithoutARefusal_WorksWithoutAuthentication(string generator)
     {
         using var unauthenticated = new SampleProject(SampleProject.Minimal);

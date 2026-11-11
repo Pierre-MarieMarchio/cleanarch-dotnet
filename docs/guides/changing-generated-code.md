@@ -299,7 +299,8 @@ its local.
 
 ## The templates of add setting
 
-`add setting` writes its two files from code templates too, under `code-templates/add-setting/`:
+`add setting` writes its two files from code templates too, which
+`dotnet cleanarch templates copy add-setting` copies into `code-templates/add-setting/`:
 the options class with its validator, whose template ends in `PlaceholderLimitsOptions.cs.txt`, and
 their tests, whose template ends in `PlaceholderLimitsOptionsTests.cs.txt` and which it writes only
 where the application's unit test project exists. Its edits stay the tool's: the registration, each
