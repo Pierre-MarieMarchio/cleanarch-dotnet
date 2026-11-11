@@ -42,6 +42,30 @@ internal static class TemplateCopies
         return null;
     }
 
+    internal static IEnumerable<string> Stale(string root, TemplateOverrides templates)
+    {
+        if (templates.Used.Count == 0)
+        {
+            return [];
+        }
+
+        if (Read(root, out string? problem) is not { } copies)
+        {
+            return [$"{problem}, so whether the tool changed a template this project overrides since it was copied is not known: repair it, or move it aside."];
+        }
+
+        var tool = ToolTemplates.Of(templates.Generator).ToDictionary(
+            template => ToolTemplates.PathOf(templates.Generator, template.Key),
+            template => (Name: Path.GetFileName(template.Key), Sha256: ToolTemplates.Digest(template.Value)),
+            StringComparer.Ordinal);
+
+        return templates.Used
+            .Where(used => copies.ContainsKey(used.Path) && copies[used.Path].Sha256 != tool[used.Path].Sha256)
+            .Select(used =>
+                $"{used.Path} overrides a template the tool has changed since version {copies[used.Path].Version}, which it was copied from; the files keep your text. "
+                + $"To take the change: move your file aside, run dotnet cleanarch templates copy {templates.Generator} {tool[used.Path].Name}, and carry your changes over.");
+    }
+
     internal static byte[] Written(IReadOnlyDictionary<string, Copy> copies)
     {
         var top = new JsonObject

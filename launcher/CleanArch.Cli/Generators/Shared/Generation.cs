@@ -24,6 +24,8 @@ internal abstract class Generation(GenerationContext context)
 
     protected virtual string Writing => "write";
 
+    protected virtual IEnumerable<string> Warnings => [];
+
     internal int Generate()
     {
         if (Concluded() is { } concluded)
@@ -33,7 +35,11 @@ internal abstract class Generation(GenerationContext context)
 
         var problems = new List<string>();
 
-        if (!Draft(problems))
+        bool drafted = Draft(problems);
+
+        WriteWarnings();
+
+        if (!drafted)
         {
             return Refuse(problems);
         }
@@ -122,6 +128,14 @@ internal abstract class Generation(GenerationContext context)
         manifest.Record(editor);
 
         return manifest.Replacement;
+    }
+
+    private void WriteWarnings()
+    {
+        foreach (string warning in Warnings)
+        {
+            Error.WriteLine($"warning: {warning}");
+        }
     }
 
     private int StopAtDryRun()
