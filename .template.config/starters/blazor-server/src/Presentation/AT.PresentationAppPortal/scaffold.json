@@ -3,7 +3,7 @@
   "framework": "blazor-server",
   "name": "AppTemplate.PresentationAppPortal",
   "package": "Microsoft.DotNet.Web.ProjectTemplates.10.0",
-  "version": "10.0.14",
+  "version": "10.0.15",
   "template": "blazor",
   "arguments": [
     "--name", "{name}", "--output", "{directory}",

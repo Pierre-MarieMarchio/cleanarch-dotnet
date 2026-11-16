@@ -3,7 +3,7 @@
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Packages.props', '$(MSBuildThisFileDirectory)..'))" />
 
   <ItemGroup Label="Analysis">
-    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.35.0.4138" />
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.36.0.15337" />
   </ItemGroup>
 
   <ItemGroup Label="Launcher">
@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup Label="Project tool">
-    <PackageVersion Include="System.CommandLine" Version="2.0.14" />
+    <PackageVersion Include="System.CommandLine" Version="3.0.0" />
   </ItemGroup>
 
 </Project>

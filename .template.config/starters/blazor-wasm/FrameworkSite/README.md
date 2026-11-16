@@ -262,11 +262,11 @@ It then creates the app as above; commit it. The edits, to make by hand where th
 
   ```xml
     <ItemGroup Label="Web app on WebAssembly">
-      <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.14" />
+      <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.15" />
   <!--#if (externalAuth)-->
-      <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="10.0.14" />
+      <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="10.0.15" />
   <!--#endif-->
-      <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.14" />
+      <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.15" />
     </ItemGroup>
 
   ```

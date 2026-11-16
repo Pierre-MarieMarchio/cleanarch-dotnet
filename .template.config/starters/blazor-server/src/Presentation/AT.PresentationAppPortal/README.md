@@ -110,13 +110,13 @@ the command stops:
 - in `Directory.Packages.props`, after the line:
 
   ```xml
-      <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.14" />
+      <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.15" />
   ```
 
   add:
 
   ```xml
-      <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.14" />
+      <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.15" />
   ```
 
 <!--#endif-->

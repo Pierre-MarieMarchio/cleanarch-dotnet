@@ -3,7 +3,7 @@
   "framework": "avalonia",
   "name": "AppTemplate.PresentationAppDesktop",
   "package": "Avalonia.Templates",
-  "version": "12.1.4",
+  "version": "12.1.6",
   "template": "avalonia.mvvm",
   "arguments": [
     "--name", "{name}", "--output", "{directory}",
