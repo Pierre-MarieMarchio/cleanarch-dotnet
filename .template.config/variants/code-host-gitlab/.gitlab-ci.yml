@@ -57,7 +57,7 @@ default:
 
 # Directory.Packages.props holds every package version and global.json the SDK; GitLab keys a cache on two files at most.
 .dotnet:
-  image: mcr.microsoft.com/dotnet/sdk:10.0.403-noble@sha256:212fe4cb74627d5adf9817a4088906ae3edff1bd853bb27565d4b46731efe61e
+  image: mcr.microsoft.com/dotnet/sdk:10.0.404-noble@sha256:fe0fd4e93bd2fbb47c883b7a6369e5c8d3db8bf01cdc5981f6ee35fbdf3ff4fb
   cache:
     key:
       files:
@@ -84,7 +84,7 @@ default:
 
 # The Docker CLI with the Compose plugin and the Buildx plugin its builds need, beside the SDK, for the jobs that start the stack, from Docker's static release, each checked against its SHA-256: bump a version and its checksum together.
 .docker-client:
-  image: mcr.microsoft.com/dotnet/sdk:10.0.403-noble@sha256:212fe4cb74627d5adf9817a4088906ae3edff1bd853bb27565d4b46731efe61e
+  image: mcr.microsoft.com/dotnet/sdk:10.0.404-noble@sha256:fe0fd4e93bd2fbb47c883b7a6369e5c8d3db8bf01cdc5981f6ee35fbdf3ff4fb
   before_script:
     - |
       cli=29.9.3

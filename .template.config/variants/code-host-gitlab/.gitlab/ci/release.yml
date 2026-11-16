@@ -124,7 +124,7 @@ container-image:
     # Buildx takes the TLS endpoint of the Docker-in-Docker service from a context, not from the environment.
     - docker context create dind
     # The BuildKit image, pinned by digest and bumped like the binfmt image.
-    - docker buildx create --name release --driver docker-container --driver-opt image=moby/buildkit:v0.33.1@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea --use dind
+    - docker buildx create --name release --driver docker-container --driver-opt image=moby/buildkit:v0.35.0@sha256:aa632b921ef07411d2cb77292cd34213d4f7b384001d6fceef1e1f25bf9752bb --use dind
     - echo "$CI_JOB_TOKEN" | docker login "$CI_REGISTRY" --username "$CI_REGISTRY_USER" --password-stdin
     # Semantic versioning's tags: a prerelease gets its version alone and never moves latest.
     - |
@@ -147,7 +147,7 @@ container-image:
         --platform linux/amd64,linux/arm64 \
         --file "$DOCKERFILE" \
         --push \
-        --sbom=generator=docker/buildkit-syft-scanner:1.12.0@sha256:ae4f3b554449e7e25548e7d8ccc029d17357348e30c6e3df01b92bc93654d6a9 \
+        --sbom=generator=docker/buildkit-syft-scanner:1.12.1@sha256:873a7458c3c8ac8e32c7b796c10e1600b07b963d2aa000a72a2d97aaaa2d6315 \
         --provenance=mode=max \
         --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
         --label "org.opencontainers.image.description=$CI_PROJECT_DESCRIPTION" \

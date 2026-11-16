@@ -5,7 +5,7 @@ namespace AppTemplate.Api.IntegrationTests.Infrastructure;
 public sealed class DatabaseServer(string database) : IAsyncDisposable
 {
     internal const string Image =
-        "postgres:18.6-alpine3.23@sha256:a0cbdbbcc57f7317ca183ac9d10eb3af72b5b05b2f25acad58e765bd2b139099";
+        "postgres:18.7-alpine3.24@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015";
 
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder(Image)
         .WithDatabase(database)
