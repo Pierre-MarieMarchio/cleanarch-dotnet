@@ -7,7 +7,7 @@ namespace AppTemplate.Api.IntegrationTests.Infrastructure;
 public sealed class DatabaseServer(string database) : IAsyncDisposable
 {
     internal const string Image =
-        "mcr.microsoft.com/mssql/server:2022-CU27-ubuntu-22.04@sha256:4402d880dd4c34bfa7d8705e56a86cd6c88da80a1f6bbbe741f999e76264a090";
+        "mcr.microsoft.com/mssql/server:2022-CU28-ubuntu-22.04@sha256:4525e3efac9f3e241cb003bb2ff2a82818b502f37e12049d788b1a9fa7e13b7f";
 
     private const string _createDatabaseSql =
         "DECLARE @sql nvarchar(max) = N'CREATE DATABASE ' + QUOTENAME(@database); EXEC (@sql);";

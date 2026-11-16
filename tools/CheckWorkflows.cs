@@ -410,7 +410,7 @@ internal static class WorkflowGate
               - name: Set up Buildx
                 uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e
                 with:
-                  driver-opts: image=moby/buildkit:v0.33.1@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea
+                  driver-opts: image=moby/buildkit:v0.35.0@sha256:aa632b921ef07411d2cb77292cd34213d4f7b384001d6fceef1e1f25bf9752bb
               - name: Build
                 run: |
                   echo "$SOLUTION"
@@ -503,13 +503,13 @@ internal static class WorkflowGate
         (
             "a BuildKit image left to the action's floating default",
             _cleanFixture.Replace(
-                "        with:\n          driver-opts: image=moby/buildkit:v0.33.1@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea\n",
+                "        with:\n          driver-opts: image=moby/buildkit:v0.35.0@sha256:aa632b921ef07411d2cb77292cd34213d4f7b384001d6fceef1e1f25bf9752bb\n",
                 "")
         ),
         (
             "a BuildKit image named by tag alone",
             _cleanFixture.Replace(
-                "moby/buildkit:v0.33.1@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea",
+                "moby/buildkit:v0.35.0@sha256:aa632b921ef07411d2cb77292cd34213d4f7b384001d6fceef1e1f25bf9752bb",
                 "moby/buildkit:v0.33.1")
         ),
         (

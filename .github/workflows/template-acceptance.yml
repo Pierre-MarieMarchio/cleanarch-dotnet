@@ -278,7 +278,7 @@ jobs:
           pipx run --spec check-jsonschema==0.39.0 check-jsonschema --builtin-schema vendor.gitlab-ci --data-transform gitlab-ci \
             "$generated/.gitlab-ci.yml" "$generated"/.gitlab/ci/*.yml
           docker run --rm --volume "$generated/.gitlab:/config:ro" --entrypoint renovate-config-validator \
-            ghcr.io/renovatebot/renovate:44.206.2@sha256:d515a99f5d14d1c62b792ee61339d165dd9d20ee82ca9d5379daf639050bab51 \
+            ghcr.io/renovatebot/renovate:44.246.1@sha256:daa61d45175e0c96860739c3ab0ee93b45a64bbf50d5e4d2a06807abe2ac8da9 \
             --strict --no-global /config/renovate.jsonc
           committed="${{ runner.temp }}/gitlab-pipeline"
           cp -a "$generated" "$committed"
