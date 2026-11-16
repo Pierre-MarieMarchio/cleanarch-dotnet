@@ -1,4 +1,5 @@
 ﻿using AppTemplate.Application.Core.Common.Ports;
+using MailKit;
 using MailKit.Net.Smtp;
 using Microsoft.Extensions.Options;
 using MimeKit;
@@ -29,7 +30,7 @@ internal sealed class MailKitEmailSender(IOptions<EmailOptions> options) : IEmai
             await client.AuthenticateAsync(settings.UserName, settings.Password ?? string.Empty, cancellationToken);
         }
 
-        await client.SendAsync(message, cancellationToken);
+        await client.SendAsync(new SendRequest(message), cancellationToken);
         await client.DisconnectAsync(quit: true, cancellationToken);
     }
 }
