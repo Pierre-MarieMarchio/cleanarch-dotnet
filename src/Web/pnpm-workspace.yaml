@@ -8,8 +8,8 @@ peerDependencyRules:
 
 # GHSA-g3hv-75wg-m249: minimatch below 11.0.1. Drop the overrides and the patch once eslint, typescript-eslint and @redocly/openapi-core depend on a release at 11.0.1 or above.
 overrides:
-  minimatch@10: 11.0.4
-  minimatch@5: 11.0.4
+  minimatch@10: 11.0.8
+  minimatch@5: 11.0.8
 
 # Install scripts the Angular CLI's build tools ship, refused: each package has a prebuilt binary to fall back on.
 allowBuilds:
