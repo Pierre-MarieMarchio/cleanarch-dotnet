@@ -942,7 +942,7 @@ public sealed partial class NewFeatureTests
             expect(Wrote(suffix) == should, $"[{label}] {suffix} should {(should ? "exist" : "be absent")}.");
         }
 
-        string use(string operation, string name) => $"UseCases/{operation}/{name}/{name}.cs";
+        static string use(string operation, string name) => $"UseCases/{operation}/{name}/{name}.cs";
 
         string verb = deletion == "anonymise" ? "Anonymise" : "Delete";
 
@@ -1824,7 +1824,7 @@ public sealed partial class NewFeatureTests
 
         expect(record.Code == 0, $"The record with every field type was refused: {record.Error}");
 
-        string Read(string root, string path) =>
+        static string Read(string root, string path) =>
             File.Exists(System.IO.Path.Combine(root, path)) ? File.ReadAllText(System.IO.Path.Combine(root, path)) : $"<{path} was not written>";
 
         (string Root, string Path, string[] Present, string[] Absent)[] expectations =

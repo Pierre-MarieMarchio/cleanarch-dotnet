@@ -287,7 +287,7 @@ public sealed class UpgradeReportTests : IDisposable
 
         static string Secrets(string guid, string rest = "") => $"<UserSecretsId>{guid}</UserSecretsId>\n{rest}";
 
-        void One(string root, string path, string text)
+        static void One(string root, string path, string text)
         {
             string full = Path.Combine(root, path);
             Directory.CreateDirectory(Path.GetDirectoryName(full)!);
