@@ -50,7 +50,7 @@ public sealed class EjectCommandTests : IDisposable
         string app = Encoding.UTF8.GetString(written, 3, written.Length - 3);
         app.ShouldStartWith(
             "#:property UseAppHost=false\n#:property PublishAot=false\n#:property AssemblyName=dotnet-cleanarch-format\n"
-            + "#:property ManagePackageVersionsCentrally=false\n#:package System.CommandLine@2.0.14\n");
+            + "#:property ManagePackageVersionsCentrally=false\n#:package System.CommandLine@3.0.0\n");
         app.ShouldNotContain("\r");
         app.ShouldContain("internal static class FormatCommand");
         app.ShouldNotContain("internal static class BuildCommand");
