@@ -24,7 +24,7 @@
   "prHourlyLimit": 0,
   // One merge request per dependency or group, at its newest version, majors included, as Dependabot opens them.
   "separateMajorMinor": false,
-  "dependencyDashboard": false,
+  "dependencyDashboard": { "enabled": false },
   "semanticCommits": "enabled",
   "semanticCommitType": "build",
   "semanticCommitScope": "deps",
