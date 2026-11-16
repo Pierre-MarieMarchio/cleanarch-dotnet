@@ -387,7 +387,7 @@ dotnet cleanarch migrations add AddAccessKeys --context auth
 
   ```xml
     <ItemGroup Label="MCP server">
-      <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.3.0" />
+      <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
     </ItemGroup>
 
   ```

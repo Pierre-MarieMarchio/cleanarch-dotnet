@@ -151,7 +151,7 @@ the command stops:
     <ItemGroup Label="Desktop presentation">
       <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
   <!--#if (externalAuth)-->
-      <PackageVersion Include="Duende.IdentityModel.OidcClient" Version="7.1.0" />
+      <PackageVersion Include="Duende.IdentityModel.OidcClient" Version="7.1.1" />
   <!--#endif-->
     </ItemGroup>
 

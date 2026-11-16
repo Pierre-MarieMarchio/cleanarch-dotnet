@@ -11,7 +11,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.15" />
     <!--#endif-->
     <!--#if (presentationBlazorServer && externalAuth)-->
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.15" />
     <!--#endif-->
     <!--#if (localAuth)-->
     <PackageVersion Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="10.0.15" />
@@ -22,21 +22,21 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.15" />
     <!--#if (sqlServer)-->
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.15" />
     <!--#endif-->
-    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="11.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="11.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="11.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="11.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.15" />
     <!-- For a module that registers a typed client without referencing ASP.NET Core. -->
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="11.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="11.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="11.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="11.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.15" />
   </ItemGroup>
 
   <!--#if (localAuth)-->
@@ -47,7 +47,7 @@
 
   <!-- Its own 10.9.x band; Polly comes transitively, at the version this package chose. -->
   <ItemGroup Label="Outbound HTTP">
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
   </ItemGroup>
 
   <!--#if (dotnetClient)-->
@@ -59,11 +59,11 @@
   <!--#endif-->
   <!--#if (webBlazorWasm)-->
   <ItemGroup Label="Web app on WebAssembly">
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.15" />
     <!--#if (externalAuth)-->
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="10.0.15" />
     <!--#endif-->
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.15" />
   </ItemGroup>
 
   <!--#endif-->
@@ -74,22 +74,22 @@
   <ItemGroup Label="Desktop presentation">
   <!--#endif-->
   <!--#if (presentationAvalonia)-->
-    <PackageVersion Include="Avalonia" Version="12.1.4" />
-    <PackageVersion Include="Avalonia.Desktop" Version="12.1.4" />
-    <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.1.4" />
-    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <PackageVersion Include="Avalonia" Version="12.1.6" />
+    <PackageVersion Include="Avalonia.Desktop" Version="12.1.6" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.1.6" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.6" />
   <!--#endif-->
   <!--#if (presentationAvalonia || presentationWpf)-->
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <!--#if (externalAuth)-->
-    <PackageVersion Include="Duende.IdentityModel.OidcClient" Version="7.1.0" />
+    <PackageVersion Include="Duende.IdentityModel.OidcClient" Version="7.1.1" />
     <!--#endif-->
   </ItemGroup>
 
   <!--#endif-->
   <!--#if (presentationMcp)-->
   <ItemGroup Label="MCP server">
-    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.3.0" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
   </ItemGroup>
 
   <!--#endif-->
@@ -115,11 +115,6 @@
   </ItemGroup>
 
   <!--#endif-->
-  <!-- Overrides a version a package asks for. Drop the entry once MailKit requires System.Security.Cryptography.Pkcs 10.0.14 or later. -->
-  <ItemGroup Label="Transitive pins">
-    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
-  </ItemGroup>
-
   <ItemGroup Label="Third-party runtime">
     <PackageVersion Include="Asp.Versioning.Mvc" Version="10.2.1" />
     <PackageVersion Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.2.1" />
@@ -131,7 +126,7 @@
     <!--#if (postgreSql)-->
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <!--#endif-->
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.21.0" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="3.0.0" />
   </ItemGroup>
 
   <!--#if (aspire)-->
@@ -151,7 +146,7 @@
   <ItemGroup Label="Test">
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.15" />
     <!-- The version Microsoft.EntityFrameworkCore.Design requires exactly, through its pin on Roslyn's workspaces; the two move together. -->
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.12.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
     <!-- The in-process relational provider the saving-pipeline tests run on. -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
@@ -165,7 +160,7 @@
     <PackageVersion Include="Testcontainers" Version="4.16.0" />
     <!--#endif-->
     <!--#if (sqlServer)-->
-    <PackageVersion Include="Testcontainers.MsSql" Version="4.15.0" />
+    <PackageVersion Include="Testcontainers.MsSql" Version="4.16.0" />
     <!--#endif-->
     <!--#if (postgreSql)-->
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
