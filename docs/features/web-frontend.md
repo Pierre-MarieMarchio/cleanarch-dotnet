@@ -548,6 +548,9 @@ a user other than root and exposes only 8080. Details are in
 The `web` job of `.gitlab/ci/web.yml` installs with the frozen lockfile, audits, lints, tests and
 builds every app and package, runs `pnpm api` and fails when the generated client differs from the
 committed one. The `web-image` job builds each app under `src/Web/apps` holding a `Dockerfile` and a
-`package.json`, one after the other, and checks that it runs as a user other than root and exposes
-only 8080. Details are in [Build and CI](../guides/build-and-ci.md).
+`package.json`, or a `.csproj` for a .NET app, one after the other, and checks that it runs as a user
+other than root and exposes only 8080. A pnpm app builds with `src/Web` as its context and a .NET app,
+such as the Blazor WebAssembly one, with the repository root. The job fails when `src/Web/apps` holds
+folders but no such app, and passes without building when it holds none. Details are in
+[Build and CI](../guides/build-and-ci.md).
 <!--#endif-->
