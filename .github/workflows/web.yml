@@ -91,7 +91,7 @@ jobs:
             exit 1
           fi
 
-  # Every folder under src/Web/apps holding a Dockerfile and a package.json is an app with its own image; one still holding scaffold.json waits for web-scaffold.
+  # Every folder under src/Web/apps holding a Dockerfile and a package.json, or a .csproj for a .NET app, is an app with its own image; a pnpm app builds with src/Web as its context and a .NET app with the repository root. One still holding scaffold.json waits for web-scaffold. A workspace with no app folder gets the single leg "none", whose steps are skipped: a matrix job skipped whole would report no leg.
   web-apps:
     name: Web apps
     runs-on: ubuntu-latest
@@ -107,9 +107,15 @@ jobs:
         id: discover
         run: |
           set -euo pipefail
-          apps=$(find src/Web/apps -mindepth 2 -maxdepth 2 -name Dockerfile -printf '%h\n' | while read -r app; do if [ -f "$app/package.json" ]; then basename "$app"; fi; done | sort | jq -R . | jq -cs .)
+          mkdir -p src/Web/apps
+          if [ -z "$(find src/Web/apps -mindepth 1 -maxdepth 1 -type d)" ]; then
+            echo "::notice title=No web image::src/Web/apps holds no app, so no web image is built."
+            echo 'apps=[{"app":"none","context":"."}]' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          apps=$(find src/Web/apps -mindepth 2 -maxdepth 2 -name Dockerfile -printf '%h\n' | while read -r app; do if [ -f "$app/package.json" ]; then echo "$(basename "$app") src/Web"; elif ls "$app"/*.csproj > /dev/null 2>&1; then echo "$(basename "$app") ."; fi; done | sort | jq -R 'split(" ") | {app: .[0], context: .[1]}' | jq -cs .)
           if [ "$apps" = "[]" ]; then
-            echo "::error title=No web app::src/Web/apps holds no app with a Dockerfile and a package.json: run dotnet cleanarch bootstrap, or dotnet cleanarch add web-app --name <App> for one app, and commit the app it creates."
+            echo "::error title=No web app::src/Web/apps holds no app with a Dockerfile and a package.json or a .csproj: run dotnet cleanarch bootstrap, or dotnet cleanarch add web-app --name <App> for one app, and commit the app it creates."
             exit 1
           fi
           echo "apps=$apps" >> "$GITHUB_OUTPUT"
@@ -128,26 +134,30 @@ jobs:
 
     steps:
       - name: Checkout
+        if: matrix.app != 'none'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Buildx
+        if: matrix.app != 'none'
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
         with:
           driver-opts: image=moby/buildkit:v0.35.0@sha256:aa632b921ef07411d2cb77292cd34213d4f7b384001d6fceef1e1f25bf9752bb
 
       # Docker refuses an image name with capitals, and an app's folder is PascalCase.
       - name: Name the image
+        if: matrix.app != 'none'
         id: image
         env:
           APP: ${{ matrix.app }}
           SHA: ${{ github.sha }}
         run: echo "name=web-${APP,,}:ci-${SHA}" >> "$GITHUB_OUTPUT"
 
-      # The workspace is the context, so an image holds its app and the packages it uses.
+      # The context is src/Web for a pnpm app, so an image holds its app and the packages it uses, and the repository root for a .NET app, whose Dockerfile copies the solution's props and the .NET client.
       - name: Build the image
+        if: matrix.app != 'none'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: src/Web
+          context: ${{ matrix.context }}
           file: src/Web/apps/${{ matrix.app }}/Dockerfile
           platforms: linux/amd64
           push: false
@@ -157,6 +167,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=web-${{ matrix.app }}
 
       - name: Assert image runs unprivileged and exposes only 8080
+        if: matrix.app != 'none'
         env:
           IMAGE: ${{ steps.image.outputs.name }}
         run: |
