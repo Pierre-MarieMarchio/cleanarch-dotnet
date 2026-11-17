@@ -121,7 +121,7 @@ internal static class ProjectFileCheck
                 ["version"] = symbols.GetProperty("templateVersion").GetProperty("parameters").GetProperty("value").GetString(),
             },
             ["name"] = name,
-            ["targetFramework"] = XDocument.Load(Path.Combine(Path.GetDirectoryName(folder)!, "Directory.Build.props")).Descendants("TargetFramework").Single().Value,
+            ["targetFramework"] = Value("dotnet"),
             ["options"] = options,
             ["client"] = chosen.Intersect(_clientPresentations).Any() || web == "blazor-wasm",
         };
@@ -178,7 +178,7 @@ internal static class ProjectFileCheck
 
         try
         {
-            string options = "--web vite-react --web-audience admin --presentation wpf --presentation worker --agent-files false --aspire true --code-host none";
+            string options = "--dotnet net11.0 --web vite-react --web-audience admin --presentation wpf --presentation worker --agent-files false --aspire true --code-host none";
             File.WriteAllText(Path.Combine(scratch, "cleanarch.json"), Expected("Acme.Shop", [.. options.Split(' ')]));
 
             if (Run([scratch, "Acme.Shop", options]) != 0)
@@ -189,7 +189,7 @@ internal static class ProjectFileCheck
             string text = File.ReadAllText(Path.Combine(scratch, "cleanarch.json"));
             string[] expectations =
             [
-                "\"targetFramework\": \"net10.0\"", "\"auth\": \"local\"", "\"codeHost\": \"none\"", "\"ci\": false", "\"agentFiles\": false", "\"aspire\": true", "\"client\": true", "\"scope\": \"acme-shop\"",
+                "\"targetFramework\": \"net11.0\"", "\"auth\": \"local\"", "\"codeHost\": \"none\"", "\"ci\": false", "\"agentFiles\": false", "\"aspire\": true", "\"client\": true", "\"scope\": \"acme-shop\"",
                 "\"name\": \"Site\"", "\"audience\": \"admin\"", "\"rendering\": \"spa\"", "\"port\": 5173", "\"name\": \"Api\"",
                 "\"framework\": \"wpf\"", "\"name\": \"Worker\"",
             ];

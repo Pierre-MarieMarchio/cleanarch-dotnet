@@ -105,6 +105,8 @@ internal static class GitLabPipelineGate
 
     private static readonly Regex _dotnetCommand = new(@"^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*dotnet(?:\.exe)?(?:\s|$)", RegexOptions.Compiled);
 
+    private static readonly Regex _defaultLineInclude = new(@"^(?<indent>[ \t]*)#else\n\k<indent>#include \.\./\.\./(?<path>\S+)$", RegexOptions.Compiled | RegexOptions.Multiline);
+
     private static readonly Regex _keylessSigning = new(@"(?:^|[\s;&|(])cosign\s+(?:sign|attest)\b(?!.*\s--key[\s=])", RegexOptions.Compiled);
 
     private const string _sigstoreToken = "SIGSTORE_ID_TOKEN";
@@ -139,7 +141,7 @@ internal static class GitLabPipelineGate
         var read = new HashSet<string>(StringComparer.Ordinal);
         included = read;
 
-        if (Parse(name, text, problems) is not { } top)
+        if (Parse(name, WithTheDefaultLine(root, text), problems) is not { } top)
         {
             return problems;
         }
@@ -163,7 +165,7 @@ internal static class GitLabPipelineGate
             {
                 var relative = Path.GetRelativePath(includeBase, file).Replace('\\', '/');
                 var includedName = $"{name} > {relative}";
-                if (Parse(includedName, ReadText(file), problems) is { } document)
+                if (Parse(includedName, WithTheDefaultLine(root, ReadText(file)), problems) is { } document)
                 {
                     pending.Enqueue((includedName, document));
                 }
@@ -498,11 +500,13 @@ internal static class GitLabPipelineGate
         ("a job that is not a mapping", _cleanFixture + "odd: 3\n"),
         ("a top level that is not a mapping", "- one\n- two\n"),
         ("YAML that does not parse", "build: [\n"),
+        ("an image only another line's include writes", _cleanFixture.Replace($"  image: {_sdk}\n", "  #if (dotnet == \"net11.0\")\n  #include ../../images/sdk.values.yml\n  #endif\n")),
     ];
 
     private static readonly (string Label, string Text)[] _mustStaySilent =
     [
         ("a pipeline with nothing wrong with it", _cleanFixture),
+        ("an image the default line's include writes", _cleanFixture.Replace($"  image: {_sdk}\n", "  #if (dotnet == \"net11.0\")\n  #include ../../images/other.values.yml\n  #else\n  #include ../../images/sdk.values.yml\n  #endif\n")),
         ("no stages: and jobs in the default ones", _cleanFixture.Replace("stages:\n  - build\n  - test\n", "")),
         ("an include as a local string", _cleanFixture.Replace("  - local: ci/extra.yml", "  - ci/extra.yml")),
         ("a local include with a leading slash", _cleanFixture.Replace("  - local: ci/extra.yml", "  - local: /ci/extra.yml")),
@@ -560,6 +564,8 @@ internal static class GitLabPipelineGate
         Directory.CreateDirectory(tools);
         File.WriteAllText(Path.Combine(tools, "Present.cs"), "", _utf8NoBom);
         File.WriteAllText(Path.Combine(root, "global.json"), "{}", _utf8NoBom);
+        Directory.CreateDirectory(Path.Combine(root, "images"));
+        File.WriteAllText(Path.Combine(root, "images", "sdk.values.yml"), $"image: {_sdk}\n", _utf8NoBom);
         var included = Path.Combine(includeBase, "ci");
         Directory.CreateDirectory(included);
         File.WriteAllText(Path.Combine(included, "extra.yml"), _extraFixture, _utf8NoBom);
@@ -1001,6 +1007,9 @@ internal static class GitLabPipelineGate
 
     private static string ScalarText(YamlNode node)
         => node is YamlScalarNode scalar ? scalar.Value ?? "" : node.ToString();
+
+    private static string WithTheDefaultLine(string root, string text)
+        => _defaultLineInclude.Replace(text, include => string.Join('\n', ReadText(Path.Combine(root, include.Groups["path"].Value)).TrimEnd('\n').Split('\n').Select(line => include.Groups["indent"].Value + line)));
 
     private static string ReadText(string path)
         => File.ReadAllText(path).Replace("\r\n", "\n").Replace("\r", "\n");

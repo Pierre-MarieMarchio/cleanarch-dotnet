@@ -55,7 +55,8 @@ public sealed class Questionnaire
         IReadOnlyDictionary<string, string> preset,
         IReadOnlyDictionary<string, Condition> askedWhen,
         IReadOnlyList<Question>? before = null,
-        IReadOnlyList<Question>? after = null)
+        IReadOnlyList<Question>? after = null,
+        IReadOnlyCollection<string>? askedFirst = null)
     {
         Dictionary<string, string> answers = Given(manifest, given);
         foreach ((string symbol, string value) in preset)
@@ -73,10 +74,14 @@ public sealed class Questionnaire
             }
         }
 
+        ILookup<bool, TemplateOption> unanswered = manifest.Options
+            .Where(option => !answers.ContainsKey(option.Symbol))
+            .ToLookup(option => askedFirst?.Contains(option.Symbol) == true);
         Interview(
             [
+                .. unanswered[true].Select(option => OptionQuestion(manifest, option, askedWhen)),
                 .. before ?? [],
-                .. manifest.Options.Where(option => !answers.ContainsKey(option.Symbol)).Select(option => OptionQuestion(manifest, option, askedWhen)),
+                .. unanswered[false].Select(option => OptionQuestion(manifest, option, askedWhen)),
                 .. after ?? [],
             ],
             answers,

@@ -31,7 +31,7 @@ internal static class OptionChanges
         Dictionary<string, TemplateParameter> was = before.ParametersByName();
         Dictionary<string, TemplateParameter> @is = after.ParametersByName();
         string[] removed = [.. was.Keys.Except(@is.Keys).Order(StringComparer.Ordinal)];
-        string[] added = [.. @is.Keys.Except(was.Keys).Order(StringComparer.Ordinal)];
+        string[] added = [.. @is.Keys.Except(was.Keys).Where(name => name != GenerationPlan.DotnetSymbol).Order(StringComparer.Ordinal)];
 
         IEnumerable<string> removals = removed.Select(name => Removal(before, after, name, added, recording, version));
         IEnumerable<string> additions = added.Select(name =>

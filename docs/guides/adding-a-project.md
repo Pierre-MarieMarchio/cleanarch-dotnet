@@ -27,7 +27,7 @@ says. A new folder in an existing project is not a new project.
    module references the application projects whose ports it implements and
    `AppTemplate.Infrastructure.Core`, never another module; `ModuleDependencyTests` holds it. It
    grants its internals to its unit tests with an `InternalsVisibleTo` item.
-3. Add it to the solution, in the solution folder of its layer: `dotnet sln AppTemplate.slnx add --solution-folder src/Infrastructure <path to the project file>`, and `--solution-folder tests/Infrastructure` for its unit tests.
+3. Add it to the solution, in the solution folder of its layer: `dotnet sln AppTemplate.slnx add --solution-folder src/Infrastructure --include-references false <path to the project file>`, and `--solution-folder tests/Infrastructure` for its unit tests. The projects it references are in the solution already, in their own folders, and a .NET 11 SDK refuses to add them again under this one.
    The solution is an `.slnx`, so the change is one `<Project>` line with no GUID, as
    [the project file](../reference/project-layout.md#the-project-file) says.
 4. Give it its registration class at its root, `<Capability>Module` with an

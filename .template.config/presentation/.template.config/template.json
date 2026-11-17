@@ -18,6 +18,102 @@
     "type": "item"
   },
   "symbols": {
+    "dotnet": {
+      "type": "parameter",
+      "datatype": "choice",
+      "defaultValue": "net10.0",
+      "choices": [
+        {
+          "choice": "net10.0",
+          "description": ".NET 10, the LTS: the recommended line."
+        },
+        {
+          "choice": "net11.0",
+          "description": ".NET 11, the newest .NET."
+        }
+      ],
+      "replaces": "net10.0",
+      "onlyIf": [
+        {
+          "after": "<TargetFramework>"
+        },
+        {
+          "after": "\"targetFramework\": \""
+        },
+        {
+          "after": "Directory.Packages."
+        },
+        {
+          "before": "-windows"
+        }
+      ],
+      "description": "The project's --dotnet value, the targetFramework cleanarch.json records: the .NET line it builds on and of the images its Dockerfile runs."
+    },
+    "dotnet11": {
+      "type": "computed",
+      "value": "(dotnet == \"net11.0\")",
+      "description": "The project builds on .NET 11, whose runtime holds what a .NET 10 project takes from packages, such as the abstractions of Microsoft.Extensions' configuration, dependency injection and logging, and whose SDK and analyzers ask for newer forms. Conditions what differs on .NET 11."
+    },
+    "dotnetSdk": {
+      "type": "generated",
+      "generator": "switch",
+      "parameters": {
+        "evaluator": "C++",
+        "datatype": "string",
+        "cases": [
+          {
+            "condition": "(dotnet == \"net11.0\")",
+            "value": "11.0.100"
+          },
+          {
+            "condition": "(true)",
+            "value": "10.0.100"
+          }
+        ]
+      },
+      "replaces": "10.0.100",
+      "description": "The SDK feature band global.json requires, the first of the chosen .NET's."
+    },
+    "dotnetName": {
+      "type": "generated",
+      "generator": "switch",
+      "parameters": {
+        "evaluator": "C++",
+        "datatype": "string",
+        "cases": [
+          {
+            "condition": "(dotnet == \"net11.0\")",
+            "value": ".NET 11 "
+          },
+          {
+            "condition": "(true)",
+            "value": ".NET 10 "
+          }
+        ]
+      },
+      "replaces": ".NET 10 ",
+      "description": "The chosen .NET as the pages and the agents' file name it."
+    },
+    "dotnetProjectTemplates": {
+      "type": "generated",
+      "generator": "switch",
+      "parameters": {
+        "evaluator": "C++",
+        "datatype": "string",
+        "cases": [
+          {
+            "condition": "(dotnet == \"net11.0\")",
+            "value": "ProjectTemplates.11.0"
+          },
+          {
+            "condition": "(true)",
+            "value": "ProjectTemplates.10.0"
+          }
+        ]
+      },
+      "replaces": "ProjectTemplates.10.0",
+      "description": "The line of Microsoft's project templates a starter's scaffold.json installs, which carries the .NET it generates in its name."
+    },
     "framework": {
       "type": "parameter",
       "displayName": "Framework",
@@ -597,6 +693,17 @@
     }
   },
   "SpecialCustomOperations": {
+    "**/Dockerfile": {
+      "operations": [
+        {
+          "type": "include",
+          "configuration": {
+            "start": "#include ",
+            "end": "\n"
+          }
+        }
+      ]
+    },
     "**/Generated/**.cs": {
       "operations": [
         {

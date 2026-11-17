@@ -15,7 +15,7 @@ public sealed class SignInCompositionTests
     private static CancellationToken Cancellation => TestContext.Current.CancellationToken;
 
     [Fact]
-    public void TheApp_RefusesToStart_UntilTheSignInIsConfigured()
+    public async Task TheApp_RefusesToStart_UntilTheSignInIsConfigured()
     {
         using var services = SiteServices.Build(NoContent(), settings: new Dictionary<string, string?>
         {
@@ -23,18 +23,18 @@ public sealed class SignInCompositionTests
             [$"{SignInOptions.SectionName}:ClientId"] = string.Empty,
         });
 
-        var refused = Should.Throw<OptionsValidationException>(() => services.GetRequiredService<IStartupValidator>().Validate());
+        var refused = await Should.ThrowAsync<OptionsValidationException>(ValidateOnStartAsync(services));
 
         refused.Message.ShouldContain("'SignIn:Authority'");
         refused.Message.ShouldContain("'SignIn:ClientId'");
     }
 
     [Fact]
-    public void TheApp_Starts_OnceTheSignInIsConfigured()
+    public async Task TheApp_Starts_OnceTheSignInIsConfigured()
     {
         using var services = SiteServices.Build(NoContent());
 
-        Should.NotThrow(() => services.GetRequiredService<IStartupValidator>().Validate());
+        await ValidateOnStartAsync(services);
     }
 
     [Fact]
@@ -74,4 +74,12 @@ public sealed class SignInCompositionTests
     }
 
     private static StubApi NoContent() => new(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
+
+    /*#if (!dotnet11)*/
+    private static Task ValidateOnStartAsync(IServiceProvider provider) =>
+        Task.Run(provider.GetRequiredService<IStartupValidator>().Validate, TestContext.Current.CancellationToken);
+    /*#else
+    private static Task ValidateOnStartAsync(IServiceProvider provider) =>
+        provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(TestContext.Current.CancellationToken);
+    #endif*/
 }

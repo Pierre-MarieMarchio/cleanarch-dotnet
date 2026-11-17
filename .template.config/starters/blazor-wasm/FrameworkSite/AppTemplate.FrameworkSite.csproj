@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <!--#if (dotnet11)
+    <StaticWebAssetSpaFallbackEnabled>true</StaticWebAssetSpaFallbackEnabled>
+    #endif-->
   </PropertyGroup>
 
   <ItemGroup>
@@ -9,7 +12,11 @@
     <!--#if (externalAuth)-->
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" />
     <!--#endif-->
+    <!--#if (dotnet11)
+    <PackageReference Include="Microsoft.AspNetCore.Components.Gateway" PrivateAssets="all" />
+    #else-->
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" PrivateAssets="all" />
+    <!--#endif-->
   </ItemGroup>
 
   <ItemGroup>

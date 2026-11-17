@@ -96,6 +96,26 @@ runs the `dotnet new`, reading the options from `cleanarch.json`. The edits, to 
 the command stops:
 
 <!--#if (!hasClient)-->
+<!--#if (dotnet11)-->
+- in `.config/dotnet-tools.json`, before the line:
+
+  ```json
+      "cleanarch.cli": {
+  ```
+
+  add:
+
+  ```json
+      "microsoft.openapi.kiota": {
+        "version": "1.38.0",
+        "commands": [
+          "kiota"
+        ],
+        "rollForward": true
+      },
+  ```
+
+<!--#else-->
 - in `.config/dotnet-tools.json`, replace the lines:
 
   ```json
@@ -121,11 +141,11 @@ the command stops:
   }
   ```
 
+<!--#endif-->
 - in `Directory.Packages.props`, after the lines:
 
   ```xml
-      <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
-    </ItemGroup>
+    <Import Project="$(MSBuildThisFileDirectory)Directory.Packages.net10.0.props" />
 
   ```
 

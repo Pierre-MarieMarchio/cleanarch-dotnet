@@ -43,6 +43,52 @@ public sealed class LauncherTests : IDisposable
     }
 
     [Theory]
+    [InlineData("10.0.114 [/usr/share/dotnet/sdk]", "net10.0", false)]
+    [InlineData("10.0.114 [/usr/share/dotnet/sdk]", "net11.0", true)]
+    [InlineData("10.0.114 [/usr/share/dotnet/sdk]\n11.0.100 [/usr/share/dotnet/sdk]", "net11.0", false)]
+    public void AMissingSdk_OnlyWarns_WithItsDownloadLink(string installed, string line, bool warned)
+    {
+        var console = new TestConsole();
+        console.Profile.Width = Terminal.UnwrappedWidth;
+        var processes = new FakeProcesses(call => new(0, call.Arguments.SequenceEqual(["--list-sdks"]) ? installed : string.Empty));
+
+        new Launcher(console, _root, interactive: false, processes)
+            .Run(["new", "-n", "Acme.Shop", "--yes", "--template-source", Repository.Root, "--dotnet", line])
+            .ShouldBe(0, console.Output);
+
+        console.Output.Contains("https://dotnet.microsoft.com/download/dotnet/11.0").ShouldBe(warned);
+        processes.CommandLines.ShouldContain(command => command.StartsWith("dotnet new cleanarch-webapi", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void TheNewestLine_ReachesDotnetNew_AsTheDotnetOption()
+    {
+        var console = new TestConsole();
+        console.Profile.Width = Terminal.UnwrappedWidth;
+        var processes = new FakeProcesses();
+
+        new Launcher(console, _root, interactive: false, processes)
+            .Run(["new", "-n", "Acme.Shop", "--yes", "--template-source", Repository.Root, "--dotnet", "net11.0"])
+            .ShouldBe(0, console.Output);
+
+        processes.CommandLines.Single(command => command.StartsWith("dotnet new cleanarch-webapi", StringComparison.Ordinal)).ShouldContain("--dotnet net11.0");
+    }
+
+    [Fact]
+    public void WithYes_TheProjectIsOnTheLts_AndNoSdkIsListed()
+    {
+        var console = new TestConsole();
+        console.Profile.Width = Terminal.UnwrappedWidth;
+        var processes = new FakeProcesses();
+
+        new Launcher(console, _root, interactive: false, processes)
+            .Run(["new", "-n", "Acme.Shop", "--yes", "--template-source", Repository.Root])
+            .ShouldBe(0, console.Output);
+
+        processes.CommandLines.Single(command => command.StartsWith("dotnet new cleanarch-webapi", StringComparison.Ordinal)).ShouldNotContain("--dotnet");
+    }
+
+    [Theory]
     [InlineData("--examples", "all", "add --examples none")]
     [InlineData("--files", "true", "add --files false")]
     public void ARefusedCombination_IsExplainedInWordsWithItsFix_AndLeavesNoFolderBehind(string option, string value, string fix)

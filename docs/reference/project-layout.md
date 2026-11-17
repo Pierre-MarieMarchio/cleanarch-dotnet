@@ -240,7 +240,7 @@ Server and which carries the schema in its name on SQLite.
 |---|---|
 | `template` | the `package` and the `version` that generated the project |
 | `name` | the project's name, the prefix of every project under `src` and `tests` |
-| `targetFramework` | the .NET the project builds, the `TargetFramework` of `Directory.Build.props`, such as `net10.0`; a file without it, written by a 1.x version, reads as `net10.0` |
+| `targetFramework` | the .NET the project builds, the `--dotnet` it was generated with and the `TargetFramework` of `Directory.Build.props`, such as `net10.0`; a file without it, written by a 1.x version, reads as `net10.0` |
 | `options` | each generation option that adds no part: `auth`, `database`, `examples`, `files`, `ci`, `sonar`, `agentFiles`, `agentFilesExample`, `aspire` |
 | `client` | `true` when the project holds the .NET client of the API |
 | `web` | present with the web workspace: its npm `scope`, its `apps` with the `framework`, `audience`, `rendering` and host `port` each was added with, and the `packages` added to it |

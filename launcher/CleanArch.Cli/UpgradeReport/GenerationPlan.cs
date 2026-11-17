@@ -5,6 +5,8 @@ namespace CleanArch.Cli.UpgradeReport;
 
 internal sealed record GenerationPlan(IReadOnlyList<(string Symbol, string Value)> Generation, IReadOnlyList<Replay> Replays)
 {
+    public const string DotnetSymbol = "dotnet";
+
     private static readonly (string Framework, string Name)[] _generatedHosts =
     [
         ("api", "Api"), ("blazor-server", "Portal"), ("mcp", "Mcp"), ("avalonia", "Desktop"), ("wpf", "Desktop"), ("worker", "Worker"),
@@ -12,7 +14,7 @@ internal sealed record GenerationPlan(IReadOnlyList<(string Symbol, string Value
 
     public static GenerationPlan Of(Provenance project)
     {
-        (string Symbol, string Value)[] recorded = [.. project.Options];
+        (string Symbol, string Value)[] recorded = [.. project.Options, (DotnetSymbol, project.TargetFramework)];
         var generation = new List<(string Symbol, string Value)>(recorded);
         var replays = new List<Replay>();
 

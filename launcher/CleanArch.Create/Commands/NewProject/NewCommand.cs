@@ -38,6 +38,7 @@ public static class NewCommand
         string workingDirectory = session.Machine.WorkingDirectory;
         string target = Path.GetFullPath(asked.Output, workingDirectory);
         IReadOnlyList<string> options = manifest.CommandArguments(asked.Options);
+        SdkLine.WarnWhenMissing(session, manifest.Resolve(SdkLine.Symbol, asked.Options));
         ItemAdditions.Install(session.Conversation, session.Dotnet, session.Source, session.Version, workingDirectory);
         Generate(session, [manifest.ShortName, "-n", asked.Name, "-o", target, .. options, .. ExistingFiles.Forced(asked.ExistingFiles)], asked, target);
         List<SetupOutcome> outcomes = SetUp(session, target, asked.Setup);

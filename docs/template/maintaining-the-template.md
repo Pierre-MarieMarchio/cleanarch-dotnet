@@ -56,6 +56,9 @@ releases: the acceptance matrix packs the checkout. A red run is an advisory pub
 release, or a published package that no longer builds; the fix is a release that raises the
 dependency, as [the project's policy](../guides/build-and-ci.md#an-advisory-fails-the-build) says.
 A nuget.org holding no stable version fails the run too, since there is nothing for a user to install.
+When the published package's help for `cleanarch-webapi` offers `--dotnet net11.0`, the run also
+generates, bootstraps and builds a project on the newest line, with its own .NET 11 SDK; the 1.x and
+10.x packages have no such option, and the run skips those steps and builds the default project alone.
 Like the nightly acceptance run, GitHub announces a red run only to the person who last changed the
 cron line, by mail if their settings send workflow failures, and shows it under the Actions tab; look
 there on Mondays. The workflow is excluded from generation and from the package, and
@@ -252,7 +255,19 @@ same name, `Template acceptance (<leg>)`, the check the `develop` ruleset requir
 | a `.template.config/variants/database-<name>` overlay | that provider's legs |
 | the `.template.config/variants/code-host-gitlab` overlay | the leg that passes `--code-host gitlab` |
 | `src/AppHost`, its integration tests and `LocalStackParityTests` | the leg that passes `--aspire true` |
+| the newest line's own files: `.template.config/images/net11.0`, `Directory.Packages.<tfm>.props` of the newest line, `.template.config/lines` | the leg that passes `--dotnet net11.0` alone |
 | anything else: `src`, `tests`, the shared pages, `tools`, the props, `template.json`, the other variants | every leg, the Windows ones included |
+
+The leg `newest .NET, local auth, api worker and mcp` generates `--dotnet net11.0` with the API, the worker
+and the MCP server on PostgreSQL, so it builds every image the newest line owns. A file both lines read,
+such as `global.json`, `Directory.Build.props`, `Directory.Packages.props`, `.template.config/template.json`,
+`src` or `tests`, matches no rule and so runs every leg, this one included: a shared bump that passes on
+.NET 10 and breaks .NET 11 shows on the pull request. The leg sets `light_on_pull_request`, so on a pull
+request without the `full-acceptance` label it generates, builds and runs the Docker-free tests, and skips the integration suites, the
+end-to-end suite and the images the stack builds; with that label, and on every other event, the nightly run included, it runs
+the whole depth the LTS legs run. Its job installs the .NET 11 SDK from the generated `global.json`.
+`AcceptanceSelectionTests` holds that every file a line owns reaches this leg, and that the steps which
+need Docker skip on a pull request.
 
 The `windows, wpf, local auth` leg generates the default shape with the WPF app added and nothing
 else changed, so it proves the default project's tasks on Windows too. A team on Windows runs those
@@ -491,7 +506,7 @@ prefix, schedule, limit and ignored major of `dependabot.yml` has its counterpar
 of `packageRules` that applies them in order, as Renovate does; it also holds the README edits to the
 blocks the worker and the web workspace write. Its `TheBots_IgnoreTheMajorsOfTheRuntimeBand` reads
 the runtime band from the files, every package of `Directory.Packages.props` whose major is that of
-the target framework in `Directory.Build.props`, every local tool at that major, the project tool and
+the target framework in `Directory.Build.props` and every package of a line's `Directory.Packages.<tfm>.props` at that line's major, every local tool at that major, the project tool and
 every image at that tag, and fails until both bots ignore each one's majors and no other.
 `RenovateConfigurationTests`, which a GitLab project
 receives under `(gitlabHost)`, holds the `node` group and the SDK image to the files the project
@@ -1468,7 +1483,7 @@ option is not `--framework`, which the item templates give to the web or present
 | The tool's contract | the project file's schema, the code templates and a command's contract break only at a major: deprecated within one, removed at the next, by a pull request labelled `next-major` |
 | What a line owns | its runtime band in `Directory.Packages.<tfm>.props`, its target framework, its SDK, the name of Microsoft's project templates the starters scaffold from, and its images' tags and digests |
 | A generated project | records the target framework in `cleanarch.json`, never the word LTS; its Dependabot and Renovate ignore the majors of the runtime band, the .NET images, `dotnet-ef` and `CleanArch.Cli`; the upgrade report stays on its framework unless asked to move |
-| Held by | `TemplatePackagingTests` for the major and the minor bumps, the title check of `.github/workflows/template-pull-request-title.yml` for the tool's contract, `RenovateParityTests` for the ignore rules, and `UpgradeReportTests` for the report's line |
+| Held by | `TemplatePackagingTests` for the major and the minor bumps, the title check of `.github/workflows/template-pull-request-title.yml` for the tool's contract, `RenovateParityTests` for the ignore rules, `UpgradeReportTests` for the report's line, and `DotnetLineGenerationTests` for what a generation on the newest line keeps |
 
 One package rather than a branch per line keeps both lines equal in features with no backport, where
 a maintenance branch would get fixes only, and Dependabot's security updates, the scheduled
@@ -1480,9 +1495,63 @@ the choice, always comes with a major; a numbering of its own would spend a majo
 need a table of which version generates which .NET.
 
 This checkout is the instance of the LTS line: its `Directory.Build.props`, `global.json` and images
-are the LTS's, and the newest line's values are the replacements generation applies. Dependabot
-updates every line's band, since each lives in a file of its own, and ignores their major versions,
-so a line never moves by a bot's pull request.
+are the LTS's, and the newest line's values are the replacements generation applies. Each line's
+runtime band is a file of its own, `Directory.Packages.net10.0.props` and
+`Directory.Packages.net11.0.props`, which `Directory.Packages.props` imports by name. The `dotnet`
+symbol of `template.json` replaces `net10.0` where it follows `<TargetFramework>`,
+`"targetFramework": "` or `Directory.Packages.`, or precedes `-windows`, so the import names the
+chosen line's file and the other file is left out. Its siblings replace what no file of the line
+holds: `dotnetSdk` the SDK band of `global.json`, `dotnetProjectTemplates` the name of Microsoft's
+project templates in the starters' `scaffold.json`, `dotnetName` the ".NET 10" of the pages and
+`AGENTS.md`; a patch moves none of them, so `template.json` holds no patch version of either line. A
+project on the newest line receives `.template.config/lines/net11.0/.config/dotnet-tools.json` whole in
+place of the LTS's manifests, with `dotnet-ef` at the line's version, its tools rolling forward to the
+.NET 11 runtime, the only one a .NET 11 SDK brings, and Kiota and the scanner behind the markers of
+`--sonar` and the client; `DotnetLineGenerationTests` holds its tools and commands to the LTS's. Where
+the sources differ between the lines, the computed `dotnet11` conditions them: a .NET 11 runtime holds
+the abstractions of Microsoft.Extensions that a .NET 10 project references as packages, its options
+validate at start through `IAsyncStartupValidator`, and its WebAssembly app runs on
+Microsoft.AspNetCore.Components.Gateway where a .NET 10 one has the DevServer. The `cleanarch-presentation` and
+`cleanarch-webapp` item templates declare the same symbols, which `dotnet cleanarch` sets from the
+project's `TargetFramework`, and `upgrade-report` generates both versions on the recorded line.
+
+The bots ignore the majors of every band, so a line never moves by a bot's pull request. Dependabot
+updates both bands: it reads a band only through a build that restores it, the LTS's through this
+checkout and the newest line's through `.template.config/lines/net11.0/DotnetLine.csproj`, a project of
+this repository alone that references every package of `Directory.Packages.net11.0.props` on the
+line's SDK, as `DotnetLineGenerationTests` holds; that project's first run under Dependabot is the
+proof of it end to end. Dependabot also moves the line's tool manifest beside that project. A
+generated project imports its own line's file, which its bots update. The version of Microsoft's
+project templates in each starter's `scaffold.json`, and of the packages the starters' pages quote,
+is written for each line under `#if (dotnet11)` and moved by hand on both lines; the probe references
+those templates, so a pull request of Dependabot that moves them is the reminder to carry the new
+version there.
+
+Each line's images live in `.template.config/images/<tfm>/`, `net10.0` and `net11.0`, one file per
+form a line takes: the SDK as a build stage, as the web app's publish stage, as the analysis image and
+as a GitLab job's `image:`, and the ASP.NET Core runtime as the final stage. Each
+`mcr.microsoft.com/dotnet` line of a Dockerfile, of `tools/sonar-scanner.Dockerfile` and of the GitLab
+pipeline is wrapped as `#if (dotnet == "net11.0")`, `#include ../../.template.config/images/net11.0/<form>`,
+`#else`, the LTS's, `#endif`, and the `include` operation of `template.json` writes that file in place of
+the marker. The LTS's branch is the line itself in a file this checkout builds, the API's and the web
+app's Dockerfiles and the analysis image, since Docker reads the markers as comments; it is
+`#include ../../.template.config/images/net10.0/<form>` in a file only generation reads, a starter's
+Dockerfile or the GitLab pipeline, which no bot reads where it sits. `tools/CheckGitLabCi.cs` reads the pipeline
+with the LTS's include written in, as a default generation writes it. The path is read from an item
+template's root, `.template.config/<item>/`, since `cleanarch-presentation` and `cleanarch-webapp` write
+the same Dockerfiles; the project template's token takes the `../../` off. Each folder is a docker
+directory of `.github/dependabot.yml`, whose `container-images` group moves an image in one pull request
+across the folder and this checkout's files and keeps it on its major; the pipeline's file is named as
+Helm values, the only YAML without a Kubernetes `kind` Dependabot reads an `image:` from.
+
+Two other shapes fail. Both lines' `FROM` lines in one Dockerfile make one dependency for Dependabot,
+whose ignored majors follow the lower version, so the newest line's pin never moves; they also give
+the checkout's Dockerfile two stages of one name. Values in `template.json` that replace the LTS's
+are read by no bot, so each pull request that moves a pin leaves them behind, and a test that holds
+them equal fails on it. `ContainerImagePinningTests` holds the reference files, their Dependabot
+directory, this checkout's images to the LTS's folder, and a generation on the newest line, rendered
+from the markers, that keeps no LTS image;
+in a generated project, it holds every .NET image to the `targetFramework` of `cleanarch.json`.
 
 Each November, one major:
 
@@ -1494,6 +1563,23 @@ Each November, one major:
 `release-as` stays in `.github/release-please/config.json` for that one release and leaves with the
 next commit, so the minors that follow are bumped as usual; `TemplatePackagingTests` fails while it is
 not above the last release.
+
+A change that concerns one line alone names it as its scope, `fix(net10.0): …` or `fix(net11.0): …`,
+so the release notes say which projects it reaches; a change to both lines names no line. It touches
+that line's files (its band, its images, its probe) or sits under a `(dotnet == "<tfm>")` marker,
+and the line's acceptance leg holds it.
+
+A line leaves the choice with the version that brings the next LTS, while its runtime is still
+supported, and a project on it stays on the last major that generates it, which `upgrade-report`
+offers. A security fix of `CleanArch.Cli` or of the package that must reach those projects ships as a
+patch of that major: a `hotfix/<major>.x` branch from the major's last tag takes the fix by
+cherry-pick, its release is made from that branch, and the branch is deleted once released; a
+feature or a dependency move reaches them only by moving to the current major. `template-release.yml`
+runs on `develop` alone and the `nuget` environment deploys from `develop` alone, so such a release
+first adds the branch to both, the environment with the owner's agreement. A branch for the one fix,
+rather than keeping the earlier LTS in the choice until its end of support, also reaches the
+projects on the STS that left with it, and spares the template a year more on that LTS's API and
+packages.
 
 ## The launcher
 
@@ -1560,7 +1646,8 @@ project on the thread and fails on any glyph above Latin-1 outside the WGL4 list
 | Option | Read from |
 |---|---|
 | `-n` | the one solution file beside `cleanarch.json` |
-| `--auth` | `local` with the `Application.Auth` project, `external` with the JWT bearer package in `Directory.Packages.props`, `none` otherwise |
+| `--dotnet` | the `TargetFramework` of `Directory.Build.props` |
+| `--auth` | `local` with the `Application.Auth` project, `external` with the JWT bearer package in a `Directory.Packages*.props` file, `none` otherwise |
 | `--examples` | `all` with `Features/TodoLists` in the application project, `notes` with `Features/Notes` alone, `none` otherwise |
 | `--files` | the `Infrastructure.Storage` project |
 | `--database` | the provider package `Infrastructure.Core` references: SQL Server, SQLite, PostgreSQL otherwise |

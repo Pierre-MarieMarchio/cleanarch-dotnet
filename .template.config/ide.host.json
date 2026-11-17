@@ -6,6 +6,13 @@
   "defaultSymbolVisibility": false,
   "symbolInfo": [
     {
+      "id": "dotnet",
+      "name": {
+        "text": ".NET"
+      },
+      "isVisible": true
+    },
+    {
       "id": "presentation",
       "name": {
         "text": "Presentation projects"

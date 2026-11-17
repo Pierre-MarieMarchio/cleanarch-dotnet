@@ -33,6 +33,11 @@ internal sealed partial class PresentationAddition(AdditionFlow flow)
             ["codeHost"] = project.CodeHost,
             ["ci"] = Condition.Of(project.Ci),
         };
+        if (project.TargetFramework is { } framework)
+        {
+            detected["dotnet"] = framework;
+        }
+
         flow.Detected(project, manifest, detected);
 
         AskedItem asked = flow.AskItemNamedLast(

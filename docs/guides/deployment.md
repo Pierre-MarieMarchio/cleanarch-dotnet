@@ -82,7 +82,7 @@ docker build -f src/Presentation/AT.Api/Dockerfile -t app-template-api:local .
 ```
 
 The build context is the repository root, because restore needs `Directory.Build.props`,
-`Directory.Packages.props` and `global.json`. The SDK stage builds portable IL on the builder's
+`Directory.Packages.props`, the `Directory.Packages.net10.0.props` it imports and `global.json`. The SDK stage builds portable IL on the builder's
 platform; the runtime is ASP.NET on alpine, both pinned by digest. The image runs as a non-root user
 (`USER $APP_UID`, which alpine does not set by itself), speaks HTTP on 8080 only, and carries a
 `HEALTHCHECK` on `/health` that needs alpine's `wget`. `.dockerignore` keeps
@@ -101,7 +101,8 @@ docker build -f src/Presentation/<Initials>.Worker/Dockerfile -t app-template-wo
 
 Each host has a `Dockerfile` in its own folder under `src/Presentation`, built the same way: the worker
 above, and a portal or an MCP server when the project holds one. The build context is the repository
-root, because restore needs `Directory.Build.props`, `Directory.Packages.props` and `global.json`. The
+root, because restore needs `Directory.Build.props`, `Directory.Packages.props`, the
+`Directory.Packages.net10.0.props` it imports and `global.json`. The
 SDK stage builds portable IL on the builder's platform; the runtime is ASP.NET on alpine, both pinned
 by digest, and each image runs as a non-root user (`USER $APP_UID`, which alpine does not set by
 itself). The worker serves no port and carries no `HEALTHCHECK`: its log and its loops' `iterations`

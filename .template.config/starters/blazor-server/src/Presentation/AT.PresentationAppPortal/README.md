@@ -107,16 +107,24 @@ the command stops:
   EXTERNAL_AUTH_INTERACTIVE_CLIENT_SECRET=
   ```
 
-- in `Directory.Packages.props`, after the line:
+- in `Directory.Packages.net10.0.props`, after the line:
 
   ```xml
+  <!--#if (dotnet11)
+      <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="11.0.0" />
+  #else-->
       <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.15" />
+  <!--#endif-->
   ```
 
   add:
 
   ```xml
+  <!--#if (dotnet11)
+      <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="11.0.0" />
+  #else-->
       <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.15" />
+  <!--#endif-->
   ```
 
 <!--#endif-->

@@ -417,7 +417,7 @@ public sealed class RenovateParityTests
                 .Where(version => Major(version) == (_lineProps.Match(Path.GetFileName(file)) is { Success: true } line ? Major(line) : major))
                 .Select(version => version.Groups["name"].Value))
             .Concat(files.Where(file => Path.GetFileName(file) == "dotnet-tools.json")
-                .SelectMany(file => JsonNode.Parse(File.ReadAllText(file))!["tools"]!.AsObject())
+                .SelectMany(file => JsonNode.Parse(File.ReadAllText(file), documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip })!["tools"]!.AsObject())
                 .Where(tool => tool.Value!["version"]!.GetValue<string>().Split('.')[0] == major.ToString(System.Globalization.CultureInfo.InvariantCulture))
                 .Select(tool => tool.Key))
             .Append(_projectTool)

@@ -1,7 +1,11 @@
 # syntax=docker/dockerfile:1.29.0@sha256:572cebbc2b15e6f84c077742952674889cb63cd5e9b80abdffcbe587b6f19183
 
 # Build from the repository root: docker build -f src/Presentation/AT.Worker/Dockerfile -t app-template-worker:local .
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.404-noble@sha256:fe0fd4e93bd2fbb47c883b7a6369e5c8d3db8bf01cdc5981f6ee35fbdf3ff4fb AS build
+#if (dotnet == "net11.0")
+#include ../../.template.config/images/net11.0/build.Dockerfile
+#else
+#include ../../.template.config/images/net10.0/build.Dockerfile
+#endif
 
 ARG BUILD_CONFIGURATION=Release
 
@@ -12,7 +16,7 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
 WORKDIR /src
 
 # Restore inputs first, so this layer stays cached until a project file or a version pin changes.
-COPY ["global.json", "Directory.Build.props", "Directory.Build.targets", "Directory.Packages.props", "./"]
+COPY ["global.json", "Directory.Build.props", "Directory.Build.targets", "Directory.Packages.props", "Directory.Packages.net10.0.props", "./"]
 
 # Every project the worker references, at its real path.
 COPY ["src/Domain/AT.Domain.Core/AppTemplate.Domain.Core.csproj",                                       "src/Domain/AT.Domain.Core/"]
@@ -45,7 +49,11 @@ RUN dotnet publish "src/Presentation/AT.Worker/AppTemplate.Worker.csproj" \
         -o /app/publish
 
 # The API's runtime image: the identity module needs ASP.NET Core, and the two images share its layers.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.15-alpine3.24@sha256:21c3f9798416cba4c0576a947c286231cb71ea2884896cb968253f5c9668f930 AS final
+#if (dotnet == "net11.0")
+#include ../../.template.config/images/net11.0/final.Dockerfile
+#else
+#include ../../.template.config/images/net10.0/final.Dockerfile
+#endif
 
 ARG TARGETARCH
 ARG TARGETPLATFORM

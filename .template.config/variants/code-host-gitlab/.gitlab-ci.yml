@@ -55,14 +55,18 @@ default:
       when: never
     - when: on_success
 
-# Directory.Packages.props holds every package version and global.json the SDK; GitLab keys a cache on two files at most.
+# The package versions live in Directory.Packages.props and the .NET line's file it imports; GitLab keys a cache on two files at most.
 .dotnet:
-  image: mcr.microsoft.com/dotnet/sdk:10.0.404-noble@sha256:fe0fd4e93bd2fbb47c883b7a6369e5c8d3db8bf01cdc5981f6ee35fbdf3ff4fb
+  #if (dotnet == "net11.0")
+  #include ../../.template.config/images/net11.0/pipeline.values.yml
+  #else
+  #include ../../.template.config/images/net10.0/pipeline.values.yml
+  #endif
   cache:
     key:
       files:
         - Directory.Packages.props
-        - global.json
+        - Directory.Packages.net10.0.props
       prefix: nuget
     paths:
       - .nuget/packages
@@ -84,7 +88,11 @@ default:
 
 # The Docker CLI with the Compose plugin and the Buildx plugin its builds need, beside the SDK, for the jobs that start the stack, from Docker's static release, each checked against its SHA-256: bump a version and its checksum together.
 .docker-client:
-  image: mcr.microsoft.com/dotnet/sdk:10.0.404-noble@sha256:fe0fd4e93bd2fbb47c883b7a6369e5c8d3db8bf01cdc5981f6ee35fbdf3ff4fb
+  #if (dotnet == "net11.0")
+  #include ../../.template.config/images/net11.0/pipeline.values.yml
+  #else
+  #include ../../.template.config/images/net10.0/pipeline.values.yml
+  #endif
   before_script:
     - |
       cli=29.9.3
@@ -140,7 +148,7 @@ build-test:
     - key:
         files:
           - Directory.Packages.props
-          - global.json
+          - Directory.Packages.net10.0.props
         prefix: nuget
       paths:
         - .nuget/packages

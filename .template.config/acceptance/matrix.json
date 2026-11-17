@@ -130,6 +130,18 @@
     "first_presentation": "--framework wpf --database sqlite"
   },
   {
+    "name": "newest .NET, local auth, api worker and mcp",
+    "tags": ["dotnet-net11.0", "presentation-mcp", "presentation-worker"],
+    "options": "--dotnet net11.0 --presentation api --presentation mcp --presentation worker --examples notes --files false",
+    "auth_context": "true",
+    "integration": "true",
+    "end_to_end": "true",
+    "light_on_pull_request": "true",
+    "worker": "true",
+    "mcp": "true",
+    "stack_env": "SEED_ENABLED=true\nSEED_ADMIN_PASSWORD=Acceptance-Passw0rd!"
+  },
+  {
     "name": "windows, wpf, local auth",
     "tags": ["presentation-wpf"],
     "runner": "windows-latest",

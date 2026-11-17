@@ -33,10 +33,11 @@ public sealed class TemplateManifestTests
     }
 
     [Fact]
-    public void TheProjectsQuestions_AskWhatItHolds_ThenHowCallersSignIn_ThenItsData_ThenItsTooling()
+    public void TheProjectsQuestions_AskTheDotnetLine_ThenWhatItHolds_ThenHowCallersSignIn_ThenItsData_ThenItsTooling()
     {
         string[][] groups =
         [
+            ["dotnet"],
             ["presentation", "web", "webName", "webAudience", "webRendering"],
             ["auth"],
             ["database", "examples", "files"],

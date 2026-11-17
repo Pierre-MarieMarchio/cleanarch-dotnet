@@ -36,6 +36,7 @@ public sealed class QuestionnaireTests
 
         Dictionary<string, string> answers = questionnaire.Answer(_project, _nothing, _nothing, NewCommand.ProjectAskedWhen);
 
+        answers["dotnet"].ShouldBe("net10.0");
         answers["auth"].ShouldBe("local");
         answers["web"].ShouldBe("none");
         answers.ShouldNotContainKey("webName");
@@ -45,10 +46,35 @@ public sealed class QuestionnaireTests
     }
 
     [Fact]
+    public void TheDotnetLine_IsAskedBeforeTheQuestionsTheCallerPutsFirst()
+    {
+        var console = new TestConsole().Interactive();
+        console.Profile.Width = 200;
+        PushKeys(console, ConsoleKey.DownArrow, ConsoleKey.Enter);
+        var questionnaire = new Questionnaire(console, interactive: true, yes: false);
+        bool? lineKnownWhenTheNameIsAsked = null;
+        Question name = new("--name", (answers, _) =>
+        {
+            lineKnownWhenTheNameIsAsked = answers.ContainsKey("dotnet");
+            return Reply.Passed("Acme");
+        });
+        Dictionary<string, string> given = _project.Options
+            .Where(option => option.Symbol != "dotnet")
+            .ToDictionary(option => option.CliName, option => option.DefaultValue ?? "none");
+        given["presentation"] = "api";
+
+        Dictionary<string, string> answers = questionnaire.Answer(_project, given, _nothing, NewCommand.ProjectAskedWhen, [name], askedFirst: ["dotnet"]);
+
+        lineKnownWhenTheNameIsAsked.ShouldBe(true);
+        answers["dotnet"].ShouldBe("net11.0");
+    }
+
+    [Fact]
     public void InATerminal_NoCodeHost_LeavesThePipelinesUnasked()
     {
         var console = new TestConsole().Interactive();
         console.Profile.Width = 200;
+        console.Input.PushKey(ConsoleKey.Enter);
         PushKeys(console, ConsoleKey.Enter, ConsoleKey.Enter, ConsoleKey.Enter, ConsoleKey.Enter);
         var questionnaire = new Questionnaire(console, interactive: true, yes: false);
 
@@ -125,7 +151,7 @@ public sealed class QuestionnaireTests
         var console = new TestConsole();
         console.Profile.Width = Terminal.UnwrappedWidth;
         var questionnaire = new Questionnaire(console, interactive: false, yes: false);
-        var given = new Dictionary<string, string> { ["project-name"] = "Acme.Shop", ["auth"] = "none", ["examples"] = "none", ["files"] = "false", ["database"] = "postgresql", ["has-client"] = "false", ["has-api"] = "false", ["code-host"] = "github", ["ci"] = "true" };
+        var given = new Dictionary<string, string> { ["dotnet"] = "net10.0", ["project-name"] = "Acme.Shop", ["auth"] = "none", ["examples"] = "none", ["files"] = "false", ["database"] = "postgresql", ["has-client"] = "false", ["has-api"] = "false", ["code-host"] = "github", ["ci"] = "true" };
 
         Dictionary<string, string> answers = questionnaire.Answer(presentation, given, _nothing, new Dictionary<string, Condition>());
 
@@ -165,6 +191,7 @@ public sealed class QuestionnaireTests
         console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.Enter);
+        console.Input.PushKey(ConsoleKey.Enter);
         var questionnaire = new Questionnaire(console, interactive: true, yes: false);
 
         Dictionary<string, string> answers = questionnaire.Answer(
@@ -185,6 +212,7 @@ public sealed class QuestionnaireTests
     {
         var console = new TestConsole().Interactive();
         console.Profile.Width = 200;
+        console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushTextWithEnter("n");
@@ -214,6 +242,7 @@ public sealed class QuestionnaireTests
     {
         var console = new TestConsole().Interactive();
         console.Profile.Width = 200;
+        console.Input.PushKey(ConsoleKey.Enter);
         PushKeys(console, ConsoleKey.DownArrow, ConsoleKey.DownArrow, ConsoleKey.DownArrow, ConsoleKey.Spacebar, ConsoleKey.DownArrow, ConsoleKey.Spacebar, ConsoleKey.Enter);
         PushKeys(console, ConsoleKey.DownArrow, ConsoleKey.DownArrow, ConsoleKey.DownArrow, ConsoleKey.DownArrow, ConsoleKey.Spacebar, ConsoleKey.Enter);
         PushKeys(console, ConsoleKey.Enter, ConsoleKey.Enter);
@@ -270,6 +299,7 @@ public sealed class QuestionnaireTests
         console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.Enter);
+        console.Input.PushKey(ConsoleKey.Enter);
         var questionnaire = new Questionnaire(console, interactive: true, yes: false);
 
         Dictionary<string, string> answers = questionnaire.Answer(
@@ -288,6 +318,7 @@ public sealed class QuestionnaireTests
     {
         var console = new TestConsole().Interactive();
         console.Profile.Width = 200;
+        console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.DownArrow);
         console.Input.PushKey(ConsoleKey.Enter);
@@ -323,6 +354,7 @@ public sealed class QuestionnaireTests
     {
         var console = new TestConsole().Interactive();
         console.Profile.Width = 200;
+        console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushKey(ConsoleKey.DownArrow);
         console.Input.PushKey(ConsoleKey.Enter);
@@ -360,6 +392,7 @@ public sealed class QuestionnaireTests
             _nothing,
             new Dictionary<string, string>
             {
+                ["dotnet"] = "net10.0",
                 ["auth"] = "none",
                 ["examples"] = "none",
                 ["files"] = "false",

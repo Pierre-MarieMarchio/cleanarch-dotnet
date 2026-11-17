@@ -208,6 +208,26 @@ It then creates the app as above; commit it. The edits, to make by hand where th
   ```
 <!--#endif-->
 <!--#if (!hasClient)-->
+<!--#if (dotnet11)-->
+- in `.config/dotnet-tools.json`, before the line:
+
+  ```json
+      "cleanarch.cli": {
+  ```
+
+  add:
+
+  ```json
+      "microsoft.openapi.kiota": {
+        "version": "1.38.0",
+        "commands": [
+          "kiota"
+        ],
+        "rollForward": true
+      },
+  ```
+
+<!--#else-->
 - in `.config/dotnet-tools.json`, replace the lines:
 
   ```json
@@ -233,11 +253,11 @@ It then creates the app as above; commit it. The edits, to make by hand where th
   }
   ```
 
+<!--#endif-->
 - in `Directory.Packages.props`, after the lines:
 
   ```xml
-      <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
-    </ItemGroup>
+    <Import Project="$(MSBuildThisFileDirectory)Directory.Packages.net10.0.props" />
 
   ```
 
@@ -252,21 +272,33 @@ It then creates the app as above; commit it. The edits, to make by hand where th
   ```
 
 <!--#endif-->
-- in `Directory.Packages.props`, before the line:
+- in `Directory.Packages.net10.0.props`, before the line:
 
   ```xml
-    <!-- One 1.18.x band. -->
+    <ItemGroup Label="Third-party runtime">
   ```
 
   add:
 
   ```xml
     <ItemGroup Label="Web app on WebAssembly">
+  <!--#if (dotnet11)
+      <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="11.0.0" />
+  #else-->
       <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.15" />
+  <!--#endif-->
   <!--#if (externalAuth)-->
+  <!--#if (dotnet11)
+      <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="11.0.0" />
+  #else-->
       <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="10.0.15" />
   <!--#endif-->
+  <!--#endif-->
+  <!--#if (dotnet11)
+      <PackageVersion Include="Microsoft.AspNetCore.Components.Gateway" Version="11.0.0" />
+  #else-->
       <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.15" />
+  <!--#endif-->
     </ItemGroup>
 
   ```

@@ -13,7 +13,8 @@ public sealed record ProjectFacts(
     string CodeHost,
     bool Ci,
     bool AgentFiles,
-    bool HasApi)
+    bool HasApi,
+    string? TargetFramework)
 {
     public string WebFolder => Path.Combine(Root, "src", "Web");
 

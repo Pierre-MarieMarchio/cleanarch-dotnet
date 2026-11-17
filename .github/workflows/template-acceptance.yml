@@ -137,6 +137,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: ${{ matrix.timeout_minutes || 45 }}
 
+    # A leg that sets light_on_pull_request stops at generate, build and the Docker-free tests on a pull request without the full-acceptance label; every other event, the night's run included, gives it the whole depth.
+    env:
+      LIGHT: ${{ matrix.light_on_pull_request == 'true' && github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-acceptance') }}
+
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.changes.outputs.run) }}
@@ -177,6 +181,13 @@ jobs:
             echo "::error title=Index shipped::The generated project carries a docs index; bootstrap writes it."
             exit 1
           fi
+
+      # The generated project's global.json names the SDK of its line, which the runner holds only for the LTS the checkout's own global.json names.
+      - name: Set up the .NET SDK of the generated project's line
+        if: contains(matrix.options, '--dotnet net11.0')
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: ${{ runner.temp }}/generated/global.json
 
       # The manifest pins dotnet cleanarch at the template's version, which nuget.org holds only once released: the packed one is restored.
       - name: Restore the project's tools, its own from the packed one
@@ -509,7 +520,7 @@ jobs:
 
       # The projects the Docker-free step leaves out, against the runner's Docker: the HTTP surface the options change most.
       - name: Run the integration tests (Testcontainers)
-        if: matrix.integration == 'true'
+        if: matrix.integration == 'true' && env.LIGHT != 'true'
         working-directory: ${{ runner.temp }}/generated
         env:
           DATABASE: ${{ matrix.database || 'postgresql' }}
@@ -551,7 +562,7 @@ jobs:
 
       # The generated project's own task: its Compose stack from .env.example, the suite, then the stack removed.
       - name: Run the end-to-end suite (end-to-end legs)
-        if: matrix.end_to_end == 'true'
+        if: matrix.end_to_end == 'true' && env.LIGHT != 'true'
         working-directory: ${{ runner.temp }}/generated
         run: dotnet cleanarch end-to-end
 
@@ -892,7 +903,7 @@ jobs:
         run: dotnet run tools/CheckDocPaths.cs "${{ runner.temp }}/generated"
 
       - name: Build the images and start the stack
-        if: matrix.web == 'true' || matrix.worker == 'true' || matrix.mcp == 'true'
+        if: (matrix.web == 'true' || matrix.worker == 'true' || matrix.mcp == 'true') && env.LIGHT != 'true'
         working-directory: ${{ runner.temp }}/generated
         env:
           STACK_ENV: ${{ matrix.stack_env }}
@@ -1029,7 +1040,7 @@ jobs:
 
       # The worker runs its first maintenance pass as it starts; the API, which leaves the jobs to it, starts none. Each verdict greps logs captured whole: grep -q closing a pipe early fails the pipeline under pipefail, so a logged pass would read as none.
       - name: Assert the worker runs the jobs and the API none (worker legs)
-        if: matrix.worker == 'true'
+        if: matrix.worker == 'true' && env.LIGHT != 'true'
         working-directory: ${{ runner.temp }}/generated
         run: |
           set -euo pipefail
@@ -1050,7 +1061,7 @@ jobs:
 
       # The MCP server answers its health and refuses a call without a credential. Under an external provider its 401 names its resource metadata, which names the provider; under local accounts the seeded administrator creates access keys through the API, a note is written and read back through the tools, a read-only key is refused a write and a revoked key refused outright.
       - name: Assert the MCP server acts for the caller its credential names (mcp legs)
-        if: matrix.mcp == 'true'
+        if: matrix.mcp == 'true' && env.LIGHT != 'true'
         working-directory: ${{ runner.temp }}/generated
         run: |
           set -euo pipefail
@@ -1108,12 +1119,12 @@ jobs:
           echo "MCP server on $port: /health, a note written and read through access keys, a read-only key refused a write, a revoked key refused."
 
       - name: Stack logs on failure
-        if: failure() && (matrix.web == 'true' || matrix.worker == 'true' || matrix.mcp == 'true')
+        if: failure() && (matrix.web == 'true' || matrix.worker == 'true' || matrix.mcp == 'true') && env.LIGHT != 'true'
         working-directory: ${{ runner.temp }}/generated
         run: docker compose logs --tail 200
 
       - name: Stop the stack
-        if: always() && (matrix.web == 'true' || matrix.worker == 'true' || matrix.mcp == 'true')
+        if: always() && (matrix.web == 'true' || matrix.worker == 'true' || matrix.mcp == 'true') && env.LIGHT != 'true'
         working-directory: ${{ runner.temp }}/generated
         run: |
           if [ -f .env ]; then

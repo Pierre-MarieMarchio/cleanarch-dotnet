@@ -17,12 +17,13 @@ internal static class NewQuestions
     private const string _currentFolder = ".";
     private const string _setupKey = "--setup";
     private const char _setupSeparator = '|';
+    private static readonly string[] _askedFirst = [SdkLine.Symbol];
 
     public static NewAnswers Ask(Session session, TemplateManifest manifest, IReadOnlyDictionary<string, Condition> askedWhen)
     {
         Dictionary<string, string> answers = AddedHosts.WithTheHostsAdded(
             manifest,
-            session.Questionnaire.Answer(manifest, session.Parsed.TemplateOptions, ReadOnlyDictionary<string, string>.Empty, askedWhen, Before(session, manifest), After(session, manifest)));
+            session.Questionnaire.Answer(manifest, session.Parsed.TemplateOptions, ReadOnlyDictionary<string, string>.Empty, askedWhen, Before(session, manifest), After(session, manifest), _askedFirst));
         return new NewAnswers(answers.GetValueOrDefault(_nameKey)!, answers.GetValueOrDefault(_outputKey)!, answers.GetValueOrDefault(_existingFilesKey), answers, Steps(answers.GetValueOrDefault(_setupKey)));
     }
 

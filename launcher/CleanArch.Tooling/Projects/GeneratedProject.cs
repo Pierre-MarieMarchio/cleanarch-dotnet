@@ -42,7 +42,8 @@ public static class GeneratedProject
             codeHost,
             File.Exists(Path.Combine(root, PipelineOf(codeHost))),
             File.Exists(Path.Combine(root, "AGENTS.md")),
-            Directory.Exists(Path.Combine(root, "src", "Presentation", ProjectFacts.FolderOf(name, "Api"))));
+            Directory.Exists(Path.Combine(root, "src", "Presentation", ProjectFacts.FolderOf(name, "Api"))),
+            GeneratedProjectFacts.TargetFramework(root));
     }
 
     private static string CodeHost(string root)
@@ -80,8 +81,8 @@ public static class GeneratedProject
             return "local";
         }
 
-        string packages = Path.Combine(root, "Directory.Packages.props");
-        return File.Exists(packages) && File.ReadAllText(packages).Contains("Microsoft.AspNetCore.Authentication.JwtBearer", StringComparison.Ordinal)
+        return Directory.EnumerateFiles(root, "Directory.Packages*.props")
+            .Any(packages => File.ReadAllText(packages).Contains("Microsoft.AspNetCore.Authentication.JwtBearer", StringComparison.Ordinal))
             ? "external"
             : "none";
     }
