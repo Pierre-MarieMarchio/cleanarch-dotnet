@@ -240,6 +240,7 @@ Server and which carries the schema in its name on SQLite.
 |---|---|
 | `template` | the `package` and the `version` that generated the project |
 | `name` | the project's name, the prefix of every project under `src` and `tests` |
+| `targetFramework` | the .NET the project builds, the `TargetFramework` of `Directory.Build.props`, such as `net10.0`; a file without it, written by a 1.x version, reads as `net10.0` |
 | `options` | each generation option that adds no part: `auth`, `database`, `examples`, `files`, `ci`, `sonar`, `agentFiles`, `agentFilesExample`, `aspire` |
 | `client` | `true` when the project holds the .NET client of the API |
 | `web` | present with the web workspace: its npm `scope`, its `apps` with the `framework`, `audience`, `rendering` and host `port` each was added with, and the `packages` added to it |
@@ -399,7 +400,7 @@ So does the app host, which `LocalStackTests` starts from its integration test p
 
 | Rule | Test |
 |---|---|
-| `cleanarch.json` records the name, the options and the parts the tree holds | `ProjectFileTests` |
+| `cleanarch.json` records the name, the target framework, the options and the parts the tree holds | `ProjectFileTests` |
 | A folder even for a single file; a project root holds only its composition file | `LayoutConventionTests.NoProjectRoot_HoldsAnythingButItsModule` |
 | No empty folder | `LayoutConventionTests.NoFolderInTheSourceTree_IsEmpty` |
 | Namespaces follow folders, without exception | `LayoutConventionTests.EverySourceFile_DeclaresTheNamespaceOfItsFolder` |

@@ -148,7 +148,7 @@ public sealed class UpgradeReportTests : IDisposable
         string chosen;
         try
         {
-            chosen = Releases.Choose(current, to, _catalog, "P").To.Version;
+            chosen = Releases.Choose(current, to, _catalog, "P", DotnetLine.Of("net10.0")).To.Version;
         }
         catch (LauncherException refusal)
         {
@@ -156,6 +156,39 @@ public sealed class UpgradeReportTests : IDisposable
         }
 
         chosen.ShouldStartWith(expected);
+    }
+
+    [Theory]
+    [InlineData("net10.0", "1.0.0", null, "11.1.0")]
+    [InlineData("net11.0", "11.0.0", null, "11.1.0")]
+    [InlineData("net12.0", "12.0.0", null, "12.1.0")]
+    [InlineData("net10.0", "11.1.0", null, "No stable version of P newer than 11.1.0 still generates net10.0")]
+    [InlineData("net11.0", "11.1.0", null, "No stable version of P newer than 11.1.0 still generates net11.0")]
+    [InlineData("net10.0", "10.0.0", "11.0.0", "11.0.0")]
+    [InlineData("net10.0", "10.0.0", "12.0.0", "Version 12.0.0 of P no longer generates net10.0")]
+    [InlineData("net11.0", "11.0.0", "12.0.0", "Version 12.0.0 of P no longer generates net11.0")]
+    public void TheTarget_IsAVersionThatStillGeneratesTheRecordedDotnet(string targetFramework, string current, string? to, string expected)
+    {
+        Release[] catalog = [new("1.0.0", null), new("10.0.0", null), new("11.0.0", null), new("11.1.0", null), new("12.0.0", null), new("12.1.0", null)];
+        string chosen;
+        try
+        {
+            chosen = Releases.Choose(current, to, catalog, "P", DotnetLine.Of(targetFramework)).To.Version;
+        }
+        catch (LauncherException refusal)
+        {
+            chosen = refusal.Message;
+        }
+
+        chosen.ShouldStartWith(expected);
+    }
+
+    [Fact]
+    public void AProjectFileWithoutTheTargetFramework_IsReadAsTheNet10ThatVersion1Generated()
+    {
+        using var project = new SampleProject("""{ "template": { "package": "P", "version": "1.0.0" }, "name": "Sample.Shop", "options": {} }""");
+
+        Provenance.Of(ProjectLocator.Find(project.Root).ShouldNotBeNull()).TargetFramework.ShouldBe("net10.0");
     }
 
     [Theory]
@@ -390,7 +423,7 @@ public sealed class UpgradeReportTests : IDisposable
         (string Key, string Value)[]? options = null,
         WebWorkspace? web = null,
         PresentationProject[]? presentation = null) =>
-        new("P", "2.0.0", "Sample.Shop", options ?? [], web, presentation ?? [new PresentationProject("Api", "api")]);
+        new("P", "2.0.0", "Sample.Shop", options ?? [], web, presentation ?? [new PresentationProject("Api", "api")], "net10.0");
 
     private string Feed(params string[] versions)
     {

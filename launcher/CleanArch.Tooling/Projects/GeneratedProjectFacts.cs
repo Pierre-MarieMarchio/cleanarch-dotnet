@@ -43,6 +43,14 @@ public static partial class GeneratedProjectFacts
         return sentence.Success ? new TemplateProvenance(sentence.Groups["package"].Value, sentence.Groups["version"].Value) : null;
     }
 
+    public static string? TargetFramework(string root)
+    {
+        string props = Path.Combine(root, "Directory.Build.props");
+        return File.Exists(props)
+            ? XDocument.Load(props).Descendants("TargetFramework").Select(element => element.Value.Trim()).FirstOrDefault(value => value.Length > 0)
+            : null;
+    }
+
     public static IReadOnlyList<GeneratedWebApp> WebApps(string web) =>
         [.. Folders(Path.Combine(web, "apps")).Select(app => WebApp(Path.Combine(web, "apps", app)))];
 

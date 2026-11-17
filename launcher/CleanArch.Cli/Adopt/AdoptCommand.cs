@@ -107,6 +107,11 @@ internal static class AdoptCommand
 
     private static IEnumerable<string> Unknown(ProjectFacts project)
     {
+        if (GeneratedProjectFacts.TargetFramework(project.Root) is null)
+        {
+            yield return "Directory.Build.props sets no TargetFramework, so the project's .NET cannot be read.";
+        }
+
         foreach (GeneratedWebApp app in project.HasWorkspace ? GeneratedProjectFacts.WebApps(project.WebFolder) : [])
         {
             if (app.Framework is null)
@@ -132,6 +137,7 @@ internal static class AdoptCommand
         {
             ["template"] = new JsonObject { ["package"] = provenance.Package, ["version"] = provenance.Version },
             ["name"] = project.Name,
+            ["targetFramework"] = GeneratedProjectFacts.TargetFramework(project.Root),
             ["options"] = new JsonObject
             {
                 ["auth"] = project.Auth,

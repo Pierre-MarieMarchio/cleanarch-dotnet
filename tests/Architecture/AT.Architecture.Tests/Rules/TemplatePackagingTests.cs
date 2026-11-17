@@ -465,6 +465,19 @@ public sealed class TemplatePackagingTests
         pinned["commands"]!.AsArray().Select(command => command!.GetValue<string>()).ShouldBe([tool.Descendants("ToolCommandName").Single().Value]);
     }
 
+    [Fact]
+    public void EveryTool_RollsForwardToANewerDotNetMajor()
+    {
+        var tools = _packageProjects
+            .Select(project => (Project: project, Xml: XDocument.Load(Path.Combine(ProjectReferenceGraph.RepositoryRoot, project))))
+            .Where(tool => tool.Xml.Descendants("PackAsTool").Any(flag => flag.Value == "true"))
+            .ToList();
+
+        tools.Count.ShouldBe(2, "The launcher and the project tool are the two packages packed as .NET tools, so this rule is reading the wrong projects.");
+        tools.Where(tool => tool.Xml.Descendants("RollForward").SingleOrDefault()?.Value != "Major").Select(tool => tool.Project).ShouldBeEmpty(
+            "A tool without RollForward=Major does not start on a machine that has only a newer .NET runtime, such as a team on the newest .NET line.");
+    }
+
     private static string GeneratedToolManifestPath() =>
         Path.Combine(ProjectReferenceGraph.RepositoryRoot, ".template.config", "variants", "project", ".config", "dotnet-tools.json");
 
@@ -491,6 +504,7 @@ public sealed class TemplatePackagingTests
                 ["version"] = Text(symbols.GetProperty("templateVersion"), "replaces"),
             },
             ["name"] = manifest.RootElement.GetProperty("sourceName").GetString(),
+            ["targetFramework"] = XDocument.Load(Path.Combine(root, "Directory.Build.props")).Descendants("TargetFramework").Single().Value,
             ["options"] = options,
             ["client"] = false,
             ["presentation"] = new JsonArray(new JsonObject { ["name"] = "Api", ["framework"] = "api" }),
@@ -1920,6 +1934,72 @@ public sealed class TemplatePackagingTests
             bytes.Take(_utf8Bom.Length).SequenceEqual(_utf8Bom).ShouldBeFalse(
                 $"'{file}' starts with a UTF-8 byte order mark, which release-please cannot parse: save it as UTF-8 without a BOM.");
         }
+    }
+
+    [Fact]
+    public void TheNextRelease_IsNumberedAfterTheNewestDotnetTheTemplateGenerates()
+    {
+        string root = ProjectReferenceGraph.RepositoryRoot;
+        Version next = NextReleaseVersion(root);
+        int newest = NewestGeneratedDotnetMajor(root);
+
+        next.Major.ShouldBe(
+            newest,
+            $"The next release is {next}, but the newest .NET the template generates is {newest}: the major of a version is that .NET, so a feature that adds a line moves the major.");
+    }
+
+    [Fact]
+    public void AReleaseAs_IsAboveTheLastRelease()
+    {
+        string root = ProjectReferenceGraph.RepositoryRoot;
+        using JsonDocument config = ReleasePleaseConfig(root);
+
+        if (!config.RootElement.GetProperty("packages").GetProperty(".").TryGetProperty("release-as", out JsonElement releaseAs))
+        {
+            return;
+        }
+
+        Version.Parse(releaseAs.GetString()!).ShouldBeGreaterThan(
+            LastReleasedVersion(root),
+            "release-as is not above manifest.json: that release is out, so remove release-as in the next commit.");
+    }
+
+    [Fact]
+    public void ReleasePlease_BumpsTheMinorBetweenMajors()
+    {
+        using JsonDocument config = ReleasePleaseConfig(ProjectReferenceGraph.RepositoryRoot);
+
+        config.RootElement.GetProperty("packages").GetProperty(".").GetProperty("versioning").GetString().ShouldBe(
+            "always-bump-minor",
+            "A ! must land under the breaking changes without moving the major, which follows the newest .NET generated.");
+    }
+
+    private static JsonDocument ReleasePleaseConfig(string root) =>
+        JsonDocument.Parse(File.ReadAllText(Path.Combine(root, ".github", "release-please", "config.json")));
+
+    private static Version LastReleasedVersion(string root)
+    {
+        using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, ".github", "release-please", "manifest.json")));
+        return Version.Parse(manifest.RootElement.GetProperty(".").GetString()!);
+    }
+
+    private static Version NextReleaseVersion(string root)
+    {
+        using JsonDocument config = ReleasePleaseConfig(root);
+        return config.RootElement.GetProperty("packages").GetProperty(".").TryGetProperty("release-as", out JsonElement releaseAs)
+            ? Version.Parse(releaseAs.GetString()!)
+            : LastReleasedVersion(root);
+    }
+
+    private static int NewestGeneratedDotnetMajor(string root)
+    {
+        string framework = XDocument.Load(Path.Combine(root, "Directory.Build.props")).Descendants("TargetFramework").Single().Value;
+        IEnumerable<string> perLine = Directory.EnumerateFiles(root, "Directory.Packages.net*.props", SearchOption.TopDirectoryOnly)
+            .Select(file => Path.GetFileName(file)["Directory.Packages.".Length..^".props".Length]);
+
+        return new[] { framework }.Concat(perLine)
+            .Select(tfm => int.Parse(Regex.Match(tfm, @"^net(?<major>\d+)\.0$", RegexOptions.None, TimeSpan.FromSeconds(5)).Groups["major"].Value, System.Globalization.CultureInfo.InvariantCulture))
+            .Max();
     }
 
     [Theory]

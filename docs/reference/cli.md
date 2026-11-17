@@ -256,14 +256,15 @@ overwritten.
 
 `dotnet cleanarch adopt` writes `cleanarch.json` for a project generated before the tool, from its
 files, and is refused where one exists; `--dry-run` prints it, and `--template-version` gives the
-version where `docs/getting-started/overview.md` no longer names it. It records `agentFilesExample`
+version where `docs/getting-started/overview.md` no longer names it. It reads `targetFramework` from
+`Directory.Build.props`, and writes nothing when that file sets none. It records `agentFilesExample`
 as `false`: the lines that option writes are the team's to replace, so no file says it was given.
 
 ## Taking a newer version
 
 | Command | Does |
 |---|---|
-| `upgrade-report` | generates the project's options at the version `cleanarch.json` records and at the target, then classifies each file between the two and this project, without writing in the project; `--to` names the target, the latest stable version by default, `--source` reads a `.nupkg` or a folder of them in place of the NuGet sources, `--json` writes the report outside the project, `--keep <folder>` keeps both generations there |
+| `upgrade-report` | generates the project's options at the version `cleanarch.json` records and at the target, then classifies each file between the two and this project, without writing in the project; `--to` names the target, by default the latest stable version that still generates the `targetFramework` recorded, and a version that no longer generates it is refused; `--source` reads a `.nupkg` or a folder of them in place of the NuGet sources, `--json` writes the report outside the project, `--keep <folder>` keeps both generations there |
 
 [Upgrading](../guides/upgrading.md) says how to read the report and take the version.
 

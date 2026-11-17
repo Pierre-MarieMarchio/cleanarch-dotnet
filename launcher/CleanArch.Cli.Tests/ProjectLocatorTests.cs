@@ -12,6 +12,7 @@ public sealed class ProjectLocatorTests
 
         file.Template.ShouldBe(new TemplateReference("CleanArch.WebApi.Templates", "1.2.3"));
         file.Name.ShouldBe("Acme.Shop");
+        file.TargetFramework.ShouldBe("net11.0");
         file.Options.ShouldBe(new ProjectOptions("local", "postgresql", "all", Files: true, CodeHost: "github", Ci: true, Sonar: false, AgentFiles: true));
         file.Client.ShouldBeTrue();
         file.Web.ShouldNotBeNull().Scope.ShouldBe("acme-shop");

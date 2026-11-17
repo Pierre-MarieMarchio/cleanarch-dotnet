@@ -6,6 +6,7 @@ internal sealed class SampleProject : IDisposable
         {
           "template": { "package": "CleanArch.WebApi.Templates", "version": "1.2.3" },
           "name": "Acme.Shop",
+          "targetFramework": "net11.0",
           "options": {
             "auth": "local",
             "database": "postgresql",

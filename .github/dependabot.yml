@@ -19,6 +19,34 @@ updates:
     commit-message:
       prefix: "build(deps)"
       prefix-development: "build(deps-dev)"
+    # The packages and tools whose major is .NET's: a project stays on its .NET line, and moving to another is a migration.
+    ignore:
+      - dependency-name: Microsoft.AspNetCore.*
+        update-types:
+          - version-update:semver-major
+      - dependency-name: Microsoft.EntityFrameworkCore*
+        update-types:
+          - version-update:semver-major
+      - dependency-name: Microsoft.Extensions.*
+        update-types:
+          - version-update:semver-major
+      - dependency-name: Asp.Versioning.*
+        update-types:
+          - version-update:semver-major
+      #if (postgreSql)
+      - dependency-name: Npgsql.EntityFrameworkCore.PostgreSQL
+        update-types:
+          - version-update:semver-major
+      - dependency-name: Npgsql.OpenTelemetry
+        update-types:
+          - version-update:semver-major
+      #endif
+      - dependency-name: dotnet-ef
+        update-types:
+          - version-update:semver-major
+      - dependency-name: CleanArch.Cli
+        update-types:
+          - version-update:semver-major
 
     groups:
       # The 10.0.x runtime band, one pull request per servicing release.
@@ -137,6 +165,11 @@ updates:
       - docker
     commit-message:
       prefix: "build(deps)"
+    # The .NET images, whose name Dependabot reads without the registry, stay on the project's .NET line.
+    ignore:
+      - dependency-name: dotnet/*
+        update-types:
+          - version-update:semver-major
     groups:
       container-images:
         applies-to: version-updates
@@ -200,6 +233,11 @@ updates:
       - docker
     commit-message:
       prefix: "build(deps)"
+    # A .NET image a service names stays on the project's .NET line, as in the Dockerfiles.
+    ignore:
+      - dependency-name: dotnet/*
+        update-types:
+          - version-update:semver-major
     groups:
       compose-images:
         applies-to: version-updates

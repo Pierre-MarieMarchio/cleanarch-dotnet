@@ -50,6 +50,7 @@ public sealed class AdoptCommandTests : IDisposable
         ProjectFile file = ProjectLocator.Find(_root).ShouldNotBeNull().File;
         file.Template.ShouldBe(new TemplateReference("CleanArch.WebApi.Templates", "1.4.0"));
         file.Name.ShouldBe("Acme.Shop");
+        file.TargetFramework.ShouldBe("net11.0");
         file.Options.ShouldBe(new ProjectOptions("local", "postgresql", "none", Files: false, CodeHost: "github", Ci: true, Sonar: true, AgentFiles: false, Aspire: false));
         file.Client.ShouldBeFalse();
         file.Web.ShouldNotBeNull().Scope.ShouldBe("acme-shop");
@@ -127,6 +128,18 @@ public sealed class AdoptCommandTests : IDisposable
     }
 
     [Fact]
+    public void Adopt_WritesNothing_WhereDirectoryBuildPropsSetsNoTargetFramework()
+    {
+        AProjectBeforeTheTool();
+        File.Delete(Path.Combine(_root, "Directory.Build.props"));
+
+        Run(["adopt"], _root).ShouldBe(CleanArchCommand.Failed);
+
+        _error.ToString().ShouldContain("Directory.Build.props sets no TargetFramework");
+        File.Exists(Path.Combine(_root, ProjectLocator.FileName)).ShouldBeFalse();
+    }
+
+    [Fact]
     public void Adopt_RefusesFoldersThatCarryTheNameRatherThanTheInitials()
     {
         AProjectBeforeTheTool();
@@ -153,6 +166,7 @@ public sealed class AdoptCommandTests : IDisposable
     {
         Write("Acme.Shop.sln", string.Empty);
         Write("tools/Tasks.cs", string.Empty);
+        Write("Directory.Build.props", "<Project><PropertyGroup><TargetFramework>net11.0</TargetFramework></PropertyGroup></Project>");
         Write("tools/sonar-scanner.Dockerfile", string.Empty);
         Write(".github/workflows/ci.yml", string.Empty);
         Write("docs/getting-started/overview.md", _overview);

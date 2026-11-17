@@ -11,6 +11,10 @@ public sealed class RenovateParityTests
 {
     private const string _probePackage = "Probe.Package";
 
+    private const string _majorUpdate = "version-update:semver-major";
+
+    private const string _projectTool = "CleanArch.Cli";
+
     private static readonly TimeSpan _budget = TimeSpan.FromSeconds(5);
 
     private static readonly Dictionary<string, string> _managers = new(StringComparer.Ordinal)
@@ -33,6 +37,10 @@ public sealed class RenovateParityTests
 
     private static readonly string[] _readInTheirFolderAlone = ["docker", "docker-compose"];
 
+    private static readonly string[] _imageManagers = ["dockerfile", "docker-compose", "gitlabci"];
+
+    private static readonly string[] _skippedFolders = [".git", "node_modules", "bin", "obj", "dist"];
+
     private static readonly Dictionary<string, string> _gitHubNames = new(StringComparer.Ordinal)
     {
         ["github-actions"] = "gitlab-ci",
@@ -50,6 +58,15 @@ public sealed class RenovateParityTests
     private static readonly Regex _schedule = new(@"^\* (?<hour>\d+)(?:-\d+)? \* \* (?<day>\d)$", RegexOptions.None, _budget);
 
     private static readonly Regex _prefix = new(@"^(?<type>\w+)\((?<scope>[^)]+)\)$", RegexOptions.None, _budget);
+
+    private static readonly Regex _targetFramework = new(@"<TargetFramework>net(?<major>\d+)\.\d+</TargetFramework>", RegexOptions.None, _budget);
+
+    private static readonly Regex _lineProps = new(@"^Directory\.Packages\.net(?<major>\d+)\.\d+\.props$", RegexOptions.None, _budget);
+
+    private static readonly Regex _packageVersion = new(@"<PackageVersion\s+Include=""(?<name>[^""]+)""\s+Version=""(?<major>\d+)\.", RegexOptions.None, _budget);
+
+    private static readonly Regex _taggedImage = new(
+        @"^\s*(?:FROM\s+(?:--platform=\S+\s+)?|(?:-\s+)?(?:image|name):\s*[""']?)(?<image>[^\s:@#""']+):(?<major>\d+)", RegexOptions.IgnoreCase, _budget);
 
     private static string DependabotFile => Path.Combine(ProjectReferenceGraph.RepositoryRoot, ".github", "dependabot.yml");
 
@@ -78,6 +95,30 @@ public sealed class RenovateParityTests
             "A GitLab project's .gitlab/renovate.jsonc updates what .github/dependabot.yml updates on GitHub, under the same markers: each "
             + "ecosystem's manager, folders, schedule, labels and commit prefix, each group with its patterns and exclusions, and the limits added up. "
             + "Change the two files together.");
+    }
+
+    [Fact]
+    public void TheBots_IgnoreTheMajorsOfTheRuntimeBand()
+    {
+        string[] dependabot = File.ReadAllLines(DependabotFile);
+        string[] renovate = File.ReadAllLines(RenovateConfigurationTests.ConfigurationFile);
+        var values = Symbols(dependabot).Union(Symbols(renovate)).ToDictionary(symbol => symbol, _ => true, StringComparer.Ordinal);
+        var updates = Yaml(Resolved(dependabot, values))["updates"]!.AsArray();
+        using var config = RenovateConfigurationTests.Parse(string.Join('\n', Resolved(renovate, values)));
+        var ignores = DependabotIgnores(updates).Concat(RenovateIgnores(config.RootElement)).ToList();
+        var (packages, images) = RuntimeBand();
+
+        packages.ShouldContain(package => package.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal), "The runtime band reads no EF Core package, so this rule reads nothing.");
+        images.ShouldNotBeEmpty("No Dockerfile builds on a .NET image of the runtime band, so this rule reads nothing.");
+
+        var problems = Uncovered(packages, ignores, [("Dependabot", "nuget"), ("Renovate", "nuget")])
+            .Concat(Uncovered(images, ignores, [("Dependabot", "dockerfile"), ("Dependabot", "docker-compose"), .. _imageManagers.Select(manager => ("Renovate", manager))]))
+            .Concat(ignores.Where(ignore => !(ignore.Manager == "nuget" ? packages : images).Any(ignore.Covers)).Select(ignore => $"{ignore} covers nothing of the runtime band."))
+            .ToList();
+
+        problems.ShouldBeEmpty(
+            "Every package of Directory.Packages.props whose major is the target framework's, dotnet-ef, the project tool and each .NET image move with .NET: "
+            + "a project stays on its .NET line, so Dependabot and Renovate ignore their majors, and ignore no other major. Change the two files together.");
     }
 
     [Fact]
@@ -168,6 +209,11 @@ public sealed class RenovateParityTests
             yield return "the groups apply to version updates alone, as applies-to: version-updates says: leave vulnerabilityAlerts and osvVulnerabilityAlerts out.";
         }
 
+        foreach (string difference in IgnoreDifferences(updates, config))
+        {
+            yield return difference;
+        }
+
         foreach (var update in updates)
         {
             foreach (string difference in Differences(update!, config))
@@ -181,9 +227,7 @@ public sealed class RenovateParityTests
     {
         string ecosystem = Text(update, "package-ecosystem");
         string manager = _managers[ecosystem];
-        var folders = update.AsObject().ContainsKey("directories")
-            ? update["directories"]?.AsArray().Select(folder => folder!.GetValue<string>()).ToList() ?? []
-            : [Text(update, "directory")];
+        var folders = Folders(update);
         var schedule = update["schedule"]!;
 
         if (Text(schedule, "interval") != "weekly"
@@ -301,6 +345,103 @@ public sealed class RenovateParityTests
             }
         }
     }
+
+    private static IEnumerable<string> IgnoreDifferences(JsonArray updates, JsonElement config)
+    {
+        var probes = new Dictionary<string, string>(StringComparer.Ordinal) { ["gitlabci"] = _probeFiles["gitlabci"] };
+        foreach (var update in updates)
+        {
+            string manager = _managers[Text(update, "package-ecosystem")];
+            if (Folders(update!) is [var folder, ..])
+            {
+                probes[manager] = Probe(folder, manager);
+            }
+        }
+
+        var ignores = DependabotIgnores(updates).ToList();
+        foreach (var beyond in ignores.Where(ignore => !ignore.MajorsAlone))
+        {
+            yield return $"{beyond} ignores more than its majors, which no Renovate rule here stands for.";
+        }
+
+        foreach (string manager in updates.Select(update => _managers[Text(update, "package-ecosystem")]))
+        {
+            var expected = ignores.Where(ignore => ignore.Manager == manager || (manager == "gitlabci" && ignore.Manager == "dockerfile"))
+                .Select(ignore => ignore.Pattern).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var patterns = RenovateIgnores(config).Where(ignore => ignore.Manager == manager).Select(ignore => ignore.Pattern).ToList();
+            if (!patterns.Select(WithoutRegistry).ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(expected))
+            {
+                yield return $"{manager}: Renovate disables the majors of [{string.Join(", ", patterns)}], where Dependabot ignores those of [{string.Join(", ", expected)}]"
+                    + (manager == "gitlabci" ? ", the Dockerfiles' images the pipeline runs on." : ".");
+            }
+
+            foreach (string pattern in patterns.Where(_ => probes.ContainsKey(manager)))
+            {
+                var dependency = new RenovateDependency(manager, pattern.Replace("*", "Probe", StringComparison.Ordinal), probes[manager]);
+                if (!RenovateConfigurationTests.Effective(config, dependency).SeparateMajorMinor
+                    || RenovateConfigurationTests.Effective(config, dependency with { UpdateType = "major" }).Enabled
+                    || !RenovateConfigurationTests.Effective(config, dependency with { UpdateType = "minor" }).Enabled)
+                {
+                    yield return $"{manager}: {dependency.Package} does not get its newest minor without its major, as Dependabot's ignore gives it; "
+                        + "separateMajorMinor puts the major in a branch of its own, a later rule disables it, and no rule after enables it again.";
+                }
+            }
+        }
+    }
+
+    private static IEnumerable<BotIgnore> DependabotIgnores(JsonArray updates) =>
+        updates.SelectMany(update => (update!["ignore"]?.AsArray() ?? []).Select(ignore => new BotIgnore(
+            "Dependabot",
+            _managers[Text(update, "package-ecosystem")],
+            Text(ignore, "dependency-name"),
+            (ignore!["update-types"]?.AsArray() ?? []).Select(type => type!.GetValue<string>()).SequenceEqual([_majorUpdate]))));
+
+    private static IEnumerable<BotIgnore> RenovateIgnores(JsonElement config) =>
+        config.GetProperty("packageRules").EnumerateArray()
+            .Where(rule => Strings(rule, "matchUpdateTypes").SequenceEqual(["major"]) && rule.TryGetProperty("enabled", out var on) && !on.GetBoolean())
+            .SelectMany(rule => Strings(rule, "matchManagers").SelectMany(manager => Strings(rule, "matchPackageNames").Select(pattern => new BotIgnore("Renovate", manager, pattern, true))));
+
+    private static IEnumerable<string> Uncovered(List<string> band, List<BotIgnore> ignores, (string Bot, string Manager)[] places) =>
+        band.SelectMany(name => places
+            .Where(place => !ignores.Any(ignore => ignore.Bot == place.Bot && ignore.Manager == place.Manager && ignore.Covers(name)))
+            .Select(place => $"{place.Bot} ({place.Manager}) proposes the majors of {name}."));
+
+    private static (List<string> Packages, List<string> Images) RuntimeBand()
+    {
+        string root = ProjectReferenceGraph.RepositoryRoot;
+        int major = int.Parse(_targetFramework.Match(File.ReadAllText(Path.Combine(root, "Directory.Build.props"))).Groups["major"].Value, System.Globalization.CultureInfo.InvariantCulture);
+        var files = RepositoryTree.SourceFiles(root, "*", _skippedFolders).ToList();
+
+        var packages = Directory.EnumerateFiles(root, "Directory.Packages*.props")
+            .SelectMany(file => _packageVersion.Matches(File.ReadAllText(file))
+                .Where(version => Major(version) == (_lineProps.Match(Path.GetFileName(file)) is { Success: true } line ? Major(line) : major))
+                .Select(version => version.Groups["name"].Value))
+            .Concat(files.Where(file => Path.GetFileName(file) == "dotnet-tools.json")
+                .SelectMany(file => JsonNode.Parse(File.ReadAllText(file))!["tools"]!.AsObject())
+                .Where(tool => tool.Value!["version"]!.GetValue<string>().Split('.')[0] == major.ToString(System.Globalization.CultureInfo.InvariantCulture))
+                .Select(tool => tool.Key))
+            .Append(_projectTool)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        var images = files.Where(file => Path.GetFileName(file).Contains("Dockerfile", StringComparison.Ordinal) || Path.GetExtension(file) is ".yml" or ".yaml")
+            .SelectMany(File.ReadLines)
+            .Select(line => _taggedImage.Match(line))
+            .Where(image => image.Success && Major(image) == major)
+            .Select(image => image.Groups["image"].Value)
+            .Distinct(StringComparer.Ordinal).ToList();
+
+        return (packages, images);
+    }
+
+    private static int Major(Match match) => int.Parse(match.Groups["major"].Value, System.Globalization.CultureInfo.InvariantCulture);
+
+    internal static string WithoutRegistry(string image) =>
+        image.IndexOf('/') is > 0 and var slash && (image[..slash].Contains('.') || image[..slash].Contains(':') || image[..slash] == "localhost") ? image[(slash + 1)..] : image;
+
+    private static List<string> Folders(JsonNode update) =>
+        update.AsObject().ContainsKey("directories")
+            ? update["directories"]?.AsArray().Select(folder => folder!.GetValue<string>()).ToList() ?? []
+            : [Text(update, "directory")];
 
     private static List<JsonElement> Rules(JsonElement config, string manager) =>
         [.. config.GetProperty("packageRules").EnumerateArray()
@@ -474,4 +615,16 @@ public sealed class RenovateParityTests
     private static JsonValue Scalar(string text) => JsonValue.Create(text.Trim().Trim('"'));
 
     private static int Indent(string line) => line.Length - line.TrimStart().Length;
+}
+
+internal sealed record BotIgnore(string Bot, string Manager, string Pattern, bool MajorsAlone)
+{
+    private static readonly TimeSpan _budget = TimeSpan.FromSeconds(1);
+
+    internal bool Covers(string name) =>
+        Bot == "Renovate"
+            ? RenovateConfigurationTests.MatchesList(name, [Pattern])
+            : Regex.IsMatch(RenovateParityTests.WithoutRegistry(name), "^" + Regex.Escape(Pattern).Replace(@"\*", ".*", StringComparison.Ordinal) + "$", RegexOptions.IgnoreCase, _budget);
+
+    public override string ToString() => $"{Bot}'s ignore of {Pattern} ({Manager})";
 }

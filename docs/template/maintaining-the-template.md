@@ -469,7 +469,10 @@ worker's and the web workspace's README edits extend as they extend `dependabot.
 opens Monday at 06:00 Paris time and stays open until 10:00, for a run that starts late; the limits
 are added up into `prConcurrentLimit`, since Renovate counts every open merge request against one;
 `separateMajorMinor` is off, as Dependabot opens one pull request per dependency or group at its
-newest version; `prHourlyLimit` is off and the dashboard too. `applies-to: version-updates` needs no
+newest version, but for the .NET line: Dependabot's `ignore` of a major becomes a rule that turns
+`separateMajorMinor` on for those names and one that disables their `major` updates, since with it off
+Renovate's one candidate is the newest version and disabling its major would drop the patch too; the
+pipeline's `gitlabci` manager ignores the majors of the images Dependabot ignores in the Dockerfiles; `prHourlyLimit` is off and the dashboard too. `applies-to: version-updates` needs no
 counterpart: Renovate leaves a vulnerability fix out of every group by default, and on GitLab it gets
 none, since its vulnerability alerts read GitHub's and `osvVulnerabilityAlerts` is experimental. The
 `templateMaintenance` lines of `dependabot.yml`, `target-branch: develop`, have none either, since no
@@ -484,9 +487,13 @@ update a checksum it has not computed, so the Node.js archive of `.gitlab/ci/web
 in the `node` merge request, which `GitLabPipelinePinningTests` fails until it is.
 `RenovateParityTests`, template-only, resolves the markers of both files for every combination of the
 symbols they read and fails until each ecosystem, folder, group, pattern, exclusion, label, commit
-prefix, schedule and limit of `dependabot.yml` has its counterpart and nothing more, through a reader
+prefix, schedule, limit and ignored major of `dependabot.yml` has its counterpart and nothing more, through a reader
 of `packageRules` that applies them in order, as Renovate does; it also holds the README edits to the
-blocks the worker and the web workspace write. `RenovateConfigurationTests`, which a GitLab project
+blocks the worker and the web workspace write. Its `TheBots_IgnoreTheMajorsOfTheRuntimeBand` reads
+the runtime band from the files, every package of `Directory.Packages.props` whose major is that of
+the target framework in `Directory.Build.props`, every local tool at that major, the project tool and
+every image at that tag, and fails until both bots ignore each one's majors and no other.
+`RenovateConfigurationTests`, which a GitLab project
 receives under `(gitlabHost)`, holds the `node` group and the SDK image to the files the project
 holds. `renovate-config-validator`, run on a generated project's file, is the schema's check; the
 project runs Renovate through the Mend-hosted app on GitLab.com or the `renovate-runner` template from
@@ -1394,12 +1401,12 @@ passes 207 characters.
 |---|---|---|
 | `develop` | the next version; the default branch | a pull request from a `<type>/<subject>` branch, up to date with `develop` and rebased, the history kept linear |
 | `main` | the released commits only | `template-release.yml` fast-forwarding it to each release; nobody pushes to it |
-| `net<major>.0` | the last release built on an earlier .NET major, for its fixes | a pull request, cut from that major's last tag when `develop` moves to the next .NET |
 
 Every commit is a [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/): a `feat` or a
-`fix` lands in the changelog, a `!` or a `BREAKING CHANGE` footer makes the next version a major one,
-and the other types stay out of it, so a wrong type is a wrong release note and the type is part of
-the review. A working branch is deleted once merged: its commits are on `develop` and its pull
+`fix` lands in the changelog, a `!` or a `BREAKING CHANGE` footer lands under the breaking changes of
+the next version's notes, and the other types stay out of it, so a wrong type is a wrong release note
+and the type is part of the review. A `!` never moves the major, which
+[the .NET lines](#versions-and-net-lines) move. A working branch is deleted once merged: its commits are on `develop` and its pull
 request keeps the discussion and the checks, so the branches left are the work in progress.
 
 `main` follows the releases rather than being the one trunk with versions as tags, where the branch
@@ -1409,8 +1416,8 @@ rather than from someone's memory, and nuget.org trusts the workflow's identity 
 key that could leak and publish without a reviewer. A pull request release-please opens with
 `GITHUB_TOKEN` starts no workflow, so no check runs on it; it changes `CHANGELOG.md`,
 `templateVersion` and the release manifest only. Release branches of their own become worth having
-once several maintainers release at once, or once a fix must reach an earlier minor version, which a
-`net<major>.0` branch does not cover.
+once several maintainers release at once, or once a fix must reach an earlier version; until then
+every .NET line ships from `develop`, as [the .NET lines](#versions-and-net-lines) say.
 
 A squashed pull request lands under its title, which release-please skips in silence unless it is a
 conventional commit. The `Conventional Commits title` job of
@@ -1445,12 +1452,57 @@ repository variable) and pushes the three packages; a version already on nuget.o
 ([the package](#the-package)). Last,
 `promote` fast-forwards `main` to the release commit, and refuses if `main` is not its ancestor.
 
+## Versions and .NET lines
+
+A version offers the current LTS of .NET and, once its packages are ready, the newest .NET beside
+it; a team picks one with `--dotnet` when it generates the project, and the project stays on it. The
+option is not `--framework`, which the item templates give to the web or presentation framework.
+
+| Facet | Rule |
+|---|---|
+| Lines offered | the current LTS, the default, and the newest .NET when it is not the LTS; two at most |
+| Offering the newest | once every package of its runtime band has a stable release for it and the line builds without a silenced diagnostic |
+| Dropping a line | the version that brings the next LTS drops the earlier LTS and the STS beside it |
+| The major | the newest .NET the version generates; it moves only when the lines offered change |
+| Between majors | release-please bumps the minor; a `!` lands under the breaking changes of the notes |
+| The tool's contract | the project file's schema, the code templates and a command's contract break only at a major: deprecated within one, removed at the next, by a pull request labelled `next-major` |
+| What a line owns | its runtime band in `Directory.Packages.<tfm>.props`, its target framework, its SDK, the name of Microsoft's project templates the starters scaffold from, and its images' tags and digests |
+| A generated project | records the target framework in `cleanarch.json`, never the word LTS; its Dependabot and Renovate ignore the majors of the runtime band, the .NET images, `dotnet-ef` and `CleanArch.Cli`; the upgrade report stays on its framework unless asked to move |
+| Held by | `TemplatePackagingTests` for the major and the minor bumps, the title check of `.github/workflows/template-pull-request-title.yml` for the tool's contract, `RenovateParityTests` for the ignore rules, and `UpgradeReportTests` for the report's line |
+
+One package rather than a branch per line keeps both lines equal in features with no backport, where
+a maintenance branch would get fixes only, and Dependabot's security updates, the scheduled
+acceptance run and the `nuget` environment serve the default branch alone. The LTS is the default and
+the installed SDKs never choose, so a production project does not start on an STS by mistake and one
+command generates the same project on every machine. The major names the newest .NET, so a version
+reads beside `dotnet-ef` without a table, and the one change that breaks a project, its .NET leaving
+the choice, always comes with a major; a numbering of its own would spend a major on every `!` and
+need a table of which version generates which .NET.
+
+This checkout is the instance of the LTS line: its `Directory.Build.props`, `global.json` and images
+are the LTS's, and the newest line's values are the replacements generation applies. Dependabot
+updates every line's band, since each lives in a file of its own, and ignores their major versions,
+so a line never moves by a bot's pull request.
+
+Each November, one major:
+
+| .NET released | What this repository does |
+|---|---|
+| an STS | adds the line's band and replacements, offers the line once its band is stable, and releases the new major with `release-as` |
+| an LTS | moves its own instance to the new LTS, drops the earlier LTS and the STS, and releases the new major with `release-as` |
+
+`release-as` stays in `.github/release-please/config.json` for that one release and leaves with the
+next commit, so the minors that follow are bumped as usual; `TemplatePackagingTests` fails while it is
+not above the last release.
+
 ## The launcher
 
 `launcher/CleanArch.Create` is the .NET tool `dnx CleanArch.Create` runs, with its tests in
 `launcher/CleanArch.Create.Tests`. Its `Hosting` folder starts it, `Commands` holds its arguments, its usage and the one command it has, `new`, in `Commands/NewProject`, and `Setup` one class per step of a new project's setup. The folder is its own solution, `launcher/CleanArch.Create.slnx`,
 which holds five more projects. Generation and the template package leave the folder out, and
-`TemplatePackagingTests` holds both.
+`TemplatePackagingTests` holds both. The two tools target the LTS and roll forward to a newer major
+(`RollForward` set to `Major`), so they start on a machine that has only the newest .NET runtime;
+`TemplatePackagingTests` holds it too.
 
 | Project | What it is |
 |---|---|
@@ -1584,8 +1636,9 @@ values, generate a project from the first in a scratch hive, and run
 
 `CHANGELOG.md` follows Keep a Changelog and stays here, and the package carries it at its root for
 the upgrade report. Record what changes a generated project: a layer's shape, a rule the tests
-hold, a setting, a default that affects security or deployment. A major version means adopting the
-change in an existing project takes manual work.
+hold, a setting, a default that affects security or deployment. A major version changes the .NET
+lines offered; a change whose adoption in an existing project takes manual work goes under the
+breaking changes of its version's notes.
 
 ## Decisions
 

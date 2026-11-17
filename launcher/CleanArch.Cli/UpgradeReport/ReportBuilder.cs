@@ -7,10 +7,11 @@ internal sealed class ReportBuilder(ReportProcesses processes)
     public Report Build(string root, Provenance project, UpgradeRequest request)
     {
         RefuseWhatTheReportCannotCompare(root, request);
+        DotnetLine line = DotnetLine.Of(project.TargetFramework);
         IReadOnlyList<Release> catalog = request.Sources.Count > 0
             ? Releases.Local(request.Sources, project.Package)
             : Releases.NuGet(processes, root, project.Package);
-        (Release from, Release to) = Releases.Choose(project.Version, request.To, catalog, project.Package);
+        (Release from, Release to) = Releases.Choose(project.Version, request.To, catalog, project.Package, line);
 
         string scratch = Directory.CreateTempSubdirectory("upgrade-report-").FullName;
         try
