@@ -32,7 +32,7 @@ public static partial class GeneratedProjectFacts
 
     public static bool Sonar(ProjectFacts project) => File.Exists(Path.Combine(project.Root, "tools", "sonar-scanner.Dockerfile"));
 
-    public static bool Aspire(ProjectFacts project) => Directory.Exists(Path.Combine(project.Root, "src", "AppHost", project.FolderOf("AppHost")));
+    public static bool Aspire(ProjectFacts project) => Directory.Exists(Path.Combine(project.Root, "src", "AppHost"));
 
     public static bool FoldersCarryTheInitials(ProjectFacts project) => Directory.Exists(Path.Combine(project.Root, "src", "Domain", project.FolderOf("Domain")));
 

@@ -8,6 +8,10 @@ public sealed class ProjectFolderTests
 {
     private const string _webWorkspace = "src/Web/";
 
+    //#if (aspire)
+    private const string _appHostFolder = "src/AppHost";
+
+    //#endif
     private static readonly string[] _trees = ["src", "tests"];
 
     private static readonly HashSet<string> _skippedFolders = new(StringComparer.Ordinal)
@@ -36,11 +40,24 @@ public sealed class ProjectFolderTests
             return $"{relative}: its name does not start with {ProjectFolders.ProductName}., as every project's name does.";
         }
 
-        string[] segments = relative.Split('/');
-        string layer = segments.Length > 2 ? segments[1] : "<layer>";
-        string folder = $"{segments[0]}/{layer}/{ProjectFolders.FolderOf(name)}";
+        string folder = ExpectedFolder(relative, name);
 
         return relative == $"{folder}/{name}.csproj" ? null : $"{relative} belongs in {folder}/";
+    }
+
+    private static string ExpectedFolder(string relative, string name)
+    {
+        //#if (aspire)
+        if (name == $"{ProjectFolders.ProductName}.AppHost")
+        {
+            return _appHostFolder;
+        }
+
+        //#endif
+        string[] segments = relative.Split('/');
+        string layer = segments.Length > 2 ? segments[1] : "<layer>";
+
+        return $"{segments[0]}/{layer}/{ProjectFolders.FolderOf(name)}";
     }
 
     private static IEnumerable<string> ProjectFiles() =>
@@ -62,6 +79,13 @@ public sealed class ProjectFolderTests
         Misplacement($"src/Domain/{folder}/{name}.csproj").ShouldBeNull();
         Misplacement($"src/Domain/Elsewhere/{name}.csproj").ShouldBe($"src/Domain/Elsewhere/{name}.csproj belongs in src/Domain/{folder}/");
         Misplacement("src/Domain/Other/Other.Domain.csproj").ShouldNotBeNull().ShouldContain("does not start with");
+        //#if (aspire)
+
+        string appHost = $"{product}.AppHost";
+        Misplacement($"src/AppHost/{appHost}.csproj").ShouldBeNull();
+        Misplacement($"src/AppHost/{ProjectFolders.FolderOf(appHost)}/{appHost}.csproj").ShouldBe(
+            $"src/AppHost/{ProjectFolders.FolderOf(appHost)}/{appHost}.csproj belongs in src/AppHost/");
+        //#endif
     }
 
     [Theory]

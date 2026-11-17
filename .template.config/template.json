@@ -2098,6 +2098,7 @@
             "src/AppHost/**",
             "tests/Integration/AT.AppHost.IntegrationTests/**",
             "tests/Architecture/AT.Architecture.Tests/Rules/LocalStackParityTests.cs",
+            "tests/Architecture/AT.Architecture.Tests/Rules/AppHostIsolationTests.cs",
             "docs/guides/running-the-app-host.md"
           ]
         },

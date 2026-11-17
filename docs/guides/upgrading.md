@@ -86,6 +86,23 @@ Then rewrite each path that still names them, which `git grep -nE '(^|[^A-Za-z])
 lists, before 2.0.0 cased, in the solution, the project files, the Dockerfiles, `.dockerignore`, the
 workflows and the pages, and check the move with `dotnet build`.
 
+<!--#if (aspire)-->
+## A project whose app host sits in its own subfolder
+
+A project generated before the app host moved holds it in `src/AppHost/<Initials>.AppHost/`; the
+app host now sits at the root of `src/AppHost/`, the one project of a folder that is no layer. Move
+it as a commit of its own:
+
+```bash
+git mv src/AppHost/<Initials>.AppHost/* src/AppHost/
+```
+
+Then drop one `..\` from the `ProjectReference` paths of the app host's project file, rewrite the
+paths that still name the subfolder, which `git grep -n 'AppHost/<Initials>.AppHost'` lists, in the
+solution, the test projects and the pages, and check the move with `dotnet build`. The app host's
+user secrets follow its project file, so its generated passwords survive the move.
+
+<!--#endif-->
 ## What the report compares
 
 - **Files bootstrap or a framework's CLI writes are not compared.** The migrations, and wherever

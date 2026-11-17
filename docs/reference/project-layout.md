@@ -52,6 +52,13 @@ The .NET client's root also holds `Generated/`, which `dotnet cleanarch openapi`
 writes and nobody edits ([the .NET client](../architecture/layers-and-projects.md#the-net-client)).
 <!--#endif-->
 
+Each layer's folder under `src/` holds its projects in a folder per project.
+<!--#if (aspire)-->
+`src/AppHost/` is no layer: it holds the app host alone, at its root, which starts the local stack
+for development, references the hosts and is referenced by no project; `AppHostIsolationTests` holds
+it there.
+<!--#endif-->
+
 A brace lists every word a project allows at that level; a feature holds only the words it has
 content for.
 
@@ -203,8 +210,8 @@ src/Presentation/
                                         Features/<F>/{Composition,Jobs}
 <!--#endif-->
 <!--#if (aspire)-->
-src/AppHost/
-  AT.AppHost                            Common/{Hosting}
+src/AppHost/                            no layer: the app host's project at its root
+                                        Common/{Hosting}
                                         no Features/; AppHostModule.cs at its root: the app host's entry
 <!--#endif-->
 <!--#if (anyWeb)-->

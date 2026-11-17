@@ -192,7 +192,7 @@ public sealed class GeneratedProjectTests : IDisposable
         GeneratedProjectFacts.Aspire(GeneratedProject.Find(_root).ShouldNotBeNull()).ShouldBeFalse();
 
         Write("tools/sonar-scanner.Dockerfile", string.Empty);
-        Directory.CreateDirectory(Path.Combine(_root, "src", "AppHost", "AS.AppHost"));
+        Directory.CreateDirectory(Path.Combine(_root, "src", "AppHost"));
 
         GeneratedProjectFacts.Sonar(GeneratedProject.Find(_root).ShouldNotBeNull()).ShouldBeTrue();
         GeneratedProjectFacts.Aspire(GeneratedProject.Find(_root).ShouldNotBeNull()).ShouldBeTrue();

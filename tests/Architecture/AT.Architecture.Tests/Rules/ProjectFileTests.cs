@@ -87,7 +87,7 @@ public sealed class ProjectFileTests
     //#endif
     [InlineData("sonar", "tools/sonar-scanner.Dockerfile")]
     [InlineData("agentFiles", "AGENTS.md")]
-    [InlineData("aspire", "src/AppHost/{0}.AppHost")]
+    [InlineData("aspire", "src/AppHost")]
     public void AnOptionThatAddsAPath_IsTrueExactlyWhenTheTreeHoldsIt(string option, string path)
     {
         string relative = string.Format(System.Globalization.CultureInfo.InvariantCulture, path, ProjectFolders.InitialsOf(Name));
@@ -203,7 +203,7 @@ public sealed class ProjectFileTests
     private static readonly string[] _sourcesOfOtherShapes =
     [
         "src/Web",
-        "src/AppHost/AT.AppHost",
+        "src/AppHost",
         "src/Presentation/AT.Presentation.Client",
         "src/Presentation/AT.Api/Features/ExternalIdentity",
     ];

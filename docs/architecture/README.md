@@ -51,6 +51,12 @@ flowchart TB
 
 Every layer has a `.Core` project for mechanisms that know no feature, beside the project or
 projects that hold the business. [Layers and projects](layers-and-projects.md) names each one.
+<!--#if (aspire)-->
+
+The app host in `src/AppHost` stands outside the four layers: it starts the local stack for
+development and references the hosts, and no project references it
+([running the app host](../guides/running-the-app-host.md)).
+<!--#endif-->
 
 ## How a request travels
 
