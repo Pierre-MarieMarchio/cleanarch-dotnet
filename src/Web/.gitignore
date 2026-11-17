@@ -2,6 +2,7 @@
 !packages/*
 
 # Build output and coverage.
-dist/
+/apps/*/dist/
+/packages/*/dist/
 coverage/
 test-results/
