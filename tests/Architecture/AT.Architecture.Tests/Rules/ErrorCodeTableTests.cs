@@ -59,7 +59,7 @@ public sealed class ErrorCodeTableTests
     }
 
     [Theory]
-    [InlineData("src/AppHost/X.AppHost/Common/Hosting/ProjectFile.cs", true)]
+    [InlineData("src/AppHost/Common/Hosting/ProjectFile.cs", true)]
     [InlineData("src/Infrastructure/Jobs/PurgeJob.cs", true)]
     [InlineData("src/Application/Locks/Lease.cs", true)]
     [InlineData("src/Infrastructure/Persistence/Migrations/Init.cs", true)]

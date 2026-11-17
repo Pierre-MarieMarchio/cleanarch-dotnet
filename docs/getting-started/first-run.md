@@ -248,7 +248,7 @@ The Aspire app host starts the same stack from one command, the hosts as process
 attaches to, and shows their logs, traces and metrics in its dashboard:
 
 ```bash
-dotnet run --project src/AppHost/AT.AppHost
+dotnet run --project src/AppHost
 ```
 
 It binds the ports Compose binds, so stop the Compose stack first with `docker compose down`.

@@ -54,7 +54,7 @@ and code, then the ADRs in `docs/decisions/`, then the pages, then the tables in
 | After changing the stack, a mail or a relay | `dotnet cleanarch end-to-end`, with Docker |
 | <!--#endif--> |
 | <!--#if (aspire)--> |
-| The stack with its dashboard; a Compose service goes there too | `dotnet run --project src/AppHost/AT.AppHost` |
+| The stack with its dashboard; a Compose service goes there too | `dotnet run --project src/AppHost` |
 | <!--#endif--> |
 | Before calling a change done | `dotnet cleanarch verify`, then `dotnet cleanarch coverage`, with Docker |
 | Before taking a newer template version | `dotnet cleanarch upgrade-report --keep <folder>`, which writes nothing |

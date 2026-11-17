@@ -9,7 +9,7 @@ description: How to run the local stack from the Aspire app host, with every hos
 ## When
 
 You want the local stack from one command, with every host's logs, traces and metrics in one
-dashboard and a debugger able to attach to each host: `src/AppHost/AT.AppHost`, an Aspire app host,
+dashboard and a debugger able to attach to each host: `src/AppHost`, an Aspire app host,
 starts what `docker compose up` starts. Compose stays the reference of the deployment and the app
 host follows it: it reads each
 container's image from the Compose files when it starts, and `LocalStackParityTests` fails when a
@@ -97,7 +97,7 @@ A generated value is kept in the app host's user secrets, so it survives a resta
 1. Start Docker, then run the app host:
 
    ```bash
-   dotnet run --project src/AppHost/AT.AppHost
+   dotnet run --project src/AppHost
    ```
 
    Its first build fetches, through `dnx`, the Aspire CLI at the SDK's version, which `global.json`
@@ -107,8 +107,8 @@ A generated value is kept in the app host's user secrets, so it survives a resta
 3. Give the provider's parameters a value, in the dashboard when it asks, or once for all runs:
 
    ```bash
-   dotnet user-secrets set "Parameters:external-auth-authority" "<your issuer URL>" --project src/AppHost/AT.AppHost
-   dotnet user-secrets set "Parameters:external-auth-audience" "<this API's identifier>" --project src/AppHost/AT.AppHost
+   dotnet user-secrets set "Parameters:external-auth-authority" "<your issuer URL>" --project src/AppHost
+   dotnet user-secrets set "Parameters:external-auth-audience" "<this API's identifier>" --project src/AppHost
    ```
 <!--#endif-->
 
@@ -137,5 +137,5 @@ Stop the run with Ctrl+C: the hosts stop, and the containers and their network a
 forget the generated secrets as well:
 
 ```bash
-dotnet user-secrets clear --project src/AppHost/AT.AppHost
+dotnet user-secrets clear --project src/AppHost
 ```

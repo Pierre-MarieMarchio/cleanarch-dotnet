@@ -24,7 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Application\AT.Application\AppTemplate.Application.csproj" />
     <!--#if (aspire)-->
-    <ProjectReference Include="..\..\..\src\AppHost\AT.AppHost\AppTemplate.AppHost.csproj" />
+    <ProjectReference Include="..\..\..\src\AppHost\AppTemplate.AppHost.csproj" />
     <!--#endif-->
     <ProjectReference Include="..\..\..\src\Application\AT.Application.Core\AppTemplate.Application.Core.csproj" />
     <!--#if (localAuth)-->

@@ -897,7 +897,7 @@ and `tests` and fails until a new one is refused.
 
 ## The app host
 
-`--aspire` adds `src/AppHost/AT.AppHost`, an Aspire app host, beside Docker Compose, which stays the
+`--aspire` adds `src/AppHost`, an Aspire app host, beside Docker Compose, which stays the
 reference ([when](../guides/running-the-app-host.md#when)). Its source is in-tree, built
 and tested in this checkout like `src/Presentation/AT.Presentation.Client`, and `template.json` leaves it out with its
 integration tests, `LocalStackParityTests`, and its page under `!aspire`; `ProjectFileTests`
