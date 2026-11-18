@@ -226,7 +226,7 @@ public sealed class BackgroundJobsModuleTests
 
     private static IHost BuildHost(Dictionary<string, string?> settings, Action<IServiceCollection>? configure = null)
     {
-        var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
+        var builder = Microsoft.Extensions.Hosting.Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
         builder.Configuration.AddInMemoryCollection(settings);
         builder.Services.AddLogging();
         builder.Services.AddBackgroundJobs(builder.Configuration);

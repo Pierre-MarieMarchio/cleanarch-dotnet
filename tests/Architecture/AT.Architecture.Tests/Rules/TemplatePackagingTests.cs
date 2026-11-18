@@ -1725,6 +1725,16 @@ public sealed class TemplatePackagingTests
     }
 
     [Fact]
+    public void TheWebWorkspace_IgnoresBuildOutputOnlyBelowItsOwnProjects()
+    {
+        string[] lines = File.ReadAllLines(Path.Combine(ProjectReferenceGraph.RepositoryRoot, "src", "Web", ".gitignore"));
+
+        lines.Select(line => line.Trim()).ShouldNotContain(
+            "dist/",
+            "An unanchored dist/ also hides a Blazor WebAssembly app's wwwroot/lib/bootstrap/dist: anchor it to /apps/*/dist/ and /packages/*/dist/.");
+    }
+
+    [Fact]
     public void OnlyTheTemplateRepository_IgnoresTheMigrations()
     {
         const string migrations = "src/Infrastructure/*/Migrations/";

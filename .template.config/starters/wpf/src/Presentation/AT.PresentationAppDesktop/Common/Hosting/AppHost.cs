@@ -14,7 +14,7 @@ internal static class AppHost
 {
     public static IHost Build(string[] args, Action<HostApplicationBuilder>? configure = null)
     {
-        var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+        var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
         {
             Args = args,
             ContentRootPath = AppContext.BaseDirectory,

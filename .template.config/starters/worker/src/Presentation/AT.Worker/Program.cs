@@ -25,7 +25,7 @@ using AppTemplate.Worker.Features.ExternalIdentity.Composition;
 using AppTemplate.Worker.Features.Reminders.Composition;
 //#endif
 
-var builder = Host.CreateApplicationBuilder(args);
+var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(args);
 
 builder.Logging.ClearProviders();
 
