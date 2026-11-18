@@ -130,7 +130,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: ${{ fromJSON(needs.web-apps.outputs.apps) }}
+        include: ${{ fromJSON(needs.web-apps.outputs.apps) }}
 
     steps:
       - name: Checkout
