@@ -157,13 +157,13 @@
     <!--#if (serverDatabase)-->
     <!-- Keep on the same version as the Testcontainers database module, which pins this core exactly. -->
     <!--#endif-->
-    <PackageVersion Include="Testcontainers" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers" Version="4.17.0" />
     <!--#endif-->
     <!--#if (sqlServer)-->
     <PackageVersion Include="Testcontainers.MsSql" Version="4.16.0" />
     <!--#endif-->
     <!--#if (postgreSql)-->
-    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.17.0" />
     <!--#endif-->
     <PackageVersion Include="xunit.v3" Version="4.0.3" />
   </ItemGroup>
