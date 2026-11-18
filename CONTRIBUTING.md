@@ -116,7 +116,9 @@ Assisted-by: <tool>:<model>
 <!--#if (templateMaintenance)-->
 
 In this repository, release-please reads the types: a `feat` or a `fix` lands in the changelog, and a
-`!` makes the next version a major one
+`!` lands under the breaking changes of the release notes without moving the major, which follows the
+newest .NET the template generates, and a `!` on a scope of the tool (`cli`, `launcher`, `tasks`,
+`tooling`, `code-templates`) needs the label `next-major`
 ([branches and releases](docs/template/maintaining-the-template.md#branches-and-releases)).
 
 ## Working on the template

@@ -8,6 +8,7 @@
 
   <PropertyGroup>
     <PackAsTool>true</PackAsTool>
+    <RollForward>Major</RollForward>
     <ToolCommandName>cleanarch-create</ToolCommandName>
     <PackageId>CleanArch.Create</PackageId>
     <Version>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(TemplateConfig)template.json')), '(?&lt;="templateVersion"[^}]*"value":\s*")[^"]+'))</Version>

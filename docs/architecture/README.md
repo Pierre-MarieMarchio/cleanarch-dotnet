@@ -105,13 +105,13 @@ any other.
 | .NET SDK pinned by `global.json`, package versions in `Directory.Packages.props`, warnings as errors, a diagnostic silenced only by a row of the gate's list | One toolchain on every machine and in CI; `SilencedDiagnosticTests` refuses a silence without its row | [Build and CI](../guides/build-and-ci.md#the-gate) | — |
 | One solution at the root, `AppTemplate.slnx` | A project added or removed is one line to review and merge, with no GUID to reconcile | [Adding a project](../guides/adding-a-project.md#steps) | — |
 | <!--#if (githubCi)--> |
-| Every dependency at an exact version: packages, container images by digest, workflow actions by commit; Dependabot proposes updates in bands and ignores none | A tag or a range moves under you; an ignored dependency is one nobody revisits | [Supply chain](../guides/build-and-ci.md#supply-chain) | — |
+| Every dependency at an exact version: packages, container images by digest, workflow actions by commit; Dependabot proposes updates in bands and ignores only the majors of the .NET line | A tag or a range moves under you; an ignored dependency is one nobody revisits, and another .NET is a migration | [Supply chain](../guides/build-and-ci.md#supply-chain) | — |
 | <!--#endif--> |
 | <!--#if (githubHost && !ci)--> |
-| Every dependency at an exact version: packages, container images by digest; Dependabot proposes updates in bands and ignores none | A tag or a range moves under you; an ignored dependency is one nobody revisits | [Supply chain](../guides/build-and-ci.md#supply-chain) | — |
+| Every dependency at an exact version: packages, container images by digest; Dependabot proposes updates in bands and ignores only the majors of the .NET line | A tag or a range moves under you; an ignored dependency is one nobody revisits, and another .NET is a migration | [Supply chain](../guides/build-and-ci.md#supply-chain) | — |
 | <!--#endif--> |
 | <!--#if (gitlabHost)--> |
-| Every dependency at an exact version: packages, container images by digest; Renovate proposes updates in Dependabot's bands and ignores none | A tag or a range moves under you; an ignored dependency is one nobody revisits | [Supply chain](../guides/build-and-ci.md#supply-chain) | — |
+| Every dependency at an exact version: packages, container images by digest; Renovate proposes updates in Dependabot's bands and ignores only the majors of the .NET line | A tag or a range moves under you; an ignored dependency is one nobody revisits, and another .NET is a migration | [Supply chain](../guides/build-and-ci.md#supply-chain) | — |
 | <!--#endif--> |
 | <!--#if (!githubHost && !gitlabHost)--> |
 | Every dependency at an exact version: packages, container images by digest; no bot proposes updates, which the team takes | A tag or a range moves under you | [Supply chain](../guides/build-and-ci.md#supply-chain) | — |

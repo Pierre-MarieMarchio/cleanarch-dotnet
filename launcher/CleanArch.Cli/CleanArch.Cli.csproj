@@ -8,6 +8,7 @@
 
   <PropertyGroup>
     <PackAsTool>true</PackAsTool>
+    <RollForward>Major</RollForward>
     <ToolCommandName>dotnet-cleanarch</ToolCommandName>
     <PackageId>CleanArch.Cli</PackageId>
     <Version>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(TemplateConfig)template.json')), '(?&lt;="templateVersion"[^}]*"value":\s*")[^"]+'))</Version>

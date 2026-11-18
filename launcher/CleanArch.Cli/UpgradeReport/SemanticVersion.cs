@@ -12,6 +12,8 @@ internal static class SemanticVersion
 
     public static bool IsStable(string version) => Parse(version) is { Prerelease: null };
 
+    public static int Major(string version) => Parse(version)?.Core[0] ?? 0;
+
     public static readonly Comparer<string> Order = Comparer<string>.Create(Compare);
 
     public static int Compare(string? left, string? right)

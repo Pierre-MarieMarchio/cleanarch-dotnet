@@ -49,7 +49,7 @@ internal static class Releases
             .Select(found => new Release(found!["version"]!.GetValue<string>(), null))];
     }
 
-    public static (Release From, Release To) Choose(string current, string? to, IReadOnlyList<Release> catalog, string package)
+    public static (Release From, Release To) Choose(string current, string? to, IReadOnlyList<Release> catalog, string package, DotnetLine line)
     {
         string held = catalog.Count == 0
             ? "no version"
@@ -65,7 +65,7 @@ internal static class Releases
                 $"Version {current} of {package}, the one cleanarch.json records, is not found: the sources hold {held}. "
                 + "--source names a copy of that package.");
 
-        return (from, to is null ? Latest(current, catalog, package, held) : Named(current, to, catalog, package, held));
+        return (from, to is null ? Latest(current, catalog, package, held, line) : Named(current, to, catalog, package, held, line));
     }
 
     private static IEnumerable<string> PackagesIn(string source)
@@ -93,7 +93,7 @@ internal static class Releases
     private static Release? Find(IReadOnlyList<Release> catalog, string version) =>
         catalog.FirstOrDefault(release => SemanticVersion.IsVersion(release.Version) && SemanticVersion.Compare(release.Version, version) == 0);
 
-    private static Release Named(string current, string to, IReadOnlyList<Release> catalog, string package, string held)
+    private static Release Named(string current, string to, IReadOnlyList<Release> catalog, string package, string held, DotnetLine line)
     {
         if (!SemanticVersion.IsVersion(to))
         {
@@ -103,16 +103,32 @@ internal static class Releases
         Release target = Find(catalog, to)
             ?? throw new LauncherException($"Version {to} of {package} is not found: the sources hold {held}.");
 
-        return SemanticVersion.Compare(target.Version, current) > 0
+        if (SemanticVersion.Compare(target.Version, current) <= 0)
+        {
+            throw new LauncherException($"--to {to} is not newer than {current}, the version cleanarch.json records.");
+        }
+
+        return line.IsGeneratedBy(target.Version)
             ? target
-            : throw new LauncherException($"--to {to} is not newer than {current}, the version cleanarch.json records.");
+            : throw new LauncherException(
+                $"Version {to} of {package} no longer generates {line.TargetFramework}, the .NET cleanarch.json records: "
+                + "moving this project to another .NET is a migration, not an upgrade, as docs/guides/upgrading.md says.");
     }
 
-    private static Release Latest(string current, IReadOnlyList<Release> catalog, string package, string held) =>
-        catalog
+    private static Release Latest(string current, IReadOnlyList<Release> catalog, string package, string held, DotnetLine line)
+    {
+        Release[] newer = [.. catalog
             .Where(release => SemanticVersion.IsStable(release.Version))
-            .Where(release => SemanticVersion.Compare(release.Version, current) > 0)
-            .MaxBy(release => release.Version, SemanticVersion.Order)
-        ?? throw new LauncherException(
-            $"No stable version of {package} is newer than {current}: the sources hold {held}. --to names a prerelease.");
+            .Where(release => SemanticVersion.Compare(release.Version, current) > 0)];
+
+        if (newer.Length == 0)
+        {
+            throw new LauncherException($"No stable version of {package} is newer than {current}: the sources hold {held}. --to names a prerelease.");
+        }
+
+        return newer.Where(release => line.IsGeneratedBy(release.Version)).MaxBy(release => release.Version, SemanticVersion.Order)
+            ?? throw new LauncherException(
+                $"No stable version of {package} newer than {current} still generates {line.TargetFramework}, the .NET cleanarch.json records: "
+                + $"the sources hold {held}. Moving this project to another .NET is a migration, not an upgrade, as docs/guides/upgrading.md says.");
+    }
 }

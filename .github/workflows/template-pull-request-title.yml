@@ -4,7 +4,7 @@ name: Pull request title
 on:
   pull_request:
     branches: [develop]
-    types: [opened, edited, synchronize, reopened]
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
 
 # One run per pull request: a newer title or push cancels the check of the older one.
 concurrency:
@@ -26,6 +26,7 @@ jobs:
       - name: The title is a conventional commit release-please reads
         env:
           TITLE: ${{ github.event.pull_request.title }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
           set -euo pipefail
           pattern='^(feat|fix|perf|revert|docs|refactor|test|build|ci|chore|style)(\([a-z0-9][a-z0-9._/-]*\))?!?: [^[:space:]]'
@@ -36,8 +37,20 @@ jobs:
           for faulted in 'Update the README' 'feature: add a leg' 'fix:missing space' 'fix(API): capital scope' 'Revert "feat: add a leg"' 'docs : spaced colon'; do
             ! conventional "$faulted" || { echo "::error title=Title check::The pattern accepts '$faulted', a title release-please skips."; exit 1; }
           done
+          # The tool's contract (cleanarch.json, code templates, the commands) breaks only at a major, so a ! on its scopes belongs to the pull request that brings the next major.
+          breaks_tool() { [[ "$1" =~ ^[a-z]+\((cli|launcher|tasks|tooling|code-templates)\)!: ]]; }
+          for sound in 'feat(cli): add a command' 'fix(launcher): refuse a name' 'feat(api)!: drop a route' 'feat!: drop a route'; do
+            ! breaks_tool "$sound" || { echo "::error title=Title check::The tool rule refuses '$sound', a title that leaves the tool's contract alone."; exit 1; }
+          done
+          for faulted in 'feat(cli)!: drop a command' 'refactor(launcher)!: rename a flag' 'fix(tasks)!: change an exit code' 'feat(tooling)!: drop a task' 'build(code-templates)!: rename a template'; do
+            breaks_tool "$faulted" || { echo "::error title=Title check::The tool rule accepts '$faulted', a title that breaks the tool's contract."; exit 1; }
+          done
           if ! conventional "$TITLE"; then
             echo "::error title=Not a conventional commit::'$TITLE' is not <type>[(<scope>)][!]: <subject>, with <type> one of feat, fix, perf, revert, docs, refactor, test, build, ci, chore, style. Edit the title; this check runs again."
+            exit 1
+          fi
+          if breaks_tool "$TITLE" && ! grep -Fq '"next-major"' <<<"$LABELS"; then
+            echo "::error title=Breaking the tool::'$TITLE' breaks the tool's contract, which changes only at a major: deprecate within a major, remove at the next. Put the label next-major on the pull request that brings the next major, or drop the !; this check runs again."
             exit 1
           fi
           echo "'$TITLE' is a conventional commit."

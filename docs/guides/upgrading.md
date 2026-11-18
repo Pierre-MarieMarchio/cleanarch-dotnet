@@ -37,9 +37,18 @@ is [the project tool](../reference/cli.md).
    a source: no file of the project leaves the machine. `--source <path>` reads a package file, or a
    folder of them, instead of the sources. `--keep <folder>` keeps the two generations, outside the
    project, as `<folder>/<version>`; `--json <file>` writes the report there as JSON as well.
+
+   The report stays on the .NET this project builds, the `targetFramework` `cleanarch.json`
+   records: the latest stable version is the latest that still generates it, and a `--to` version
+   that no longer does is refused. A version's major is the newest .NET it generates; it generates
+   an LTS, such as `net10.0`, up to the major of the next LTS, and an STS, such as `net11.0`, in its
+   own major alone. Moving to another .NET is a migration rather than an upgrade: no report covers
+   it, so generate a project at the newer version in a folder of its own and compare by hand, as
+   [the end of this page](#what-the-report-compares) says for a project without `cleanarch.json`.
 2. Read the changelog entries the report quotes, those between the version here and the newer one: a
    minor or patch version is taken file by file, and a major version changes something whose adoption
-   takes work by hand, which its entry says.
+   takes work by hand, which its entry says. A major can stop generating this project's .NET, and
+   the report then stays on the last version that does.
 3. Take the decisions it lists first: an option one version has and the other has not, a value or a
    default that changed. A renamed option reads as one removed and one added: the report never
    assumes that two options are the same.
@@ -141,7 +150,7 @@ newer version under the same name and options in a folder of its own, and compar
 ## Check
 
 `dotnet cleanarch verify` passes, and `dotnet cleanarch upgrade-report` says no
-stable version is newer than the one `cleanarch.json` records.
+stable version newer than the one `cleanarch.json` records still generates this project's .NET.
 
 ## Undo
 

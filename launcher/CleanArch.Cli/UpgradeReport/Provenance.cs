@@ -9,7 +9,8 @@ internal sealed record Provenance(
     string Name,
     IReadOnlyList<(string Key, string Value)> Options,
     WebWorkspace? Web,
-    IReadOnlyList<PresentationProject> Presentation)
+    IReadOnlyList<PresentationProject> Presentation,
+    string TargetFramework)
 {
     public static Provenance Of(LocatedProject project)
     {
@@ -22,7 +23,8 @@ internal sealed record Provenance(
             project.File.Name,
             [.. (options ?? []).Select(option => (option.Key, Value(option.Value)))],
             project.File.Web,
-            project.File.Presentation ?? []);
+            project.File.Presentation ?? [],
+            project.File.TargetFramework);
     }
 
     private static string Value(JsonNode? node) => node is null ? string.Empty : node.GetValueKind() switch

@@ -121,6 +121,7 @@ internal static class ProjectFileCheck
                 ["version"] = symbols.GetProperty("templateVersion").GetProperty("parameters").GetProperty("value").GetString(),
             },
             ["name"] = name,
+            ["targetFramework"] = XDocument.Load(Path.Combine(Path.GetDirectoryName(folder)!, "Directory.Build.props")).Descendants("TargetFramework").Single().Value,
             ["options"] = options,
             ["client"] = chosen.Intersect(_clientPresentations).Any() || web == "blazor-wasm",
         };
@@ -188,7 +189,7 @@ internal static class ProjectFileCheck
             string text = File.ReadAllText(Path.Combine(scratch, "cleanarch.json"));
             string[] expectations =
             [
-                "\"auth\": \"local\"", "\"codeHost\": \"none\"", "\"ci\": false", "\"agentFiles\": false", "\"aspire\": true", "\"client\": true", "\"scope\": \"acme-shop\"",
+                "\"targetFramework\": \"net10.0\"", "\"auth\": \"local\"", "\"codeHost\": \"none\"", "\"ci\": false", "\"agentFiles\": false", "\"aspire\": true", "\"client\": true", "\"scope\": \"acme-shop\"",
                 "\"name\": \"Site\"", "\"audience\": \"admin\"", "\"rendering\": \"spa\"", "\"port\": 5173", "\"name\": \"Api\"",
                 "\"framework\": \"wpf\"", "\"name\": \"Worker\"",
             ];

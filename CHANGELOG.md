@@ -1,11 +1,13 @@
 # Changelog
 
-All notable changes to this template are recorded here. Versions follow
-[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+All notable changes to this template are recorded here. Versions are
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html) numbers whose major is the newest .NET the
+version generates: from 10.0.0 on, a major changes the .NET lines a project can be generated on, and
+1.0.0, on .NET 10, comes before it.
 
 From 1.0.0 on, release-please writes each version's entry from the conventional commits merged into
-`develop`: a `feat` is a feature, a `fix` a fix, and a `!` or a `BREAKING CHANGE` footer makes the
-next version a major one. The section after the first entry describes 1.0.0 as a whole.
+`develop`: a `feat` is a feature, a `fix` a fix, and a `!` or a `BREAKING CHANGE` footer lands under
+the version's breaking changes. The section after the first entry describes 1.0.0 as a whole.
 
 **What counts as notable in a template**, since it is cloned rather than referenced: anything that
 changes the *generated* project — a layer's shape, a convention the architecture tests enforce, a
@@ -13,8 +15,10 @@ configuration key, a default that affects security or deployment. A change invis
 starting a new project is a `refactor`, `test`, `build` or `ci` commit, and stays out of this file.
 
 **What "breaking" means here**: `Src/` is a starting point, not an API, so it cannot break a caller.
-A major version signals that adopting the change in an existing project derived from this template
-requires manual work — a renamed configuration section, a moved namespace, a new mandatory setting.
+A breaking change is one whose adoption in an existing project derived from this template requires
+manual work — a renamed configuration section, a moved namespace, a new mandatory setting — and it
+can come in a minor version, under its breaking changes. The project's tool is the exception: its
+project file, code templates and commands break only at a major.
 
 ## 1.0.0 (2026-10-22)
 

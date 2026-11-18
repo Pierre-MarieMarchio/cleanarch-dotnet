@@ -6,7 +6,11 @@ public sealed record ProjectFile(
     ProjectOptions Options,
     bool Client = false,
     WebWorkspace? Web = null,
-    IReadOnlyList<PresentationProject>? Presentation = null);
+    IReadOnlyList<PresentationProject>? Presentation = null,
+    string TargetFramework = ProjectFile.TargetFrameworkOfUnrecordedProjects)
+{
+    public const string TargetFrameworkOfUnrecordedProjects = "net10.0";
+}
 
 public sealed record TemplateReference(string Package, string Version);
 

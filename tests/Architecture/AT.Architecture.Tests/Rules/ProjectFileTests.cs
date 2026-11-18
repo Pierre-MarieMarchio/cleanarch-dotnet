@@ -1,5 +1,6 @@
 ﻿using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using AppTemplate.Architecture.Tests.Fixtures;
 using Shouldly;
 using Xunit;
@@ -48,6 +49,16 @@ public sealed class ProjectFileTests
             Case.Sensitive,
             $"cleanarch.json names the project {Name}, so its one solution is {Name}.slnx: an .sln beside it or in its place is the format docs/reference/project-layout.md turns down under The project file.");
         Holds($"src/Domain/{Folder("Domain")}").ShouldBeTrue($"cleanarch.json names the project {Name}, which has no src/Domain/{Folder("Domain")}.");
+    }
+
+    [Fact]
+    public void TheTargetFramework_IsTheOneDirectoryBuildPropsBuilds()
+    {
+        string built = XDocument.Load(Path.Combine(Root, "Directory.Build.props")).Descendants("TargetFramework").Single().Value;
+
+        Text(ProjectFile, "targetFramework").ShouldBe(
+            built,
+            $"Directory.Build.props builds {built}, and cleanarch.json records another target framework: upgrade-report keeps to the one recorded.");
     }
 
     [Fact]

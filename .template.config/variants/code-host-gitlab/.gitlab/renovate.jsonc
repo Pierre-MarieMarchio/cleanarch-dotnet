@@ -22,7 +22,7 @@
   "prConcurrentLimit": 18,
   //#endif
   "prHourlyLimit": 0,
-  // One merge request per dependency or group, at its newest version, majors included, as Dependabot opens them.
+  // One merge request per dependency or group, at its newest version, as Dependabot opens them; the rules at the end keep the .NET line's packages and images within their major.
   "separateMajorMinor": false,
   "dependencyDashboard": { "enabled": false },
   "semanticCommits": "enabled",
@@ -251,6 +251,56 @@
       "matchPackageNames": [
         "*",
       ],
+    },
+    // The packages and tools whose major is .NET's: a project stays on its .NET line, and moving to another is a migration. A major in its own branch, which the next rule disables, leaves the newest patch to propose.
+    {
+      "matchManagers": ["nuget"],
+      "matchPackageNames": [
+        "Microsoft.AspNetCore.*",
+        "Microsoft.EntityFrameworkCore*",
+        "Microsoft.Extensions.*",
+        "Asp.Versioning.*",
+        //#if (postgreSql)
+        "Npgsql.EntityFrameworkCore.PostgreSQL",
+        "Npgsql.OpenTelemetry",
+        //#endif
+        "dotnet-ef",
+        "CleanArch.Cli",
+      ],
+      "separateMajorMinor": true,
+    },
+    {
+      "matchManagers": ["nuget"],
+      "matchPackageNames": [
+        "Microsoft.AspNetCore.*",
+        "Microsoft.EntityFrameworkCore*",
+        "Microsoft.Extensions.*",
+        "Asp.Versioning.*",
+        //#if (postgreSql)
+        "Npgsql.EntityFrameworkCore.PostgreSQL",
+        "Npgsql.OpenTelemetry",
+        //#endif
+        "dotnet-ef",
+        "CleanArch.Cli",
+      ],
+      "matchUpdateTypes": ["major"],
+      "enabled": false,
+    },
+    // The .NET images of the Dockerfiles, the Compose files and the pipeline stay on the project's .NET line too.
+    {
+      "matchManagers": ["dockerfile", "docker-compose", "gitlabci"],
+      "matchPackageNames": [
+        "mcr.microsoft.com/dotnet/*",
+      ],
+      "separateMajorMinor": true,
+    },
+    {
+      "matchManagers": ["dockerfile", "docker-compose", "gitlabci"],
+      "matchPackageNames": [
+        "mcr.microsoft.com/dotnet/*",
+      ],
+      "matchUpdateTypes": ["major"],
+      "enabled": false,
     },
   ],
 }
