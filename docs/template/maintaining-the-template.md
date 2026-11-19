@@ -527,7 +527,8 @@ and it alone, takes a `SIGSTORE_ID_TOKEN` for the `sigstore` audience. This repo
 `--code-host gitlab` checks the GitLab files it writes instead: `tools/CheckGitLabCi.cs` on the
 project, `check-jsonschema` against the schema GitLab publishes for its pipeline files,
 `renovate-config-validator` on `.gitlab/renovate.jsonc`, and `gitlab-ci-local --preview` and `--list`,
-which merge every include and job as GitLab does, on a committed copy of the project. Its rule in
+which merge every include and job as GitLab does, on a committed copy of the project; a 429 from
+gitlab.com on the remote scanner templates is tried twice more, 30 then 60 seconds later. Its rule in
 `rules.json` covers `tools/CheckGitLabCi.cs` too. Under `--aspire true`, GitLab's `build-test`
 removes the app host's integration test project from the solution before `dotnet test`: the app host
 reaches the containers it starts through the Docker host's loopback, which a Docker-in-Docker service
