@@ -248,7 +248,11 @@ public sealed class GitLabPipelinePinningTests
     private static string[] PipelineLines()
     {
         File.Exists(Pipeline).ShouldBeTrue($"{Pipeline} is missing: the project's gate runs from it.");
+        /*#if (templateMaintenance)*/
         return [.. IncludedFiles().Prepend(Pipeline).SelectMany(TemplateMarkers.ReadAsTheDefaultLine)];
+        /*#else
+        return [.. IncludedFiles().Prepend(Pipeline).SelectMany(File.ReadAllLines)];
+        #endif*/
     }
 
     private static IEnumerable<(string Where, string Reference)> Images(string[] lines)
