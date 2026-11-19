@@ -105,7 +105,7 @@ public sealed class RenovateParityTests
         var values = Symbols(dependabot).Union(Symbols(renovate)).ToDictionary(symbol => symbol, _ => true, StringComparer.Ordinal);
         var updates = Yaml(Resolved(dependabot, values))["updates"]!.AsArray();
         using var config = RenovateConfigurationTests.Parse(string.Join('\n', Resolved(renovate, values)));
-        var ignores = DependabotIgnores(updates).Concat(RenovateIgnores(config.RootElement)).ToList();
+        var ignores = DependabotIgnores(updates).Where(ignore => ignore.MajorsAlone).Concat(RenovateIgnores(config.RootElement)).ToList();
         var (packages, images) = RuntimeBand();
 
         packages.ShouldContain(package => package.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal), "The runtime band reads no EF Core package, so this rule reads nothing.");
@@ -358,10 +358,25 @@ public sealed class RenovateParityTests
             }
         }
 
-        var ignores = DependabotIgnores(updates).ToList();
-        foreach (var beyond in ignores.Where(ignore => !ignore.MajorsAlone))
+        var whole = DependabotIgnores(updates).Where(ignore => !ignore.MajorsAlone).ToList();
+        var ignores = DependabotIgnores(updates).Where(ignore => ignore.MajorsAlone).ToList();
+        foreach (var manager in whole.Select(ignore => ignore.Manager).Union(RenovateDisabledNames(config).Select(name => name.Manager)).Distinct())
         {
-            yield return $"{beyond} ignores more than its majors, which no Renovate rule here stands for.";
+            var expected = whole.Where(ignore => ignore.Manager == manager).Select(ignore => ignore.Pattern).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var disabled = RenovateDisabledNames(config).Where(name => name.Manager == manager).Select(name => name.Pattern).ToList();
+            if (!disabled.ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(expected))
+            {
+                yield return $"{manager}: Renovate disables every update of [{string.Join(", ", disabled)}], where Dependabot ignores every update of [{string.Join(", ", expected)}].";
+            }
+
+            foreach (string pattern in disabled.Where(_ => probes.ContainsKey(manager)))
+            {
+                var dependency = new RenovateDependency(manager, pattern, probes[manager]);
+                if (RenovateConfigurationTests.Effective(config, dependency with { UpdateType = "patch" }).Enabled)
+                {
+                    yield return $"{manager}: {pattern} still gets a patch from Renovate, which a later rule enables again; Dependabot ignores every update of it.";
+                }
+            }
         }
 
         foreach (string manager in updates.Select(update => _managers[Text(update, "package-ecosystem")]))
@@ -400,6 +415,11 @@ public sealed class RenovateParityTests
         config.GetProperty("packageRules").EnumerateArray()
             .Where(rule => Strings(rule, "matchUpdateTypes").SequenceEqual(["major"]) && rule.TryGetProperty("enabled", out var on) && !on.GetBoolean())
             .SelectMany(rule => Strings(rule, "matchManagers").SelectMany(manager => Strings(rule, "matchPackageNames").Select(pattern => new BotIgnore("Renovate", manager, pattern, true))));
+
+    private static IEnumerable<(string Manager, string Pattern)> RenovateDisabledNames(JsonElement config) =>
+        config.GetProperty("packageRules").EnumerateArray()
+            .Where(rule => !rule.TryGetProperty("matchUpdateTypes", out _) && rule.TryGetProperty("enabled", out var on) && !on.GetBoolean())
+            .SelectMany(rule => Strings(rule, "matchManagers").SelectMany(manager => Strings(rule, "matchPackageNames").Select(pattern => (manager, pattern))));
 
     private static IEnumerable<string> Uncovered(List<string> band, List<BotIgnore> ignores, (string Bot, string Manager)[] places) =>
         band.SelectMany(name => places

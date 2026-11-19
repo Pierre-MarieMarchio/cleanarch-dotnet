@@ -472,7 +472,8 @@ are added up into `prConcurrentLimit`, since Renovate counts every open merge re
 newest version, but for the .NET line: Dependabot's `ignore` of a major becomes a rule that turns
 `separateMajorMinor` on for those names and one that disables their `major` updates, since with it off
 Renovate's one candidate is the newest version and disabling its major would drop the patch too; the
-pipeline's `gitlabci` manager ignores the majors of the images Dependabot ignores in the Dockerfiles; `prHourlyLimit` is off and the dashboard too. `applies-to: version-updates` needs no
+pipeline's `gitlabci` manager ignores the majors of the images Dependabot ignores in the Dockerfiles; an `ignore`
+of every update becomes a rule that disables the name; `prHourlyLimit` is off and the dashboard too. `applies-to: version-updates` needs no
 counterpart: Renovate leaves a vulnerability fix out of every group by default, and on GitLab it gets
 none, since its vulnerability alerts read GitHub's and `osvVulnerabilityAlerts` is experimental. The
 `templateMaintenance` lines of `dependabot.yml`, `target-branch: develop`, have none either, since no
@@ -487,7 +488,7 @@ update a checksum it has not computed, so the Node.js archive of `.gitlab/ci/web
 in the `node` merge request, which `GitLabPipelinePinningTests` fails until it is.
 `RenovateParityTests`, template-only, resolves the markers of both files for every combination of the
 symbols they read and fails until each ecosystem, folder, group, pattern, exclusion, label, commit
-prefix, schedule, limit and ignored major of `dependabot.yml` has its counterpart and nothing more, through a reader
+prefix, schedule, limit, ignored major and ignored package of `dependabot.yml` has its counterpart and nothing more, through a reader
 of `packageRules` that applies them in order, as Renovate does; it also holds the README edits to the
 blocks the worker and the web workspace write. Its `TheBots_IgnoreTheMajorsOfTheRuntimeBand` reads
 the runtime band from the files, every package of `Directory.Packages.props` whose major is that of
@@ -527,7 +528,8 @@ and it alone, takes a `SIGSTORE_ID_TOKEN` for the `sigstore` audience. This repo
 `--code-host gitlab` checks the GitLab files it writes instead: `tools/CheckGitLabCi.cs` on the
 project, `check-jsonschema` against the schema GitLab publishes for its pipeline files,
 `renovate-config-validator` on `.gitlab/renovate.jsonc`, and `gitlab-ci-local --preview` and `--list`,
-which merge every include and job as GitLab does, on a committed copy of the project. Its rule in
+which merge every include and job as GitLab does, on a committed copy of the project; a 429 from
+gitlab.com on the remote scanner templates is tried twice more, 30 then 60 seconds later. Its rule in
 `rules.json` covers `tools/CheckGitLabCi.cs` too. Under `--aspire true`, GitLab's `build-test`
 removes the app host's integration test project from the solution before `dotnet test`: the app host
 reaches the containers it starts through the Docker host's loopback, which a Docker-in-Docker service
