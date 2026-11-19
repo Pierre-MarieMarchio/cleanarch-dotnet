@@ -268,7 +268,7 @@ jobs:
         with:
           node-version-file: src/Web/.node-version
 
-      # The pipeline and the Renovate configuration as GitLab and Renovate read them, without a GitLab instance or Docker-in-Docker: the structure tools/CheckGitLabCi.cs holds, GitLab's schema, gitlab-ci-local's merge of every include and job, which reads a committed tree, and Renovate's own validator. Each tool is pinned: bump a version and its digest together.
+      # The pipeline and the Renovate configuration as GitLab and Renovate read them, without a GitLab instance or Docker-in-Docker: the structure tools/CheckGitLabCi.cs holds, GitLab's schema, gitlab-ci-local's merge of every include and job, which reads a committed tree and waits out gitlab.com's 429 on the remote templates, and Renovate's own validator. Each tool is pinned: bump a version and its digest together.
       - name: Validate the GitLab pipeline and Renovate configuration (GitLab leg)
         if: matrix.gitlab == 'true'
         run: |
@@ -286,8 +286,17 @@ jobs:
           git init --quiet
           git add -A
           git -c user.name=acceptance -c user.email=acceptance@localhost commit --quiet -m generated
-          npx --yes gitlab-ci-local@4.77.0 --preview > /dev/null
-          npx --yes gitlab-ci-local@4.77.0 --list
+          log="${{ runner.temp }}/gitlab-ci-local.log"
+          gitlab_ci_local() {
+            for wait in 30 60 0; do
+              npx --yes gitlab-ci-local@4.77.0 "$@" > "$log" 2>&1 && { cat "$log"; return; }
+              grep -q 'status code 429' "$log" && (( wait > 0 )) || { cat "$log" >&2; return 1; }
+              echo "gitlab.com refused the remote include with 429; trying again in ${wait}s." >&2
+              sleep "$wait"
+            done
+          }
+          gitlab_ci_local --preview > /dev/null
+          gitlab_ci_local --list
 
       # A project generated without a web app takes its first one, and the workspace around it, from the item template; dotnet cleanarch add completes it below.
       - name: Add the first app with cleanarch-webapp --workspace
