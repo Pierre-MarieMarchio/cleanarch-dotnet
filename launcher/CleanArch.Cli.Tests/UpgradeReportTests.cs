@@ -94,10 +94,17 @@ public sealed class UpgradeReportTests : IDisposable
     [InlineData("no longer offers none for --auth", true)]
     [InlineData("changes the default of --auth from local to external", true)]
     [InlineData("guard", false)]
+    [InlineData("--dotnet", false)]
     public void TheOptionChanges_NameWhatTheTargetChanged_AndNeverARefusalGuard(string fragment, bool reported)
     {
         TemplatePackage older = Package(new JsonObject { ["auth"] = Choice("local", "local", "external", "none"), ["webName"] = Text("Site") });
-        TemplatePackage newer = Package(new JsonObject { ["auth"] = Choice("external", "local", "external"), ["siteName"] = Text("Site"), ["guard"] = Guard() });
+        TemplatePackage newer = Package(new JsonObject
+        {
+            ["auth"] = Choice("external", "local", "external"),
+            ["siteName"] = Text("Site"),
+            ["guard"] = Guard(),
+            ["dotnet"] = Choice("net10.0", "net10.0", "net11.0"),
+        });
 
         string[] changes = [.. OptionChanges.Between(older, newer, Project(options: [("auth", "none"), ("webName", "Shop")]), "2.1.0")];
 
@@ -210,10 +217,11 @@ public sealed class UpgradeReportTests : IDisposable
             presentation: [new PresentationProject("Api", "api"), new PresentationProject("Worker", "worker"), new PresentationProject("Admin", "blazor-server")]));
 
         string.Join(" ", plan.Generation.Select(value => value.Symbol + "=" + value.Value))
-            .ShouldBe("auth=external files=false web=vite-react webName=Site webAudience=public webRendering=spa presentation=api presentation=worker");
+            .ShouldBe("auth=external files=false dotnet=net10.0 web=vite-react webName=Site webAudience=public webRendering=spa presentation=api presentation=worker");
         plan.Replays.Select(replay => replay.Name).ShouldBe(["BackOffice", "tokens", "Admin"]);
         plan.Replays[0].Values.ShouldContain(("rendering", "ssr"));
         plan.Replays[0].ProjectOptions.ShouldContain(("auth", "external"));
+        plan.Replays[0].ProjectOptions.ShouldContain(("dotnet", "net10.0"));
     }
 
     [Theory]

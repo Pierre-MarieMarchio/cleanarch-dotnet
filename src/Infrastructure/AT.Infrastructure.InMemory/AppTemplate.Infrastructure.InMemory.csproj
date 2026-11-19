@@ -1,7 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <!--#if (!dotnet11)-->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <!--#endif-->
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
   </ItemGroup>
 

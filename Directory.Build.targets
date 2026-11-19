@@ -9,6 +9,13 @@
     <MSBuildTreatWarningsAsErrors>true</MSBuildTreatWarningsAsErrors>
   </PropertyGroup>
 
+  <!--#if (dotnet11)-->
+  <!-- The .NET 11 SDK imports System.Net.Http.Json in every project; a source and a generator write it where they need it, as on .NET 10. -->
+  <ItemGroup Condition="'$(UsingMicrosoftNETSdkWeb)' != 'true'">
+    <Using Remove="System.Net.Http.Json" />
+  </ItemGroup>
+
+  <!--#endif-->
   <!--#if (sqlServer)
   <Target Name="UseIcuGlobalization" BeforeTargets="GenerateBuildRuntimeConfigurationFiles;GeneratePublishRuntimeConfigurationFiles">
     <ItemGroup>

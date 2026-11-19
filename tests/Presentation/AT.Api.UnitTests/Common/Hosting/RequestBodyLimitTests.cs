@@ -153,7 +153,7 @@ public sealed class RequestBodyLimitTests
             .Append($"--{_boundary}\r\n")
             .Append("Content-Disposition: form-data; name=\"file\"; filename=\"a.txt\"\r\n")
             .Append("Content-Type: text/plain\r\n\r\n")
-            .Append(new string('a', fileBytes))
+            .Append('a', fileBytes)
             .Append($"\r\n--{_boundary}--\r\n");
 
         return Encoding.UTF8.GetBytes(body.ToString());

@@ -376,6 +376,8 @@ internal static class LegSelector
 
     private const string _sqliteDefaults = "sqlite, defaults";
 
+    private const string _newest = "newest .NET, local auth, api worker and mcp";
+
     private static readonly string[] _webLegs = [_workerMcpWasm, _webPlaceholder, _webReact, _webAngular, _noWeb, _everyStarter];
 
     private static readonly Case[] _cases =
@@ -400,9 +402,11 @@ internal static class LegSelector
         new("the presentation item template", "pull_request", [], [".template.config/presentation/.template.config/template.json"],
             [_externalNoExamples, _sqliteExternal, _noWeb, _everyStarter, _sqliteDefaults]),
         new("the MCP server starter", "pull_request", [], [".template.config/starters/mcp/src/Presentation/AT.PresentationAppMcp/Program.cs"],
-            [_severalHosts, _workerMcpWasm, _noApi, _sqliteExternal]),
+            [_severalHosts, _workerMcpWasm, _noApi, _sqliteExternal, _newest]),
         new("the worker starter", "pull_request", [], [".template.config/starters/worker/src/Presentation/AT.Worker/Program.cs"],
-            [_severalHosts, _localNoFiles, _workerMcpWasm, _noApi]),
+            [_severalHosts, _localNoFiles, _workerMcpWasm, _noApi, _newest]),
+        new("the newest line's images", "pull_request", [], [".template.config/images/net11.0/final.Dockerfile"], [_newest]),
+        new("the SDK pin, which every leg reads", "pull_request", [], ["global.json"], null),
         new("the SQLite variant", "pull_request", [], [".template.config/variants/database-sqlite/docker-compose.database.yml"],
             [_sqliteExternal, _webPlaceholder, _sqliteDefaults]),
         new("the SQL Server variant", "pull_request", [], [".template.config/variants/database-sqlserver/docker-compose.database.yml"],

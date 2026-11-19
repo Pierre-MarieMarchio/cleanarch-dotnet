@@ -35,6 +35,11 @@ internal sealed partial class WebAppAddition(AdditionFlow flow)
             ["ci"] = Condition.Of(project.Ci),
             ["agentFiles"] = Condition.Of(project.AgentFiles),
         };
+        if (project.TargetFramework is { } framework)
+        {
+            detected["dotnet"] = framework;
+        }
+
         flow.Detected(project, manifest, detected);
 
         AskedItem asked = flow.AskItem(

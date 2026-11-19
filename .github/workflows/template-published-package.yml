@@ -21,7 +21,7 @@ env:
 
 jobs:
   published:
-    name: Build the published package's default project
+    name: Build the published package's projects
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -69,6 +69,42 @@ jobs:
       # The project's Directory.Build.props sets NuGetAudit to low over every dependency and TreatWarningsAsErrors, so an advisory on a pinned package fails this step as it fails a user's. It names no solution file, since the published version writes an .sln or an .slnx.
       - name: Build with warnings as errors
         working-directory: ${{ runner.temp }}/generated
+        run: dotnet build --configuration Release
+
+      # Versions 1.x and 10.x have no --dotnet option: the published package offers the newest line only when its help names it, and the run skips the steps below otherwise.
+      - name: Find out whether the published package offers the newest .NET
+        id: newest
+        run: |
+          set -euo pipefail
+          help=$(dotnet new cleanarch-webapi --help --debug:custom-hive "${{ runner.temp }}/hive")
+          if grep -qE -- '^\s+--dotnet\b' <<< "$help" && grep -q 'net11.0' <<< "$help"; then
+            echo "offered=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "offered=false" >> "$GITHUB_OUTPUT"
+            echo "The published package offers no .NET 11: only the default project was built."
+          fi
+
+      - name: Generate the project on the newest .NET
+        if: steps.newest.outputs.offered == 'true'
+        run: dotnet new cleanarch-webapi -n Sample.Published.Newest -o "${{ runner.temp }}/generated-newest" --dotnet net11.0 --debug:custom-hive "${{ runner.temp }}/hive"
+
+      - name: Set up the .NET SDK of the newest line
+        if: steps.newest.outputs.offered == 'true'
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: ${{ runner.temp }}/generated-newest/global.json
+
+      - name: Bootstrap the newest line's project
+        if: steps.newest.outputs.offered == 'true'
+        working-directory: ${{ runner.temp }}/generated-newest
+        run: |
+          dotnet tool restore
+          dotnet cleanarch bootstrap
+
+      # The newest line's runtime band is pinned apart from the LTS's, so an advisory can reach one band and not the other.
+      - name: Build the newest line's project with warnings as errors
+        if: steps.newest.outputs.offered == 'true'
+        working-directory: ${{ runner.temp }}/generated-newest
         run: dotnet build --configuration Release
 
       # A red run is announced by GitHub alone, to whoever last changed the cron line: docs/template/maintaining-the-template.md says what to do.

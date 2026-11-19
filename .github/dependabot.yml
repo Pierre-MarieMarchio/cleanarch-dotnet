@@ -6,7 +6,12 @@ updates:
     #if (templateMaintenance)
     target-branch: develop
     #endif
-    directory: /
+    directories:
+      - /
+      #if (templateMaintenance)
+      # The newest .NET line's band, which only this project restores.
+      - /.template.config/lines/net11.0
+      #endif
     schedule:
       interval: weekly
       day: monday
@@ -47,6 +52,10 @@ updates:
       - dependency-name: CleanArch.Cli
         update-types:
           - version-update:semver-major
+      #if (templateMaintenance)
+      # The newest line's tool manifest pins the project tool at the placeholder generation replaces.
+      - dependency-name: CleanArch.Cli
+      #endif
       # Roslyn moves by hand with Microsoft.EntityFrameworkCore.Design, which pins it exactly; alone, it fails to restore.
       - dependency-name: Microsoft.CodeAnalysis.CSharp
 
@@ -155,6 +164,11 @@ updates:
       #if (anyWeb)
       # Every web app's image, nginx or Node, by directory glob.
       - /src/Web/apps/*
+      #endif
+      #if (templateMaintenance)
+      # Each .NET line's images, which the starters and the GitLab pipeline include, and a project generated on the newest line takes in place of this checkout's; the pipeline's is in a file named as Helm values, the only YAML without a Kubernetes kind Dependabot reads an image: from.
+      - /.template.config/images/net10.0
+      - /.template.config/images/net11.0
       #endif
     schedule:
       interval: weekly

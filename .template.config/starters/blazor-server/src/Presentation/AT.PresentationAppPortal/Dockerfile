@@ -1,7 +1,11 @@
 # syntax=docker/dockerfile:1.29.0@sha256:572cebbc2b15e6f84c077742952674889cb63cd5e9b80abdffcbe587b6f19183
 
 # Build from the repository root: docker build -f src/Presentation/AT.PresentationAppPortal/Dockerfile -t app-template-presentation-app-portal:local .
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.404-noble@sha256:bef136a371963aaa46ec97882845ef6f54dec15728bb4b128b1c2a400ffbc9b4 AS build
+#if (dotnet == "net11.0")
+#include ../../.template.config/images/net11.0/build.Dockerfile
+#else
+#include ../../.template.config/images/net10.0/build.Dockerfile
+#endif
 
 ARG BUILD_CONFIGURATION=Release
 
@@ -12,7 +16,7 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
 WORKDIR /src
 
 # Restore inputs first, so this layer stays cached until a project file or a version pin changes.
-COPY ["global.json", "Directory.Build.props", "Directory.Build.targets", "Directory.Packages.props", "./"]
+COPY ["global.json", "Directory.Build.props", "Directory.Build.targets", "Directory.Packages.props", "Directory.Packages.net10.0.props", "./"]
 
 # Every project the presentation project references, at its real path.
 COPY ["src/Domain/AT.Domain.Core/AppTemplate.Domain.Core.csproj",                                       "src/Domain/AT.Domain.Core/"]
@@ -44,8 +48,12 @@ RUN dotnet publish "src/Presentation/AT.PresentationAppPortal/AppTemplate.Presen
         -p:UseAppHost=false \
         -o /app/publish
 
-# For a smaller surface, use aspnet:10.0.13-noble-chiseled and drop the HEALTHCHECK, which needs alpine's wget.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.15-alpine3.24@sha256:21c3f9798416cba4c0576a947c286231cb71ea2884896cb968253f5c9668f930 AS final
+# For a smaller surface, use the chiseled Ubuntu flavour of the same aspnet version and drop the HEALTHCHECK, which needs alpine's wget.
+#if (dotnet == "net11.0")
+#include ../../.template.config/images/net11.0/final.Dockerfile
+#else
+#include ../../.template.config/images/net10.0/final.Dockerfile
+#endif
 
 ARG TARGETARCH
 ARG TARGETPLATFORM

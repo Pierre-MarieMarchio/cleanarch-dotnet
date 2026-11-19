@@ -35,7 +35,7 @@ public sealed class GeneratedProjectTests : IDisposable
     {
         Write("Acme.Shop.slnx", string.Empty);
         Write("tools/Tasks.cs", string.Empty);
-        Write("Directory.Packages.props", """<PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.13" />""");
+        Write("Directory.Packages.net10.0.props", """<PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.13" />""");
 
         ProjectFacts project = GeneratedProject.Find(_root).ShouldNotBeNull();
 
@@ -44,7 +44,7 @@ public sealed class GeneratedProjectTests : IDisposable
         project.Auth.ShouldBe("external");
         project.Ci.ShouldBeFalse();
 
-        File.Delete(Path.Combine(_root, "Directory.Packages.props"));
+        File.Delete(Path.Combine(_root, "Directory.Packages.net10.0.props"));
         GeneratedProject.Find(_root).ShouldNotBeNull().Auth.ShouldBe("none");
     }
 

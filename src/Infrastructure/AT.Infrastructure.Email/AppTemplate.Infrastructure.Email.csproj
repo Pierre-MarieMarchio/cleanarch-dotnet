@@ -2,8 +2,10 @@
 
   <ItemGroup>
     <PackageReference Include="MailKit" />
+    <!--#if (!dotnet11)-->
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <!--#endif-->
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Extensions.Http" />
   </ItemGroup>

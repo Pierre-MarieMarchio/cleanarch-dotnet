@@ -1,0 +1,14 @@
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)../../../Directory.Packages.net11.0.props" />
+
+  <ItemGroup Label="Microsoft's project templates the starters scaffold from">
+    <PackageVersion Include="Microsoft.DotNet.Web.ProjectTemplates.11.0" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.McpServer.ProjectTemplates.11.0" Version="11.0.0" />
+  </ItemGroup>
+
+</Project>

@@ -20,6 +20,103 @@
     "type": "solution"
   },
   "symbols": {
+    "dotnet": {
+      "type": "parameter",
+      "displayName": ".NET",
+      "datatype": "choice",
+      "defaultValue": "net10.0",
+      "choices": [
+        {
+          "choice": "net10.0",
+          "description": ".NET 10, the LTS (recommended)"
+        },
+        {
+          "choice": "net11.0",
+          "description": ".NET 11, the newest"
+        }
+      ],
+      "replaces": "net10.0",
+      "onlyIf": [
+        {
+          "after": "<TargetFramework>"
+        },
+        {
+          "after": "\"targetFramework\": \""
+        },
+        {
+          "after": "Directory.Packages."
+        },
+        {
+          "before": "-windows"
+        }
+      ],
+      "description": "The .NET the project builds on; the project stays on it."
+    },
+    "dotnet11": {
+      "type": "computed",
+      "value": "(dotnet == \"net11.0\")",
+      "description": "The project builds on .NET 11, whose runtime holds what a .NET 10 project takes from packages, such as the abstractions of Microsoft.Extensions' configuration, dependency injection and logging, and whose SDK and analyzers ask for newer forms. Conditions what differs on .NET 11."
+    },
+    "dotnetSdk": {
+      "type": "generated",
+      "generator": "switch",
+      "parameters": {
+        "evaluator": "C++",
+        "datatype": "string",
+        "cases": [
+          {
+            "condition": "(dotnet == \"net11.0\")",
+            "value": "11.0.100"
+          },
+          {
+            "condition": "(true)",
+            "value": "10.0.100"
+          }
+        ]
+      },
+      "replaces": "10.0.100",
+      "description": "The SDK feature band global.json requires, the first of the chosen .NET's."
+    },
+    "dotnetName": {
+      "type": "generated",
+      "generator": "switch",
+      "parameters": {
+        "evaluator": "C++",
+        "datatype": "string",
+        "cases": [
+          {
+            "condition": "(dotnet == \"net11.0\")",
+            "value": ".NET 11 "
+          },
+          {
+            "condition": "(true)",
+            "value": ".NET 10 "
+          }
+        ]
+      },
+      "replaces": ".NET 10 ",
+      "description": "The chosen .NET as the pages and the agents' file name it."
+    },
+    "dotnetProjectTemplates": {
+      "type": "generated",
+      "generator": "switch",
+      "parameters": {
+        "evaluator": "C++",
+        "datatype": "string",
+        "cases": [
+          {
+            "condition": "(dotnet == \"net11.0\")",
+            "value": "ProjectTemplates.11.0"
+          },
+          {
+            "condition": "(true)",
+            "value": "ProjectTemplates.10.0"
+          }
+        ]
+      },
+      "replaces": "ProjectTemplates.10.0",
+      "description": "The line of Microsoft's project templates a starter's scaffold.json installs, which carries the .NET it generates in its name."
+    },
     "auth": {
       "type": "parameter",
       "displayName": "Authentication",
@@ -1864,6 +1961,7 @@
             "tests/Architecture/AT.Architecture.Tests/Rules/ConditionedMarkdownTests.cs",
             "tests/Architecture/AT.Architecture.Tests/Rules/AgentFileLengthTests.cs",
             "tests/Architecture/AT.Architecture.Tests/Rules/RenovateParityTests.cs",
+            "tests/Architecture/AT.Architecture.Tests/Rules/DotnetLineGenerationTests.cs",
             "tests/Architecture/AT.Architecture.Tests/Fixtures/TemplateForms.cs"
           ]
         },
@@ -2103,6 +2201,18 @@
           ]
         },
         {
+          "condition": "(dotnet == \"net11.0\")",
+          "exclude": [
+            "Directory.Packages.net10.0.props"
+          ]
+        },
+        {
+          "condition": "(dotnet != \"net11.0\")",
+          "exclude": [
+            "Directory.Packages.net11.0.props"
+          ]
+        },
+        {
           "condition": "(!sonar)",
           "exclude": [
             "tools/sonar-scanner.Dockerfile"
@@ -2185,7 +2295,7 @@
           ]
         },
         {
-          "condition": "(!sonar || !dotnetClient)",
+          "condition": "(!sonar || !dotnetClient || dotnet == \"net11.0\")",
           "exclude": [
             ".config/dotnet-tools.json"
           ]
@@ -2224,19 +2334,27 @@
       "condition": "(!aspire)"
     },
     {
+      "source": "./.template.config/lines/net11.0/",
+      "target": "./",
+      "condition": "(dotnet == \"net11.0\")",
+      "include": [
+        ".config/dotnet-tools.json"
+      ]
+    },
+    {
       "source": "./.template.config/variants/no-sonar/",
       "target": "./",
-      "condition": "(!sonar && dotnetClient)"
+      "condition": "(!sonar && dotnetClient && dotnet != \"net11.0\")"
     },
     {
       "source": "./.template.config/variants/no-client/",
       "target": "./",
-      "condition": "(sonar && !dotnetClient)"
+      "condition": "(sonar && !dotnetClient && dotnet != \"net11.0\")"
     },
     {
       "source": "./.template.config/variants/no-sonar-no-client/",
       "target": "./",
-      "condition": "(!sonar && !dotnetClient)"
+      "condition": "(!sonar && !dotnetClient && dotnet != \"net11.0\")"
     },
     {
       "source": "./.template.config/variants/project-file-web/",
@@ -2873,6 +2991,54 @@
             ],
             "trim": true,
             "wholeLine": true
+          }
+        },
+        {
+          "type": "include",
+          "configuration": {
+            "start": "#include ../../",
+            "end": "\n"
+          }
+        }
+      ]
+    },
+    "**/*.Dockerfile": {
+      "operations": [
+        {
+          "type": "conditional",
+          "configuration": {
+            "if": [
+              "#if"
+            ],
+            "else": [
+              "#else"
+            ],
+            "elseif": [
+              "#elseif"
+            ],
+            "endif": [
+              "#endif"
+            ],
+            "trim": true,
+            "wholeLine": true
+          }
+        },
+        {
+          "type": "include",
+          "configuration": {
+            "start": "#include ../../",
+            "end": "\n"
+          }
+        }
+      ]
+    },
+    "**/*.yml": {
+      "operations": [
+        {
+          "type": "include",
+          "configuration": {
+            "start": "#include ../../",
+            "end": "\n"
           }
         }
       ]

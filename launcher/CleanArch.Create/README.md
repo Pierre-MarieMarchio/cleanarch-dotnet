@@ -1,6 +1,6 @@
 # CleanArch.Create
 
-Creates a .NET 10 project on Clean Architecture, an HTTP API or hosts without one, by asking for
+Creates a project on Clean Architecture, on the LTS .NET or the newest, an HTTP API or hosts without one, by asking for
 each option of the `cleanarch-webapi` template, then runs `dotnet new` with the answers. It creates
 projects and nothing else: to add a web app, a web package or a presentation project to one, run
 `dotnet cleanarch add web-app`, `add web-package` or `add presentation` in it. Run inside a project,
@@ -8,13 +8,16 @@ the launcher says so.
 
 ## Create a project
 
-You need a .NET 10 SDK (10.0.100 or later), which runs a tool without installing it:
+You need a .NET 10 SDK (10.0.100 or later), which runs a tool without installing it, and the SDK of the
+.NET the project builds on, the LTS .NET 10 or the newest, .NET 11:
 
 ```bash
 dnx CleanArch.Create
 ```
 
-The launcher asks for the name, then each option, with the template's own choices, defaults and
+The launcher asks the .NET line first, .NET 10, the LTS and the default, or .NET 11, the newest; `--yes`
+takes the LTS, and an SDK of another line only raises a warning with its download link. It then asks
+for the name, then each option, with the template's own choices, defaults and
 descriptions. The name it offers is the current folder's, made a valid project name (`my-shop`
 becomes `MyShop`, `acme.shop` becomes `Acme.Shop`), or the template's default when that fails.
 Taking it with `enter` generates the project in the current folder; another name generates it in a

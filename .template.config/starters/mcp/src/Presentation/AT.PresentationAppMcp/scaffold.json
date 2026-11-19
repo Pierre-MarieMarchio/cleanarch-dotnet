@@ -3,6 +3,10 @@
   "framework": "mcp",
   "name": "AppTemplate.PresentationAppMcp",
   "generator": "dotnet new mcpserver --transport remote",
-  "package": "Microsoft.McpServer.ProjectTemplates.10.0",
-  "version": "10.0.15"
+  //#if (dotnet11)
+  "version": "11.0.0",
+  //#else
+  "version": "10.0.15",
+  //#endif
+  "package": "Microsoft.McpServer.ProjectTemplates.10.0"
 }

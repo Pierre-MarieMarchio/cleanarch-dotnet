@@ -9,7 +9,7 @@
       "release-type": "simple",
       "initial-version": "1.0.0",
       "versioning": "always-bump-minor",
-      "release-as": "10.0.0",
+      "release-as": "11.0.0",
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
         {

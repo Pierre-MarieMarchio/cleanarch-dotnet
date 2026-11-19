@@ -26,7 +26,11 @@ builder.Services.AddApiClient(new Uri(builder.HostEnvironment.BaseAddress));
 
 //#if (externalAuth)
 var host = builder.Build();
+/*#if (!dotnet11)*/
 host.Services.GetRequiredService<IStartupValidator>().Validate();
+/*#else
+await host.Services.GetRequiredService<IAsyncStartupValidator>().ValidateAsync();
+#endif*/
 await host.RunAsync();
 //#else
 await builder.Build().RunAsync();

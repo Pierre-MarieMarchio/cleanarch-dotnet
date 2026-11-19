@@ -1,0 +1,5 @@
+<Project>
+
+  <!-- Stops the repository's targets here, as Directory.Build.props stops its settings. -->
+
+</Project>

@@ -28,11 +28,26 @@ public sealed class AcceptanceSelectionTests
         "web angular, external auth, notes",
         "no web, then a react app, its workspace and an angular back office",
         "sqlite, defaults",
+        "newest .NET, local auth, api worker and mcp",
         "windows, wpf, local auth",
         "windows, wpf, external auth, notes",
     ];
 
     private static readonly string[] _notRequired = ["web, every starter"];
+
+    private const string _newestDotnet = "net11.0";
+
+    private static readonly string[] _filesALineOwns =
+    [
+        "global.json",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "Directory.Packages.net10.0.props",
+        "Directory.Packages.net11.0.props",
+        ".template.config/template.json",
+        ".template.config/images/net11.0/final.Dockerfile",
+        ".template.config/lines/probe.cs",
+    ];
 
     private const string _linux = "ubuntu-latest";
 
@@ -132,6 +147,44 @@ public sealed class AcceptanceSelectionTests
     }
 
     [Fact]
+    public void EveryFileALineOwns_RunsTheNewestLine_OnAPullRequest()
+    {
+        var rules = Rules();
+        string newestTag = $"dotnet-{_newestDotnet}";
+
+        newestTag.ShouldBe(Legs().SelectMany(leg => leg.Tags).Single(tag => tag.StartsWith("dotnet-", StringComparison.Ordinal)),
+            "No leg of matrix.json generates --dotnet net11.0, or several carry its tag.");
+
+        _filesALineOwns
+            .Where(file => rules.FirstOrDefault(rule => rule.Paths.Any(pattern => Matches(pattern, file))) is { } rule
+                && !rule.Tags.Contains(_everyLeg) && !rule.Tags.Contains(newestTag))
+            .ShouldBeEmpty(
+                "A file a .NET line owns first matches a rule that leaves the newest line's leg out, so a shared bump that breaks .NET 11 " +
+                "would show at night instead of on the pull request: give the path the tag of that leg, or 'all'.");
+    }
+
+    [Fact]
+    public void TheNewestLinesLeg_RunsLight_OnAPullRequest_AndWholeOtherwise()
+    {
+        var leg = Legs().Single(leg => leg.Tags.Contains($"dotnet-{_newestDotnet}"));
+        string workflow = File.ReadAllText(AcceptanceWorkflow);
+
+        leg.Entry["light_on_pull_request"]?.GetValue<string>().ShouldBe("true", "The newest line's leg no longer runs light on a pull request.");
+        leg.Entry["integration"]?.GetValue<string>().ShouldBe("true", "The newest line's leg runs no integration suite at night.");
+        leg.Entry["end_to_end"]?.GetValue<string>().ShouldBe("true", "The newest line's leg runs no end-to-end suite at night.");
+        workflow.ShouldContain("LIGHT: ${{ matrix.light_on_pull_request == 'true' && github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-acceptance') }}",
+            customMessage: "The template job no longer reads light_on_pull_request, so the leg runs whole on a pull request, or it runs light under full-acceptance.");
+
+        foreach (string field in new[] { "matrix.integration == 'true'", "matrix.end_to_end == 'true'", "matrix.worker == 'true'", "matrix.mcp == 'true'" })
+        {
+            workflow.Split('\n')
+                .Where(line => line.TrimStart().StartsWith("if:", StringComparison.Ordinal) && line.Contains(field, StringComparison.Ordinal))
+                .Where(line => !line.Contains("env.LIGHT != 'true'", StringComparison.Ordinal))
+                .ShouldBeEmpty($"A step of the template job that reads {field} runs on a pull request in a light leg: add env.LIGHT != 'true'.");
+        }
+    }
+
+    [Fact]
     public void EveryFolderTheTemplateCopies_HasARuleOfItsOwn()
     {
         string[] folders =
@@ -182,6 +235,13 @@ public sealed class AcceptanceSelectionTests
         Exists(root, ".template.config/variants/never-existed/**").ShouldBeFalse();
         Exists(root, ".template.config/acceptance/never-existed.json").ShouldBeFalse();
     }
+
+    private static bool Matches(string pattern, string path) =>
+        Regex.IsMatch(
+            path,
+            "^" + Regex.Escape(pattern).Replace(@"\*\*/", "(?:.*/)?", StringComparison.Ordinal).Replace(@"\*\*", ".*", StringComparison.Ordinal).Replace(@"\*", "[^/]*", StringComparison.Ordinal) + "$",
+            RegexOptions.CultureInvariant,
+            TimeSpan.FromSeconds(5));
 
     private static bool Exists(string root, string path) =>
         path.EndsWith("/**", StringComparison.Ordinal)
@@ -268,6 +328,11 @@ public sealed class AcceptanceSelectionTests
         if (Chooses(options, "--aspire", "true"))
         {
             tags.Add("aspire");
+        }
+
+        if (Chooses(options, "--dotnet", _newestDotnet))
+        {
+            tags.Add($"dotnet-{_newestDotnet}");
         }
 
         tags.AddRange(presentationStarters

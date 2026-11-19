@@ -16,15 +16,11 @@ internal sealed class OpenApiProblemMediaTypeTransformer : IOpenApiOperationTran
 
         foreach (var response in operation.Responses?.Values.OfType<OpenApiResponse>() ?? [])
         {
-            var problem = response.Content?.Values
-                .FirstOrDefault(media => media.Schema is OpenApiSchemaReference { Reference.Id: "ProblemDetails" or "ValidationProblemDetails" });
-
-            if (problem is not null)
+            if (response.Content is { } content
+                && content.Values.FirstOrDefault(media => media.Schema is OpenApiSchemaReference { Reference.Id: "ProblemDetails" or "ValidationProblemDetails" }) is { } problem)
             {
-                response.Content = new Dictionary<string, OpenApiMediaType>(StringComparer.Ordinal)
-                {
-                    [_problemMediaType] = problem,
-                };
+                content.Clear();
+                content[_problemMediaType] = problem;
             }
         }
 

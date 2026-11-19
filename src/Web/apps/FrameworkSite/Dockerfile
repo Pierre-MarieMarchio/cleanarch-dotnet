@@ -2,11 +2,15 @@
 
 #if (webBlazorWasm)
 # Built from the repository root, which holds the solution's props and the .NET client: docker build -f src/Web/apps/FrameworkSite/Dockerfile .
+#if (dotnet == "net11.0")
+#include ../../.template.config/images/net11.0/publish.Dockerfile
+#else
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.404-noble@sha256:bef136a371963aaa46ec97882845ef6f54dec15728bb4b128b1c2a400ffbc9b4 AS publish
+#endif
 
 WORKDIR /source
 
-COPY global.json Directory.Build.props Directory.Packages.props .editorconfig ./
+COPY global.json Directory.Build.props Directory.Packages.props Directory.Packages.net10.0.props .editorconfig ./
 COPY src/Presentation/AT.Presentation.Client/ src/Presentation/AT.Presentation.Client/
 COPY src/Web/apps/FrameworkSite/ src/Web/apps/FrameworkSite/
 RUN dotnet publish src/Web/apps/FrameworkSite/AppTemplate.FrameworkSite.csproj --configuration Release --output /publish

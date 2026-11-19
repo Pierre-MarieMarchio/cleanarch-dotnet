@@ -1,0 +1,67 @@
+<Project>
+
+  <!-- The runtime band of .NET 11: the packages whose version follows .NET, which the bots keep on this line. -->
+  <ItemGroup Label="Runtime — all Microsoft.* on the same 11.0.x band">
+    <!--#if (!publicApi)-->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="11.0.0" />
+    <!--#endif-->
+    <!--#if (presentationBlazorServer && externalAuth)-->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="11.0.0" />
+    <!--#endif-->
+    <!--#if (localAuth)-->
+    <PackageVersion Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="11.0.0" />
+    <!--#endif-->
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="11.0.0" />
+    <!--#if (sqlServer)-->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="11.0.0" />
+    <!--#endif-->
+    <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="11.0.0" />
+    <!-- For a module that registers a typed client without referencing ASP.NET Core. -->
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="11.0.0" />
+  </ItemGroup>
+
+  <!-- Its own band, apart from the runtime's patches; Polly comes transitively, at the version this package chose. -->
+  <ItemGroup Label="Outbound HTTP">
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="11.0.0" />
+  </ItemGroup>
+
+  <!--#if (webBlazorWasm)-->
+  <ItemGroup Label="Web app on WebAssembly">
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="11.0.0" />
+    <!--#if (externalAuth)-->
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="11.0.0" />
+    <!--#endif-->
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Gateway" Version="11.0.0" />
+  </ItemGroup>
+
+  <!--#endif-->
+  <ItemGroup Label="Third-party runtime">
+    <PackageVersion Include="Asp.Versioning.Mvc" Version="10.2.1" />
+    <PackageVersion Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.2.1" />
+    <!--#if (postgreSql)-->
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="11.0.0-rc.3" />
+    <!-- Follows the EF provider's version. -->
+    <PackageVersion Include="Npgsql.OpenTelemetry" Version="10.0.3" />
+    <!--#endif-->
+  </ItemGroup>
+
+  <ItemGroup Label="Test">
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="11.0.0" />
+    <!-- The version Microsoft.EntityFrameworkCore.Design requires exactly, through its pin on Roslyn's workspaces; the two move together. -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
+    <!-- The in-process relational provider the saving-pipeline tests run on. -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="11.0.0" />
+  </ItemGroup>
+
+</Project>
