@@ -246,7 +246,7 @@ It then creates the app as above; commit it. The edits, to make by hand where th
   ```xml
     <!-- The version the pinned Kiota tool generates for; the two move together. -->
     <ItemGroup Label="API client">
-      <PackageVersion Include="Microsoft.Kiota.Bundle" Version="2.1.6" />
+      <PackageVersion Include="Microsoft.Kiota.Bundle" Version="2.2.0" />
     </ItemGroup>
 
   ```
