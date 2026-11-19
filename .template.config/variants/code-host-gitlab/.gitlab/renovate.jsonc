@@ -286,6 +286,12 @@
       "matchUpdateTypes": ["major"],
       "enabled": false,
     },
+    // Roslyn moves by hand with Microsoft.EntityFrameworkCore.Design, which pins it exactly; alone, it fails to restore.
+    {
+      "matchManagers": ["nuget"],
+      "matchPackageNames": ["Microsoft.CodeAnalysis.CSharp"],
+      "enabled": false,
+    },
     // The .NET images of the Dockerfiles, the Compose files and the pipeline stay on the project's .NET line too.
     {
       "matchManagers": ["dockerfile", "docker-compose", "gitlabci"],
