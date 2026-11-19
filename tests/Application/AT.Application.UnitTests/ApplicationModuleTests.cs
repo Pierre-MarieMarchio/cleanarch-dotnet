@@ -129,7 +129,6 @@ public sealed class ApplicationModuleTests
                 ["Files:Categories:document:UploadModes:0"] = "Direct",
             })
             .Build();
-    //#endif
 
     /*#if (!dotnet11)*/
     private static Task ValidateOnStartAsync(IServiceProvider provider) =>
@@ -138,4 +137,5 @@ public sealed class ApplicationModuleTests
     private static Task ValidateOnStartAsync(IServiceProvider provider) =>
         provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(TestContext.Current.CancellationToken);
     #endif*/
+    //#endif
 }
