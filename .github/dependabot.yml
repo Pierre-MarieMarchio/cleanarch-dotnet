@@ -47,6 +47,8 @@ updates:
       - dependency-name: CleanArch.Cli
         update-types:
           - version-update:semver-major
+      # Roslyn moves by hand with Microsoft.EntityFrameworkCore.Design, which pins it exactly; alone, it fails to restore.
+      - dependency-name: Microsoft.CodeAnalysis.CSharp
 
     groups:
       # The 10.0.x runtime band, one pull request per servicing release.
