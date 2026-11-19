@@ -72,7 +72,7 @@
     <PackageVersion Include="MailKit" Version="5.0.0" />
     <PackageVersion Include="Mediator.Abstractions" Version="3.0.2" />
     <PackageVersion Include="Mediator.SourceGenerator" Version="3.0.2" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="3.0.0" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="3.0.2" />
   </ItemGroup>
 
   <!--#if (aspire)-->
@@ -98,13 +98,13 @@
     <!--#if (serverDatabase)-->
     <!-- Keep on the same version as the Testcontainers database module, which pins this core exactly. -->
     <!--#endif-->
-    <PackageVersion Include="Testcontainers" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers" Version="4.17.0" />
     <!--#endif-->
     <!--#if (sqlServer)-->
-    <PackageVersion Include="Testcontainers.MsSql" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.MsSql" Version="4.17.0" />
     <!--#endif-->
     <!--#if (postgreSql)-->
-    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.17.0" />
     <!--#endif-->
     <PackageVersion Include="xunit.v3" Version="4.0.3" />
   </ItemGroup>

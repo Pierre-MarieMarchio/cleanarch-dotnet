@@ -56,6 +56,8 @@ updates:
       # The newest line's tool manifest pins the project tool at the placeholder generation replaces.
       - dependency-name: CleanArch.Cli
       #endif
+      # Roslyn moves by hand with Microsoft.EntityFrameworkCore.Design, which pins it exactly; alone, it fails to restore.
+      - dependency-name: Microsoft.CodeAnalysis.CSharp
 
     groups:
       # The 10.0.x runtime band, one pull request per servicing release.

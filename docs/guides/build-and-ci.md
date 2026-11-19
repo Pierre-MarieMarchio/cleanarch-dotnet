@@ -407,19 +407,23 @@ signing fails until cosign is pointed at a Sigstore instance that trusts it, as
 
 <!--#if (githubHost)-->
 Every dependency but the SDK is at an exact version, and `.github/dependabot.yml` proposes updates
-weekly, in bands. It ignores one thing, the majors of what follows .NET's own: the runtime packages
+weekly, in bands. It ignores the majors of what follows .NET's own: the runtime packages
 whose major is the target framework's, `dotnet-ef`, `CleanArch.Cli` and the .NET images. A project
-stays on its .NET line, and moving to another is a migration, not a bot's pull request. The SDK is a floor: `global.json` names the lowest version and
+stays on its .NET line, and moving to another is a migration, not a bot's pull request. It also
+ignores every update of `Microsoft.CodeAnalysis.CSharp`, which `Microsoft.EntityFrameworkCore.Design`
+pins exactly: alone it fails to restore, so it moves by hand with that package. The SDK is a floor: `global.json` names the lowest version and
 lets a later feature band of the same major version run, and each Dockerfile pins the SDK image it
 builds with.
 The toolchain, the pinning and Dependabot are rows of [the stack](../architecture/README.md#the-stack).
 <!--#endif-->
 <!--#if (gitlabHost)-->
 Every dependency but the SDK is at an exact version, and Renovate proposes updates weekly from
-`.gitlab/renovate.jsonc`, in the bands Dependabot uses on GitHub. It ignores one thing, the majors of
+`.gitlab/renovate.jsonc`, in the bands Dependabot uses on GitHub. It ignores the majors of
 what follows .NET's own: the runtime packages whose major is the target framework's, `dotnet-ef`,
 `CleanArch.Cli` and the .NET images of the Dockerfiles and the pipeline. A project stays on its .NET
-line, and moving to another is a migration, not a bot's merge request. The SDK is a
+line, and moving to another is a migration, not a bot's merge request. It also disables every update
+of `Microsoft.CodeAnalysis.CSharp`, which `Microsoft.EntityFrameworkCore.Design` pins exactly: alone
+it fails to restore, so it moves by hand with that package. The SDK is a
 floor: `global.json` names the lowest version and lets a later feature band of the same major version
 run, and each Dockerfile pins the SDK image it builds with.
 The toolchain, the pinning and Renovate are rows of [the stack](../architecture/README.md#the-stack).
