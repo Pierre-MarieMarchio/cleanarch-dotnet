@@ -160,7 +160,7 @@
     <PackageVersion Include="Testcontainers" Version="4.17.0" />
     <!--#endif-->
     <!--#if (sqlServer)-->
-    <PackageVersion Include="Testcontainers.MsSql" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.MsSql" Version="4.17.0" />
     <!--#endif-->
     <!--#if (postgreSql)-->
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.17.0" />
