@@ -97,7 +97,7 @@
   <ItemGroup Label="OpenTelemetry">
     <!--#if (postgreSql)-->
     <!-- Npgsql.OpenTelemetry follows the EF provider's version. -->
-    <PackageVersion Include="Npgsql.OpenTelemetry" Version="10.0.3" />
+    <PackageVersion Include="Npgsql.OpenTelemetry" Version="10.0.4" />
     <!--#endif-->
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.21.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.21.0" />
@@ -124,9 +124,9 @@
     <PackageVersion Include="Mediator.Abstractions" Version="3.0.2" />
     <PackageVersion Include="Mediator.SourceGenerator" Version="3.0.2" />
     <!--#if (postgreSql)-->
-    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.4" />
     <!--#endif-->
-    <PackageVersion Include="Scalar.AspNetCore" Version="3.0.2" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="3.2.0" />
   </ItemGroup>
 
   <!--#if (aspire)-->
