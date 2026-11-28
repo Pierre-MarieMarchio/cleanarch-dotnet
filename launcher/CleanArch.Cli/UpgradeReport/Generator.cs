@@ -23,7 +23,8 @@ internal sealed class Generator(Func<string, TemplateEngine> engineIn, string ro
         var notes = new List<string>();
         PackagedTemplate main = content.Require(PackagedTemplate.Main, release.Version);
         Directory.CreateDirectory(tree);
-        engine.Run(scratch, [main.ShortName, "-n", project.Name, "-o", tree, .. Arguments(main, plan.Generation, release.Version, notes), _withoutSdkTemplates]);
+        var generation = plan.Generation.Where(value => value.Symbol != GenerationPlan.DotnetSymbol || main.Declares(value.Symbol));
+        engine.Run(scratch, [main.ShortName, "-n", project.Name, "-o", tree, .. Arguments(main, generation, release.Version, notes), _withoutSdkTemplates]);
 
         foreach (Replay replay in plan.Replays)
         {

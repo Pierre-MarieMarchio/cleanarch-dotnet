@@ -4,8 +4,10 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" IncludeAssets="all" PrivateAssets="all" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <!--#if (!dotnet11)-->
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <!--#endif-->
     <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 

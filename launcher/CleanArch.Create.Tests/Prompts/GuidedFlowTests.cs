@@ -68,6 +68,8 @@ public sealed partial class GuidedFlowTests : IDisposable
         Order(
             output,
             "┌  Create a project",
+            "◊  .NET\n│  net10.0",
+            "◊  Project name",
             "◊  Presentation project",
             "◊  First web app",
             "◊  Authentication",
@@ -260,6 +262,7 @@ public sealed partial class GuidedFlowTests : IDisposable
     {
         TestConsole console = Terminal();
         console.Input.PushKey(ConsoleKey.Escape);
+        console.Input.PushKey(ConsoleKey.Enter);
         console.Input.PushTextWithEnter("Demo");
         PushEnters(console, 2);
         console.Input.PushKey(ConsoleKey.End);
@@ -469,6 +472,7 @@ public sealed partial class GuidedFlowTests : IDisposable
     {
         var console = new TestConsole().Interactive().EmitAnsiSequences();
         console.Profile.Width = 120;
+        console.Input.PushKey(ConsoleKey.Enter);
         return console;
     }
 
@@ -544,7 +548,7 @@ public sealed partial class GuidedFlowTests : IDisposable
             };
         }
 
-        if (call.Arguments[0] == "tool")
+        if (call.Arguments[0] is "tool" or "--list-sdks")
         {
             return new ProcessResult(0, string.Empty);
         }

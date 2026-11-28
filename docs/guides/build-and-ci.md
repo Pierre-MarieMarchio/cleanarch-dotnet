@@ -36,7 +36,8 @@ does. With nothing touched it says so and passes. In this order it:
 2. builds the projects touched and every project that references them, found through the
    `ProjectReference` graph of the solution, or the whole solution when the change touches a file that
    sets the build for all of them: a project or solution file, `Directory.Build.props`,
-   `Directory.Build.targets`, `Directory.Packages.props`, `.editorconfig`, `global.json` or
+   `Directory.Build.targets`, `Directory.Packages.props`, `Directory.Packages.net10.0.props`,
+   `.editorconfig`, `global.json` or
    `nuget.config`;
 3. builds every test project that needs Docker, touched or not, so that a compile error there fails
    the command, and names each one as built and not run;
@@ -438,7 +439,7 @@ The toolchain and the pinning are rows of [the stack](../architecture/README.md#
 
 | Dependency | Pinned in |
 |---|---|
-| NuGet packages | `Directory.Packages.props` |
+| NuGet packages | `Directory.Packages.props`, and in `Directory.Packages.net10.0.props`, which it imports, the runtime band: the packages whose version follows .NET |
 | The SDK, as a floor | `global.json` |
 | The .NET tools | `.config/dotnet-tools.json` |
 | <!--#if (githubHost)--> |

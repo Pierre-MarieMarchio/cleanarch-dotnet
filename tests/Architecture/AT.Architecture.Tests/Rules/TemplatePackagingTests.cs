@@ -555,6 +555,7 @@ public sealed class TemplatePackagingTests
             .. _recordedAppKeys.Select(key => Line(withParts["web"]!["apps"]![0], key)),
             $"{{\n      {Line(api, "name")},\n      {Line(api, "framework")}\n    }}",
             withParts["name"]!.GetValue<string>(),
+            withParts["targetFramework"]!.GetValue<string>(),
             withParts["template"]!["version"]!.GetValue<string>(),
             withParts["web"]!["scope"]!.GetValue<string>(),
             withParts["web"]!["apps"]![0]!["name"]!.GetValue<string>(),
@@ -745,7 +746,7 @@ public sealed class TemplatePackagingTests
             File.ReadAllLines(Path.Combine(root, ".github", "workflows", "ci.yml")),
             line => _workflowJob.Match(line) is { Success: true } job && job.Groups["name"].Value != "jobs" ? job.Groups["name"].Value : null);
         var gitlab = GateCommands(
-            File.ReadAllLines(Path.Combine(root, ".template.config", "variants", "code-host-gitlab", ".gitlab-ci.yml")),
+            TemplateMarkers.ReadAsTheDefaultLine(Path.Combine(root, ".template.config", "variants", "code-host-gitlab", ".gitlab-ci.yml")),
             line => _topLevelKey.Match(line) is { Success: true } key ? key.Groups["name"].Value : null);
 
         foreach (string job in _gateJobs)
@@ -809,7 +810,7 @@ public sealed class TemplatePackagingTests
                 switch (marker.Groups["keyword"].Value)
                 {
                     case "if":
-                        bool template = marker.Groups["condition"].Value.Trim() == "(templateMaintenance)";
+                        bool template = marker.Groups["condition"].Value.Trim() is "(templateMaintenance)" or "(dotnet == \"net11.0\")";
                         branches.Push((template, !template));
                         break;
                     case "else":
@@ -1168,7 +1169,7 @@ public sealed class TemplatePackagingTests
         foreach (string file in files)
         {
             List<string>? current = null;
-            foreach (string line in Kept(File.ReadAllLines(file), out _))
+            foreach (string line in Kept(TemplateMarkers.ReadAsTheDefaultLine(file), out _))
             {
                 if (_gitLabKey.Match(line) is { Success: true } key)
                 {
@@ -2291,7 +2292,7 @@ public sealed class TemplatePackagingTests
                     && Text(source, "condition") == $"({chosenBy[0]})")
                 .ShouldBe(1, $"{folder}/template.json must copy {startersSource}{presentation}/ into ./ under the condition ({chosenBy[0]}).");
 
-            using var descriptor = JsonDocument.Parse(File.ReadAllText(PresentationDescriptor(presentation)));
+            using var descriptor = JsonDocument.Parse(File.ReadAllText(PresentationDescriptor(presentation)), _withComments);
             switch (Text(descriptor.RootElement, "kind"))
             {
                 case "dotnet":
@@ -2325,7 +2326,7 @@ public sealed class TemplatePackagingTests
     public void TheWorkerStarter_IsWrittenWhole_AndCopiedByJobsWorker()
     {
         string project = Path.Combine(StartersFolder, _workerStarter, "src", "Presentation", ProjectFolders.FolderOf("AppTemplate.Worker"));
-        using var descriptor = JsonDocument.Parse(File.ReadAllText(Path.Combine(project, "scaffold.json")));
+        using var descriptor = JsonDocument.Parse(File.ReadAllText(Path.Combine(project, "scaffold.json")), _withComments);
         using var manifest = JsonDocument.Parse(File.ReadAllText(ManifestPath()));
 
         Text(descriptor.RootElement, "kind").ShouldBe("written", "The worker's starter holds its whole project, which its scaffold.json must say, so presentation-scaffold runs no generator.");
@@ -2832,7 +2833,7 @@ public sealed class TemplatePackagingTests
         Regex? listedElsewhere = elsewhere is null ? null : new Regex(elsewhere.StartsWith('!') ? elsewhere : $@"(?<!!\(?)\b(?:{elsewhere})\b", RegexOptions.None, TimeSpan.FromSeconds(5));
         var written = new List<(string File, string Line)>();
 
-        foreach (string file in ProjectFiles(root))
+        foreach (string file in ProjectFiles(root).Where(file => !IsTheBandOfAnotherLine(file)))
         {
             string relative = Path.GetRelativePath(root, file).Replace('\\', '/');
             string text = File.ReadAllText(file);
@@ -2848,6 +2849,8 @@ public sealed class TemplatePackagingTests
             $"The project template writes these lines outside the starter's folders, and {readme} does not give them to a project " +
             "that adds it with an item template: add each to the edits under 'Joining a project generated without one'.");
     }
+
+    private static readonly Regex _lineBand = new(@"^Directory\.Packages\.(?<framework>net\d+\.\d+)\.props$", RegexOptions.None, TimeSpan.FromSeconds(5));
 
     private static readonly Regex _templateOnly = new(@"(?<!!\(?)\btemplateMaintenance\b", RegexOptions.None, TimeSpan.FromSeconds(5));
 
@@ -2866,6 +2869,12 @@ public sealed class TemplatePackagingTests
 
     private static string PresentationItemManifestPath() =>
         Path.Combine(ProjectReferenceGraph.RepositoryRoot, ".template.config", "presentation", ".template.config", "template.json");
+
+    private static bool IsTheBandOfAnotherLine(string file) =>
+        _lineBand.Match(Path.GetFileName(file)) is { Success: true } band && band.Groups["framework"].Value != CheckoutFramework;
+
+    private static string CheckoutFramework =>
+        XDocument.Load(Path.Combine(ProjectReferenceGraph.RepositoryRoot, "Directory.Build.props")).Descendants("TargetFramework").Single().Value;
 
     private static IEnumerable<string> ProjectFiles(string directory) =>
         Directory.EnumerateFiles(directory).Concat(Directory.EnumerateDirectories(directory)
@@ -3092,9 +3101,13 @@ public sealed class TemplatePackagingTests
     private static string? Text(JsonElement element, string property) =>
         element.TryGetProperty(property, out var value) ? value.GetString() : null;
 
+    private const string _recordedAsTargetFramework = "dotnet";
+
+    private static readonly JsonDocumentOptions _withComments = new() { CommentHandling = JsonCommentHandling.Skip };
+
     private static IEnumerable<JsonProperty> RecordedOptions(JsonElement symbols) =>
         symbols.EnumerateObject()
-            .Where(symbol => Text(symbol.Value, "type") == "parameter" && !IsRefusal(symbol.Value))
+            .Where(symbol => Text(symbol.Value, "type") == "parameter" && !IsRefusal(symbol.Value) && symbol.Name != _recordedAsTargetFramework)
             .Where(symbol => !symbol.Name.StartsWith("web", StringComparison.Ordinal) && !symbol.Name.StartsWith("presentation", StringComparison.Ordinal));
 
     private static bool IsRefusal(JsonElement symbol) =>

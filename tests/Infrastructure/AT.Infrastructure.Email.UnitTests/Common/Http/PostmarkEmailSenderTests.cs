@@ -182,7 +182,7 @@ public sealed class PostmarkEmailSenderTests : IDisposable
     {
         _endpoint.Body.ShouldNotBeNull();
 
-        return JsonDocument.Parse(_endpoint.Body).RootElement.Clone();
+        return JsonElement.Parse(_endpoint.Body);
     }
 
     private static EmailOptions ValidEmail() => new()

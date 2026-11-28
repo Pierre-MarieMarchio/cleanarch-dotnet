@@ -198,7 +198,8 @@ internal static class AddCommand
             file.Options.CodeHost ?? "github",
             file.Options.Ci == true,
             file.Options.AgentFiles == true,
-            ProjectLayout.HoldsTheApi(project));
+            ProjectLayout.HoldsTheApi(project),
+            file.TargetFramework);
     }
 
 

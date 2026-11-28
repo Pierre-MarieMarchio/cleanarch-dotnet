@@ -50,15 +50,16 @@ internal static class ProjectScaffold
             ? ProjectNames.FolderOf(project.File.Name, projectName[(project.File.Name.Length + 1)..])
             : throw new InvalidOperationException($"'{projectName}' is not a project of {project.File.Name}: its name starts with {project.File.Name}.");
 
-    public static string[][] SolutionAddArguments(string root, string solution, IEnumerable<string> projects) =>
+    public static string[][] SolutionAddArguments(string root, string solution, IEnumerable<string> projects, IReadOnlyCollection<string> listed) =>
         [.. projects
+            .Where(added => !listed.Contains(ProjectPath.Relative(root, added), StringComparer.Ordinal))
             .GroupBy(added => ProjectPath.Relative(root, Path.GetDirectoryName(Path.GetDirectoryName(added))!), StringComparer.Ordinal)
-            .Select(group => (string[])["sln", solution, "add", "--solution-folder", group.Key, .. group])];
+            .Select(group => (string[])["sln", solution, "add", "--solution-folder", group.Key, "--include-references", "false", .. group])];
 
     private static void AddToTheSolution(LocatedProject project, Shell shell, string[] projects)
     {
         string solution = Path.Combine(project.Root, ProjectLayout.Solution(project));
-        foreach (string[] arguments in SolutionAddArguments(project.Root, solution, projects))
+        foreach (string[] arguments in SolutionAddArguments(project.Root, solution, projects, File.Exists(solution) ? SolutionFilter.ProjectPaths(solution) : []))
         {
             Scaffolds.Required(shell, Dotnet.Call(project.Root, arguments));
         }

@@ -8,7 +8,18 @@ internal static class TemplateMarkers
 {
     private static readonly Regex _directive = new(@"^\s*(?:\|\s*)?(?://|/\*|<!--)?#(?<kind>if|elseif|elif|else|endif)\b(?<condition>.*?)(?:\s*\|)?$", RegexOptions.None, TimeSpan.FromSeconds(5));
 
+    private static readonly Regex _include = new(@"^(?<indent>\s*)#include \.\./\.\./(?<path>\S+)$", RegexOptions.None, TimeSpan.FromSeconds(5));
+
     internal static string[] Lines(string text) => text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+
+    internal static string[] ReadAsTheDefaultLine(string path)
+    {
+        string[] lines = File.ReadAllLines(path);
+
+        return [.. lines.SelectMany((line, index) => index > 0 && lines[index - 1].Trim() == "#else" && _include.Match(line) is { Success: true } include
+            ? File.ReadAllLines(Path.Combine(ProjectReferenceGraph.RepositoryRoot, include.Groups["path"].Value)).Select(included => include.Groups["indent"].Value + included)
+            : [line])];
+    }
 
     internal static Dictionary<int, Condition> Conditions(string[] lines)
     {

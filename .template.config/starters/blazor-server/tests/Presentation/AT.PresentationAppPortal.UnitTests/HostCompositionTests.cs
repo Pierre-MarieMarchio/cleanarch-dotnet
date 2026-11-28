@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using AppTemplate.Application.Core.Common.Ports;
 using AppTemplate.PresentationAppPortal.Common.Security;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Shouldly;
@@ -47,6 +48,19 @@ public sealed class HostCompositionTests
     }
 
     [Fact]
+    public async Task AnOperationScope_FollowsTheCircuitsCaller_WhenTheSignInChanges()
+    {
+        using var host = new PresentationHost(SignedIn(_caller));
+        var signIn = new ChangingSignIn(SignedIn(_caller));
+        using var operations = new OperationScope(host.Services.GetRequiredService<IServiceScopeFactory>(), signIn);
+        var other = Guid.CreateVersion7();
+
+        signIn.Become(SignedIn(other));
+
+        (await operations.RunAsync<ICurrentUser, Guid?>(caller => Task.FromResult(caller.UserId?.Value))).ShouldBe(other);
+    }
+
+    [Fact]
     public void AUseCaseResolvedOutsideARequestAndAnOperationScope_RefusesToGuessItsCaller()
     {
         using var host = new PresentationHost(SignedIn(_caller));
@@ -69,4 +83,17 @@ public sealed class HostCompositionTests
 
     private static ClaimsPrincipal SignedIn(Guid userId) =>
         new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId.ToString())], "test"));
+
+    private sealed class ChangingSignIn(ClaimsPrincipal caller) : AuthenticationStateProvider
+    {
+        private Task<AuthenticationState> _state = Task.FromResult(new AuthenticationState(caller));
+
+        public override Task<AuthenticationState> GetAuthenticationStateAsync() => _state;
+
+        public void Become(ClaimsPrincipal caller)
+        {
+            _state = Task.FromResult(new AuthenticationState(caller));
+            NotifyAuthenticationStateChanged(_state);
+        }
+    }
 }

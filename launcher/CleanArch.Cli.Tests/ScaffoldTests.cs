@@ -63,8 +63,8 @@ public sealed class ScaffoldTests : IDisposable
             ["new", "install", "Avalonia.Templates@12.1.4", .. hive],
             ["new", "avalonia.mvvm", "--help", .. hive],
             ["new", "avalonia.mvvm", "--name", "Acme.Shop.Desktop", "--output", "Acme.Shop.Desktop", "--allow-scripts", "no", .. hive],
-            ["sln", Path.Combine(_project.Root, "Acme.Shop.slnx"), "add", "--solution-folder", "src/Presentation", Full(_desktopProject), Full(_clientProject)],
-            ["sln", Path.Combine(_project.Root, "Acme.Shop.slnx"), "add", "--solution-folder", "tests/Presentation", Full(_desktopTests)],
+            ["sln", Path.Combine(_project.Root, "Acme.Shop.slnx"), "add", "--solution-folder", "src/Presentation", "--include-references", "false", Full(_desktopProject), Full(_clientProject)],
+            ["sln", Path.Combine(_project.Root, "Acme.Shop.slnx"), "add", "--solution-folder", "tests/Presentation", "--include-references", "false", Full(_desktopTests)],
             ["format", Full(_desktopProject)],
             ["format", Full(_desktopTests)],
             ["format", Full(_clientProject)],
@@ -189,17 +189,22 @@ public sealed class ScaffoldTests : IDisposable
     }
 
     [Fact]
-    public void ScaffoldedProjects_JoinTheSolutionFolderOfTheirLayer_OneCallPerFolder()
+    public void ScaffoldedProjects_JoinTheSolutionFolderOfTheirLayer_OneCallPerFolder_UnlessTheSolutionListsThem()
     {
         string root = Path.Combine(Path.GetTempPath(), "repo");
         string desktop = Path.Combine(root, "src", "Presentation", "X.Desktop", "App.Desktop.csproj");
         string client = Path.Combine(root, "src", "Presentation", "X.Presentation.Client", "App.Presentation.Client.csproj");
         string tests = Path.Combine(root, "tests", "Presentation", "X.Desktop.UnitTests", "App.Desktop.UnitTests.csproj");
 
-        ProjectScaffold.SolutionAddArguments(root, "X.slnx", [desktop, tests, client]).ShouldBe(
+        ProjectScaffold.SolutionAddArguments(root, "X.slnx", [desktop, tests, client], []).ShouldBe(
         [
-            ["sln", "X.slnx", "add", "--solution-folder", "src/Presentation", desktop, client],
-            ["sln", "X.slnx", "add", "--solution-folder", "tests/Presentation", tests],
+            ["sln", "X.slnx", "add", "--solution-folder", "src/Presentation", "--include-references", "false", desktop, client],
+            ["sln", "X.slnx", "add", "--solution-folder", "tests/Presentation", "--include-references", "false", tests],
+        ]);
+        ProjectScaffold.SolutionAddArguments(root, "X.slnx", [desktop, tests, client], ["src/Presentation/X.Presentation.Client/App.Presentation.Client.csproj"]).ShouldBe(
+        [
+            ["sln", "X.slnx", "add", "--solution-folder", "src/Presentation", "--include-references", "false", desktop],
+            ["sln", "X.slnx", "add", "--solution-folder", "tests/Presentation", "--include-references", "false", tests],
         ]);
     }
 

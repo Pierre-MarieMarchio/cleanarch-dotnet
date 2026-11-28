@@ -29,13 +29,13 @@ public sealed class ContainerCompositionTests
     #endif*/
 
     [Fact]
-    public void TheApiContainer_BuildsUnderStrictValidation()
+    public async Task TheApiContainer_BuildsUnderStrictValidation()
     {
         var services = HostComposition.ComposeApi(HostComposition.Configuration());
 
         using var provider = services.BuildServiceProvider(HostComposition.StrictValidation);
 
-        provider.GetRequiredService<IStartupValidator>().Validate();
+        await ValidateOnStartAsync(provider);
     }
 
     [Fact]
@@ -274,7 +274,7 @@ public sealed class ContainerCompositionTests
     }
 
     [Fact]
-    public void TheContainer_RefusesToStart_WhenAnOptionsSectionIsInvalid()
+    public async Task TheContainer_RefusesToStart_WhenAnOptionsSectionIsInvalid()
     {
         /*#if (localAuth)*/
         var configuration = HostComposition.Configuration(
@@ -288,8 +288,7 @@ public sealed class ContainerCompositionTests
 
         using var provider = services.BuildServiceProvider(HostComposition.StrictValidation);
 
-        var exception = Should.Throw<OptionsValidationException>(
-            provider.GetRequiredService<IStartupValidator>().Validate);
+        var exception = await Should.ThrowAsync<OptionsValidationException>(ValidateOnStartAsync(provider));
 
         /*#if (localAuth)*/
         exception.Message.ShouldContain("Jwt:Key");
@@ -453,4 +452,12 @@ public sealed class ContainerCompositionTests
     }
 
     private sealed class ProbeStandalone : IProbeStandalone;
+
+    /*#if (!dotnet11)*/
+    private static Task ValidateOnStartAsync(IServiceProvider provider) =>
+        Task.Run(provider.GetRequiredService<IStartupValidator>().Validate, TestContext.Current.CancellationToken);
+    /*#else
+    private static Task ValidateOnStartAsync(IServiceProvider provider) =>
+        provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(TestContext.Current.CancellationToken);
+    #endif*/
 }

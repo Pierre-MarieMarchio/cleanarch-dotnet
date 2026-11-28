@@ -63,6 +63,14 @@
       "tags": ["code-host-gitlab"]
     },
     {
+      "paths": [
+        "Directory.Packages.net11.0.props",
+        ".template.config/images/net11.0/**",
+        ".template.config/lines/**"
+      ],
+      "tags": ["dotnet-net11.0"]
+    },
+    {
       "paths": [".template.config/variants/no-aspire/**"],
       "tags": ["all"]
     },

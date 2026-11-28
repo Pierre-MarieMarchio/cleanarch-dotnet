@@ -65,25 +65,24 @@ public sealed class ApplicationModuleTests
     //#if (files)
 
     [Fact]
-    public void TheFilesSection_IsValidatedAtStart()
+    public async Task TheFilesSection_IsValidatedAtStart()
     {
         var services = new ServiceCollection();
         services.AddFiles(new ConfigurationBuilder().Build());
 
         using var provider = services.BuildServiceProvider();
 
-        Should.Throw<OptionsValidationException>(
-            () => provider.GetRequiredService<IStartupValidator>().Validate());
+        await Should.ThrowAsync<OptionsValidationException>(ValidateOnStartAsync(provider));
     }
 
     [Fact]
-    public void TheFilesSection_BindsItsCategories()
+    public async Task TheFilesSection_BindsItsCategories()
     {
         var services = new ServiceCollection();
         services.AddFiles(FilesConfiguration());
 
         using var provider = services.BuildServiceProvider();
-        provider.GetRequiredService<IStartupValidator>().Validate();
+        await ValidateOnStartAsync(provider);
 
         var category = provider.GetRequiredService<IOptions<FilesOptions>>().Value.Categories["document"];
         category.AllowedMediaTypes.ShouldBe(["application/pdf"]);
@@ -130,5 +129,13 @@ public sealed class ApplicationModuleTests
                 ["Files:Categories:document:UploadModes:0"] = "Direct",
             })
             .Build();
+
+    /*#if (!dotnet11)*/
+    private static Task ValidateOnStartAsync(IServiceProvider provider) =>
+        Task.Run(provider.GetRequiredService<IStartupValidator>().Validate, TestContext.Current.CancellationToken);
+    /*#else
+    private static Task ValidateOnStartAsync(IServiceProvider provider) =>
+        provider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(TestContext.Current.CancellationToken);
+    #endif*/
     //#endif
 }
