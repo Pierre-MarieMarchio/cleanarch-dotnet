@@ -922,18 +922,18 @@ parameters.
 | Each container runs the image its service pins, which the app host reads from the Compose files | `LocalStackParityTests.EveryContainerTheAppHostPulls_RunsTheImageItsComposeServicePins` |
 | Each `Section__Key` a Compose file sets, the app host sets | `LocalStackParityTests.EverySettingComposeGivesAHost_TheAppHostGivesToo` |
 | Each web app listens on the port its `compose.yml` publishes, which `cleanarch.json` records | `LocalStackParityTests.EveryWebAppTheAppHostStarts_ListensOnThePortItsComposeServicePublishes` |
-| `global.json` pins the SDK under `msbuild-sdks` at the version of every `Aspire.*` package | `LocalStackParityTests.TheAppHostSdk_IsPinnedInGlobalJson_AtTheVersionOfEveryAspirePackage` |
+| Every `Aspire.*` package is at one version | `LocalStackParityTests.EveryAspirePackage_IsAtTheSameVersion` |
 | The whole stack starts, healthy | `LocalStackTests`, Docker, in the several-hosts leg |
 
 In this checkout the parity test reads the Compose services of the shapes the defaults leave out as
 absent, in a `templateMaintenance` block, since the checkout's `docker-compose.yml` holds every branch.
-The dashboard and the orchestrator come from the Aspire CLI that the SDK's version pins, which `dnx`
-fetches on the first build (`AspireUseCliBundle` with `DnxPinned`): Aspire warns on the NuGet
-packages it used before, and this project keeps no such silence. The app host names
-`Aspire.AppHost.Sdk` without a version and `global.json` pins it under `msbuild-sdks`, the form
-Dependabot's NuGet updater rewrites, so its `aspire` group raises the SDK and the packages in one pull
-request; a project generated without the app host receives `.template.config/variants/no-aspire/global.json`,
-which `TheGlobalJsonWithoutTheAppHost_IsTheCheckoutsMinusItsMsBuildSdks` holds to the checkout's.
+The dashboard and the orchestrator come from the Aspire CLI that the version of `Aspire.Hosting.AppHost`
+pins, which `dnx` fetches on the first build (`AspireCliInvocationMode` with `DnxPinned`): Aspire warns on
+the NuGet packages it used before, and this project keeps no such silence. The app host builds with
+`Microsoft.NET.Sdk` and references `Aspire.Hosting.AppHost` and `Aspire.Hosting.Dotnet` as packages, and
+starts each host with `AddDotnetProject` on the path `cleanarch.json` gives, so it holds no project
+reference. Every `Aspire.*` package sits at one version in `Directory.Packages.props`, which the `aspire`
+group of Dependabot and Renovate raises in one pull request.
 `aspireNeedsServerDatabase`
 refuses SQLite, whose file the app host's processes cannot share with Compose's volume.
 

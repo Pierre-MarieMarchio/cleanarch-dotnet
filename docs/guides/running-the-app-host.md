@@ -24,7 +24,7 @@ app host would make every change to an image or a setting go through a generator
 read, and copying the images into the app host would fail every Dependabot pull request on a Compose
 image until someone copied the reference across. `LocalStackParityTests` lists by name, with its
 reason, each service, setting or variable in which the two stacks differ. The dashboard and the
-orchestrator come from the Aspire CLI the app host's SDK pins, run through `dnx`, with no workload
+orchestrator come from the Aspire CLI that the version of `Aspire.Hosting.AppHost` pins, run through `dnx`, with no workload
 and no global tool installed. SQLite is refused with the app host: its file lives in a volume Compose
 shares between containers, which the processes the app host starts cannot share. The app host
 becomes the reference only once Aspire can import a Compose file as its model, or the deployment
@@ -37,7 +37,7 @@ app host would make every change to an image or a setting go through a generator
 read, and copying the images into the app host would fail every update of a Compose image until
 someone copied the reference across. `LocalStackParityTests` lists by name, with its reason, each
 service, setting or variable in which the two stacks differ. The dashboard and the orchestrator come
-from the Aspire CLI the app host's SDK pins, run through `dnx`, with no workload and no global tool
+from the Aspire CLI that the version of `Aspire.Hosting.AppHost` pins, run through `dnx`, with no workload and no global tool
 installed. SQLite is refused with the app host: its file lives in a volume Compose shares between
 containers, which the processes the app host starts cannot share. The app host becomes the reference
 only once Aspire can import a Compose file as its model, or the deployment moves away from Compose.
@@ -91,6 +91,8 @@ The secrets are Aspire parameters, never values in the code:
 <!--#endif-->
 
 A generated value is kept in the app host's user secrets, so it survives a restart.
+A parameter whose value may stay empty is declared with `AsOptional()`: Aspire counts an empty
+string as no value, and stops the stack on a required parameter that has none.
 
 ## Steps
 

@@ -200,6 +200,11 @@ docker compose logs -f api    # follow the API
 docker compose down           # stop, keep the data
 docker compose down -v        # stop and delete the data
 ```
+<!--#if (postgreSql)-->
+
+PostgreSQL does not open a volume an earlier major wrote: when the image moves to another major,
+delete the data with `docker compose down -v`, or move it with `pg_upgrade` first.
+<!--#endif-->
 
 ## Run on the host
 

@@ -2094,7 +2094,6 @@
         {
           "condition": "(!aspire)",
           "exclude": [
-            "global.json",
             "src/AppHost/**",
             "tests/Integration/AT.AppHost.IntegrationTests/**",
             "tests/Architecture/AT.Architecture.Tests/Rules/LocalStackParityTests.cs",
@@ -2217,11 +2216,6 @@
           ]
         }
       ]
-    },
-    {
-      "source": "./.template.config/variants/no-aspire/",
-      "target": "./",
-      "condition": "(!aspire)"
     },
     {
       "source": "./.template.config/variants/no-sonar/",

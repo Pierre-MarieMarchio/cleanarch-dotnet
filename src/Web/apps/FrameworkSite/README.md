@@ -189,7 +189,8 @@ What the template adds to the CLI's starter, and nothing else; no file the CLI w
   styles without inlined critical CSS, whose `onload` handler the Content-Security-Policy refuses;
 - in `tsconfig.json`: `allowImportingTsExtensions` with `noEmit`, since the workspace packages export
   their TypeScript sources and import each other by `.ts` path (the Angular builder emits through its
-  own bundler either way);
+  own bundler either way), and `rewriteRelativeImportExtensions`, since `ng test` compiles with
+  emitting on and refuses the first option without it;
 - in `package.json`: the name `framework-site`, which `pnpm --filter` takes, the dependency
   `@app-template/api-client` (`workspace:*`), the client generated from the API in
   `src/Web/packages/api-client`, a `dev` script and a `test` script that runs once instead of
@@ -220,7 +221,8 @@ What the template adds to the CLI's starter, and nothing else:
   nonce. `ng serve` runs `server.ts` too, so `pnpm dev` relays `/api` and `/health` through the
   server's relay, the session included, with no proxy of its own;
 - in `tsconfig.json`: `allowImportingTsExtensions` with `noEmit`, since the workspace packages export
-  their TypeScript sources and import each other by `.ts` path;
+  their TypeScript sources and import each other by `.ts` path, and `rewriteRelativeImportExtensions`,
+  since `ng test` compiles with emitting on and refuses the first option without it;
 - in `package.json`: the name `framework-site`, the dependency `@app-template/api-client`
   (`workspace:*`), a `dev` script, a `test` script that runs once instead of watching, and `start`,
   which runs the built server, in place of the CLI's `serve:ssr` script. The CLI writes no linter;

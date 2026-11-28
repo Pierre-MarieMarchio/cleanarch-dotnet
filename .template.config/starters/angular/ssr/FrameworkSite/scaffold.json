@@ -25,7 +25,8 @@
     "tsconfig.json": {
       "compilerOptions": {
         "allowImportingTsExtensions": true,
-        "noEmit": true
+        "noEmit": true,
+        "rewriteRelativeImportExtensions": true
       }
     },
     "angular.json": {

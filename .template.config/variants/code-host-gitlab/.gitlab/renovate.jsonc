@@ -106,7 +106,7 @@
       ],
     },
     //#if (aspire)
-    // The Aspire band with the app host's SDK, which global.json pins under msbuild-sdks.
+    // The Aspire band.
     {
       "groupName": "aspire",
       "matchManagers": ["nuget"],

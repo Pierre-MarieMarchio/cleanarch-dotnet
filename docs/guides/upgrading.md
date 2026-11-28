@@ -106,8 +106,7 @@ it as a commit of its own:
 git mv src/AppHost/<Initials>.AppHost/* src/AppHost/
 ```
 
-Then drop one `..\` from the `ProjectReference` paths of the app host's project file, rewrite the
-paths that still name the subfolder, which `git grep -n 'AppHost/<Initials>.AppHost'` lists, in the
+Then rewrite the paths that still name the subfolder, which `git grep -n 'AppHost/<Initials>.AppHost'` lists, in the
 solution, the test projects and the pages, and check the move with `dotnet build`. The app host's
 user secrets follow its project file, so its generated passwords survive the move.
 
