@@ -91,6 +91,8 @@ The secrets are Aspire parameters, never values in the code:
 <!--#endif-->
 
 A generated value is kept in the app host's user secrets, so it survives a restart.
+A parameter whose value may stay empty is declared with `AsOptional()`: Aspire counts an empty
+string as no value, and stops the stack on a required parameter that has none.
 
 ## Steps
 

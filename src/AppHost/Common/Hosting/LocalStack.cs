@@ -68,7 +68,7 @@ internal sealed partial class LocalStack
             .WithHttpEndpoint(port: 8025, targetPort: 8025, name: "ui")
             .WithEndpoint(port: 1025, targetPort: 1025, scheme: "tcp", name: "smtp");
 
-        _emailPassword = builder.AddParameter("email-password", string.Empty, secret: true);
+        _emailPassword = builder.AddParameter("email-password", string.Empty, secret: true).AsOptional();
 
         //#if (files)
         _storageSecretKey = builder.AddParameter("storage-secret-access-key", Generated(), secret: true, persist: true);
@@ -95,9 +95,9 @@ internal sealed partial class LocalStack
         /*#if (externalAuth)
         _authority = builder.AddParameter("external-auth-authority");
         _audience = builder.AddParameter("external-auth-audience");
-        _interactiveClientId = builder.AddParameter("external-auth-interactive-client-id", string.Empty);
-        _interactiveClientSecret = builder.AddParameter("external-auth-interactive-client-secret", string.Empty, secret: true);
-        _browserClientId = builder.AddParameter("external-auth-browser-client-id", string.Empty);
+        _interactiveClientId = builder.AddParameter("external-auth-interactive-client-id", string.Empty).AsOptional();
+        _interactiveClientSecret = builder.AddParameter("external-auth-interactive-client-secret", string.Empty, secret: true).AsOptional();
+        _browserClientId = builder.AddParameter("external-auth-browser-client-id", string.Empty).AsOptional();
         #endif*/
     }
 
