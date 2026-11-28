@@ -123,7 +123,7 @@ the command stops:
 - in `Directory.Packages.props`, after the lines:
 
   ```xml
-      <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
+      <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.1" />
     </ItemGroup>
 
   ```

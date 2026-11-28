@@ -14,7 +14,7 @@ services:
       # Loopback only, for a client on this machine; remove it for any non-local use.
       - "${STACK_PUBLISH_ADDRESS:-127.0.0.1}:${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
-      # PostgreSQL 18 keeps its data under /var/lib/postgresql: a mount of /var/lib/postgresql/data loses it on down.
+      # Since PostgreSQL 18, the image keeps its data under /var/lib/postgresql: a mount of /var/lib/postgresql/data loses it on down.
       - db-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER"]
