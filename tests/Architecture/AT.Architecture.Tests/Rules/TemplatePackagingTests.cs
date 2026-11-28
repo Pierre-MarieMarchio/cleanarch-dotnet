@@ -345,20 +345,6 @@ public sealed class TemplatePackagingTests
     }
 
     [Fact]
-    public void TheGlobalJsonWithoutTheAppHost_IsTheCheckoutsMinusItsMsBuildSdks()
-    {
-        string root = ProjectReferenceGraph.RepositoryRoot;
-        var full = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "global.json")))!;
-        var withoutAppHost = JsonNode.Parse(File.ReadAllText(
-            Path.Combine(root, ".template.config", "variants", "no-aspire", "global.json")))!;
-
-        full.AsObject().Remove("msbuild-sdks").ShouldBeTrue("global.json no longer pins the app host's SDK under msbuild-sdks.");
-
-        JsonNode.DeepEquals(full, withoutAppHost).ShouldBeTrue(
-            ".template.config/variants/no-aspire/global.json has drifted from global.json.");
-    }
-
-    [Fact]
     public void ThePackageTemplatesTools_AreAtTheWorkspacesVersions()
     {
         var pinned = WorkspacePackagesPinnedTools();

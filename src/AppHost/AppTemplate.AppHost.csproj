@@ -1,4 +1,4 @@
-﻿<Project Sdk="Aspire.AppHost.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,21 +6,17 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <AspireUseCliBundle>true</AspireUseCliBundle>
     <AspireCliInvocationMode>DnxPinned</AspireCliInvocationMode>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.Dotnet" />
     <!--#if (sqlServer)
     <PackageReference Include="Aspire.Hosting.SqlServer" />
     #else-->
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <!--#endif-->
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Presentation\*\*.csproj" Exclude="..\Presentation\*\*.Core.csproj;..\Presentation\*\*.Presentation.Client.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using Aspire.Hosting.Testing;
 using Shouldly;
 using Xunit;
@@ -25,7 +26,7 @@ public sealed class LocalStackTests
         await using var app = await builder.BuildAsync(limit.Token);
         await app.StartAsync(limit.Token);
 
-        var started = builder.Resources.Where(static resource => resource is ProjectResource or ContainerResource).ToList();
+        var started = builder.Resources.Where(static resource => resource is DotnetProjectResource or ContainerResource).ToList();
         started.ShouldNotBeEmpty("the app host declares the API or the worker in every shape; a stack of nothing is broken.");
 
         foreach (var resource in started)

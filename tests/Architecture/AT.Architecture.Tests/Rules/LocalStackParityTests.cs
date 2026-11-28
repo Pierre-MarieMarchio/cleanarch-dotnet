@@ -1,11 +1,11 @@
 ﻿using System.Globalization;
-using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using AppTemplate.AppHost;
 using AppTemplate.Architecture.Tests.Fixtures;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using Shouldly;
 using Xunit;
 
@@ -90,8 +90,6 @@ public sealed class LocalStackParityTests
         @"^\s+-\s+""127\.0\.0\.1:\$\{[A-Z0-9_]+:-(?<port>\d+)\}:\d+""\s*$",
         RegexOptions.CultureInvariant,
         TimeSpan.FromSeconds(1));
-
-    private const string _sdkName = "Aspire.AppHost.Sdk";
 
     [Fact]
     public void EveryComposeService_IsAnAppHostResourceOfTheSameName_AndEveryResourceAComposeService()
@@ -250,23 +248,19 @@ public sealed class LocalStackParityTests
     }
 
     [Fact]
-    public void TheAppHostSdk_IsPinnedInGlobalJson_AtTheVersionOfEveryAspirePackage()
+    public void EveryAspirePackage_IsAtTheSameVersion()
     {
-        string root = ProjectReferenceGraph.RepositoryRoot;
-        string sdk = XDocument.Load(Directory.EnumerateFiles(AppHostDirectory, "*.csproj").Single()).Root!.Attribute("Sdk")!.Value;
-        string? pinned = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "global.json")))?["msbuild-sdks"]?[_sdkName]?.GetValue<string>();
-
-        sdk.ShouldBe(_sdkName, "The app host names its SDK without a version, which global.json pins under msbuild-sdks, where Dependabot raises it.");
-        pinned.ShouldNotBeNull($"global.json pins no {_sdkName} under msbuild-sdks.");
-
-        XDocument.Load(Path.Combine(root, "Directory.Packages.props"))
+        var versions = XDocument.Load(Path.Combine(ProjectReferenceGraph.RepositoryRoot, "Directory.Packages.props"))
             .Descendants("PackageVersion")
             .Where(package => package.Attribute("Include")!.Value.StartsWith("Aspire.", StringComparison.Ordinal))
-            .Where(package => package.Attribute("Version")!.Value != pinned)
-            .Select(package => $"{package.Attribute("Include")!.Value} {package.Attribute("Version")!.Value}")
-            .ShouldBeEmpty(
-                $"global.json pins {_sdkName} {pinned}, and the CLI the app host runs is the SDK's own: one Aspire "
-                + "version for the SDK and every package, which Dependabot's aspire group raises together.");
+            .Select(package => (Name: package.Attribute("Include")!.Value, Version: package.Attribute("Version")!.Value))
+            .ToList();
+
+        versions.ShouldNotBeEmpty("Directory.Packages.props pins no Aspire package.");
+        versions.Select(package => package.Version).Distinct(StringComparer.Ordinal).Count().ShouldBe(
+            1,
+            "The Aspire packages share one version, which Dependabot's aspire group raises together: "
+            + string.Join(", ", versions.Select(package => $"{package.Name} {package.Version}")));
     }
 
     private static string AppHostDirectory =>
@@ -286,7 +280,7 @@ public sealed class LocalStackParityTests
 
         builder.AddLocalStack();
 
-        return [.. builder.Resources.Where(resource => resource is ProjectResource or ContainerResource)];
+        return [.. builder.Resources.Where(resource => resource is DotnetProjectResource or ContainerResource)];
     }
 
     private static async Task<HashSet<string>> EnvironmentOf(ContainerResource container)

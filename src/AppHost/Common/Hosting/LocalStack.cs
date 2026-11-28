@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using Aspire.Hosting.Dotnet;
 
 namespace AppTemplate.AppHost.Common.Hosting;
 
@@ -131,7 +132,7 @@ internal sealed partial class LocalStack
         }
     }
 
-    private IResourceBuilder<ProjectResource> AddApi(PresentationProject host, bool runsTheJobs)
+    private IResourceBuilder<DotnetProjectResource> AddApi(PresentationProject host, bool runsTheJobs)
     {
         var api = AddHost("api", host)
             .WithHttpEndpoint(port: 8080, name: "http")
@@ -142,7 +143,7 @@ internal sealed partial class LocalStack
         return runsTheJobs ? WithJobs(api) : api;
     }
 
-    private void AddPortal(PresentationProject host, IResourceBuilder<ProjectResource>? api)
+    private void AddPortal(PresentationProject host, IResourceBuilder<DotnetProjectResource>? api)
     {
         var portal = AddHost($"presentation-{Kebab(host.Name)}", host)
             .WithHttpEndpoint(name: "http")
@@ -157,7 +158,7 @@ internal sealed partial class LocalStack
         #endif*/
     }
 
-    private void AddMcpServer(PresentationProject host, IResourceBuilder<ProjectResource>? api)
+    private void AddMcpServer(PresentationProject host, IResourceBuilder<DotnetProjectResource>? api)
     {
         var server = AddHost($"presentation-{Kebab(host.Name)}", host)
             .WithHttpEndpoint(name: "http")
@@ -170,12 +171,12 @@ internal sealed partial class LocalStack
         #endif*/
     }
 
-    private void AddWorker(PresentationProject host, IResourceBuilder<ProjectResource>? api) =>
+    private void AddWorker(PresentationProject host, IResourceBuilder<DotnetProjectResource>? api) =>
         WaitForTheApiOrTheServices(
             WithJobs(AddHost("worker", host).WithEnvironment("DOTNET_ENVIRONMENT", "Development")),
             api);
 
-    private void WaitForTheApiOrTheServices(IResourceBuilder<ProjectResource> host, IResourceBuilder<ProjectResource>? api)
+    private void WaitForTheApiOrTheServices(IResourceBuilder<DotnetProjectResource> host, IResourceBuilder<DotnetProjectResource>? api)
     {
         if (api is null)
         {
@@ -187,7 +188,7 @@ internal sealed partial class LocalStack
         }
     }
 
-    private void WaitForTheServices(IResourceBuilder<ProjectResource> host)
+    private void WaitForTheServices(IResourceBuilder<DotnetProjectResource> host)
     {
         //#if (serverDatabase)
         host.WaitFor(_database);
@@ -198,7 +199,7 @@ internal sealed partial class LocalStack
         //#endif
     }
 
-    private static IResourceBuilder<ProjectResource> WithJobs(IResourceBuilder<ProjectResource> host)
+    private static IResourceBuilder<DotnetProjectResource> WithJobs(IResourceBuilder<DotnetProjectResource> host)
     {
         host
             .WithEnvironment("Jobs__Enabled", "true")
@@ -225,7 +226,7 @@ internal sealed partial class LocalStack
         return host;
     }
 
-    private void AddWebApp(WebApp app, IResourceBuilder<ProjectResource> api)
+    private void AddWebApp(WebApp app, IResourceBuilder<DotnetProjectResource> api)
     {
         string workspace = Path.Combine(_project.Root, "src", "Web");
         string context = PublishesTheDotNetClient(app) ? _project.Root : workspace;
@@ -260,9 +261,9 @@ internal sealed partial class LocalStack
 
     private static bool PublishesTheDotNetClient(WebApp app) => app.Framework == "blazor-wasm";
 
-    private IResourceBuilder<ProjectResource> AddHost(string name, PresentationProject host)
+    private IResourceBuilder<DotnetProjectResource> AddHost(string name, PresentationProject host)
     {
-        var project = _builder.AddProject(name, _project.ProjectPath(host.Name), options => options.ExcludeLaunchProfile = true)
+        var project = _builder.AddDotnetProject(name, _project.ProjectPath(host.Name), options => options.ExcludeLaunchProfile = true)
             .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
             .WithEnvironment("Database__MaxPoolSize", "20")
             .WithEnvironment("Database__CommandTimeoutSeconds", "30")

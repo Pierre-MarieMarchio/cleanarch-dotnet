@@ -63,10 +63,6 @@
       "tags": ["code-host-gitlab"]
     },
     {
-      "paths": [".template.config/variants/no-aspire/**"],
-      "tags": ["all"]
-    },
-    {
       "paths": [".template.config/variants/database-sqlite/**"],
       "tags": ["database-sqlite"]
     },
